@@ -16,6 +16,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from ..perspective import Perspective
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -88,6 +90,8 @@ class Finding(BaseModel):
     severity: Severity
     affected_asset: str = Field(description="host, URL, porta ou pacote afetado")
     source_tool: str
+    # perspectiva em que o finding foi obtido; carimbada pelo orquestrador.
+    perspective: Perspective = Perspective.EXTERNAL
 
     cvss: Optional[CVSS] = None
     cwe: Optional[str] = Field(default=None, description="ex.: 'CWE-89'")
@@ -119,9 +123,12 @@ class Finding(BaseModel):
     @property
     def fingerprint(self) -> str:
         """Identidade estável para dedup: mesma vuln, mesmo asset, mesma classe
-        (CWE) => mesmo fingerprint, independente da ferramenta que reportou."""
+        (CWE) e mesma PERSPECTIVA => mesmo fingerprint, independente da ferramenta
+        que reportou. A perspectiva entra na base porque um mesmo host pode ter
+        findings externos e internos distintos que NÃO devem ser fundidos."""
         basis = "|".join(
             [
+                self.perspective.value,
                 (self.cwe or self.title).lower().strip(),
                 self.affected_asset.lower().strip(),
             ]

@@ -20,6 +20,11 @@ relatório) funciona **100% sem IA e offline**.
 
 ## Princípios de arquitetura
 
+- **Perspectiva (vantage point) de primeira classe:** o mesmo alvo é avaliado de
+  fora (`external` — visão de atacante, bloqueia RFC1918 por padrão) ou de dentro
+  (`internal` — assumed breach, bloqueia IP público por padrão). A perspectiva
+  dirige guardrail, ferramentas ativas, rate limit e pipeline **via configuração**
+  (`perspective.py`), não por `if` espalhado. Ver `docs/architecture.md`.
 - **Determinístico primeiro (CLAUDE.md §7):** toda função de IA tem um caminho
   equivalente que roda sem nenhuma chave de API. A IA apenas *lê e explica*
   findings já produzidos pelo engine — nunca escaneia sozinha.
@@ -55,8 +60,9 @@ caminho recomendado com sandbox.
 # 1. copie e edite o escopo (só alvos autorizados!)
 cp scope.example.yaml scope.yaml
 
-# 2. scan determinístico (sem IA)
-vulnforge scan --target 127.0.0.1 --profile standard --scope scope.yaml
+# 2. scan determinístico (sem IA) — escolha a perspectiva
+vulnforge scan --target app.example.com --perspective external --profile standard --scope scope.yaml
+vulnforge scan --target 10.0.0.5      --perspective internal --profile standard --scope scope.yaml
 
 # 3. relatório PDF sem nenhuma chave de API
 vulnforge report --scan 1 --format pdf

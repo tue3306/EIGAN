@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 
 from ...findings.schema import CVSS, Confidence, Finding, Severity
+from ...perspective import Perspective
 from ..base import BaseToolAdapter, ToolResult
 
 _SEV_MAP = {
@@ -27,6 +28,10 @@ _SEV_MAP = {
 class NucleiAdapter(BaseToolAdapter):
     binary = "nuclei"
     name = "nuclei"
+    supported_perspectives = (Perspective.EXTERNAL, Perspective.INTERNAL)
+    version_source = "nuclei -version  # VERIFICAR"
+    license = "VERIFICAR"          # MIT (projectdiscovery) — confirmar na fonte
+    commercial_use = "verify"
 
     def build_args(self, target: str, *, severity: str | None = None,
                    templates: str | None = None, rate_limit: int = 150, **_) -> list[str]:

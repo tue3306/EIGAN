@@ -17,6 +17,7 @@ from ..engine.orchestrator import Orchestrator
 from ..findings.schema import Severity
 from ..findings.store import FindingStore
 from ..knowledge.loader import KnowledgeBase
+from ..perspective import Perspective
 from ..report.deterministic import ReportGenerator
 from ..security.consent import ConsentGate
 from ..security.scope import Scope, ScopeViolation
@@ -42,13 +43,18 @@ def cli() -> None:
 @click.option("--target", "targets", multiple=True, help="Alvo (repetível).")
 @click.option("--target-list", type=click.Path(exists=True), help="Arquivo com um alvo por linha.")
 @click.option("--profile", default="standard", show_default=True)
+@click.option("--perspective", "perspective", type=click.Choice([p.value for p in Perspective]),
+              default=None, help="external|internal. Sobrepõe o valor do scope.yaml.")
 @click.option("--scope", "scope_path", required=True, type=click.Path(exists=True))
 @click.option("--db", default="vulnforge.db", show_default=True)
 @click.option("--no-ai", is_flag=True, help="Força modo determinístico.")
 @click.option("--yes", is_flag=True, help="Consent gate não-interativo (CI autorizado).")
+@click.option("--override-perspective", is_flag=True,
+              help="Libera a regra público×privado da perspectiva (logado). Use com cautela.")
 @click.option("--fail-on", type=click.Choice([s.value for s in Severity]), default=None,
               help="Sai com código !=0 se houver finding >= esta severidade.")
-def scan(targets, target_list, profile, scope_path, db, no_ai, yes, fail_on):
+def scan(targets, target_list, profile, perspective, scope_path, db, no_ai, yes,
+         override_perspective, fail_on):
     """Executa um scan contra alvos autorizados."""
     tlist = list(targets)
     if target_list:
@@ -57,17 +63,22 @@ def scan(targets, target_list, profile, scope_path, db, no_ai, yes, fail_on):
         raise click.UsageError("Informe --target ou --target-list.")
 
     scope = Scope.load(scope_path)
+    persp = Perspective(perspective) if perspective else scope.perspective
+    if override_perspective:
+        click.secho(f"[AUDIT] override de perspectiva ATIVO (persp={persp.value})", fg="yellow", err=True)
     try:
         ConsentGate(scope.engagement, tlist).require(assume_yes=yes)
         store = FindingStore(db)
         orch = Orchestrator(store=store)
-        report = orch.run(tlist, scope=scope, profile=profile,
+        report = orch.run(tlist, scope=scope, perspective=persp, profile=profile,
+                          override_perspective=override_perspective,
                           progress=lambda m: click.echo(f"  {m}"))
     except ScopeViolation as exc:
         click.secho(f"BLOQUEADO: {exc}", fg="red", err=True)
         sys.exit(2)
 
-    click.secho(f"\nScan #{report.scan_id}: {len(report.findings)} findings", fg="green")
+    click.secho(f"\nScan #{report.scan_id} [{report.perspective.value}]: "
+                f"{len(report.findings)} findings", fg="green")
     for f in report.findings:
         click.echo(f"  [{f.severity.value.upper():8}] {f.title}  ({f.affected_asset})")
     if report.skipped_tools:

@@ -11,12 +11,17 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 from ...findings.schema import Confidence, Finding, Severity
+from ...perspective import Perspective
 from ..base import BaseToolAdapter, ToolResult
 
 
 class NmapAdapter(BaseToolAdapter):
     binary = "nmap"
     name = "nmap"
+    supported_perspectives = (Perspective.EXTERNAL, Perspective.INTERNAL)
+    version_source = "nmap --version  # VERIFICAR"
+    license = "VERIFICAR"          # NPSL (baseada em GPLv2, com restrições) — confirmar
+    commercial_use = "verify"
 
     def build_args(self, target: str, *, ports: str | None = None, scripts: bool = False,
                    **_) -> list[str]:

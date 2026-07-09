@@ -2,7 +2,10 @@
 
 Mesma vulnerabilidade reportada por ferramentas diferentes (mesmo `fingerprint`)
 é fundida em um único finding com múltiplas evidências e a maior severidade
-observada. Determinístico — não depende de IA (CLAUDE.md §5/§7).
+observada. Como o `fingerprint` inclui a perspectiva, findings de perspectivas
+diferentes NUNCA são fundidos aqui — a correlação entre perspectivas é feita na
+camada de asset por :func:`correlate_by_asset`, preservando a origem.
+Determinístico — não depende de IA (CLAUDE.md §5/§7).
 """
 
 from __future__ import annotations
@@ -34,3 +37,16 @@ def deduplicate(findings: list[Finding]) -> list[Finding]:
         base.last_seen = max(base.last_seen, f.last_seen)
 
     return list(merged.values())
+
+
+def correlate_by_asset(findings: list[Finding]) -> dict[str, dict[str, list[Finding]]]:
+    """Agrupa findings por ativo e, dentro dele, por perspectiva — sem fundir.
+
+    Serve à camada de asset (Parte 1 do escopo): permite comparar/mesclar o que
+    foi visto de fora × de dentro para o mesmo host, mantendo total
+    rastreabilidade da origem (perspectiva + ferramenta de cada finding).
+    """
+    out: dict[str, dict[str, list[Finding]]] = {}
+    for f in findings:
+        out.setdefault(f.affected_asset, {}).setdefault(f.perspective.value, []).append(f)
+    return out

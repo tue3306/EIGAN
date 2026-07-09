@@ -57,11 +57,12 @@
 
   <h2>4. Findings</h2>
   <table>
-    <tr><th>#</th><th>Título</th><th>Severidade</th><th>Ativo</th><th>CWE</th><th>OWASP</th><th>Fonte</th></tr>
+    <tr><th>#</th><th>Título</th><th>Severidade</th><th>Perspectiva</th><th>Ativo</th><th>CWE</th><th>OWASP</th><th>Fonte</th></tr>
     {% for f in findings %}
     <tr>
       <td>{{ loop.index }}</td><td>{{ f.title }}</td>
       <td><span class="sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span></td>
+      <td>{{ f.perspective.value }}</td>
       <td>{{ f.affected_asset }}</td><td>{{ f.cwe or "—" }}</td>
       <td>{{ f.owasp or "—" }}</td><td>{{ f.source_tool }}</td>
     </tr>
@@ -76,7 +77,8 @@
       {% if f.confidence.value == "unverified" %}<span class="ai-tag" style="background:#c0392b">UNVERIFIED</span>{% endif %}
       {% if f.ai_generated %}<span class="ai-tag">IA</span>{% endif %}
     </h3>
-    <p><strong>Ativo:</strong> {{ f.affected_asset }} · <strong>Fonte:</strong> {{ f.source_tool }}
+    <p><strong>Ativo:</strong> {{ f.affected_asset }} · <strong>Perspectiva:</strong> {{ f.perspective.value }}
+    · <strong>Fonte:</strong> {{ f.source_tool }}
     {% if f.cvss %} · <strong>CVSS {{ f.cvss.version }}:</strong> {{ f.cvss.score }}{% endif %}</p>
     <p><strong>Descrição:</strong> {{ enrichment[loop.index0].text }}</p>
     {% if f.evidence %}<p><strong>Evidência:</strong></p><pre>{{ f.evidence }}</pre>{% endif %}

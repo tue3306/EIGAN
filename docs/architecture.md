@@ -41,6 +41,39 @@ confidence, status, ai_generated, first_seen, last_seen, correlated_sources[]`.
 `fingerprint = sha256(cwe|asset)[:16]` — base da dedup/correlação entre
 ferramentas.
 
+## Perspectiva (vantage point)
+
+`Perspective` (`src/vulnforge/perspective.py`) é um conceito de primeira classe
+do domínio que muda o comportamento de todo o pipeline, dirigido por
+**configuração** (o mapa `_PROFILES`), não por `if` espalhado:
+
+| Dimensão | EXTERNAL | INTERNAL |
+|---|---|---|
+| Alvos permitidos | público/hostname; bloqueia RFC1918/loopback/link-local | privado/loopback/hostname; bloqueia IP público |
+| Rate limit padrão | 150 (conservador) | 1000 (agressivo permitido) |
+| Credenciais | não | opcionais (scan autenticado) |
+| OSINT subdomínio | sim (subfinder/amass) | não (já se está dentro) |
+
+Onde toca cada camada:
+- **Guardrail** (`security/scope.py`): `enforce()` valida `alvo × perspectiva`
+  (público×privado) **antes** de qualquer execução; incompatibilidade levanta
+  `PerspectiveViolation`. `override` libera só a regra público×privado (logado),
+  nunca a autorização nem o pertencimento ao escopo.
+- **Adapter** (`engine/base.py`): declara `supported_perspectives`; o
+  orquestrador só ativa adapters compatíveis (ex.: `subfinder` só EXTERNAL).
+- **Pipeline** (`engine/pipeline.py`): grafo de estágios por perspectiva; o
+  perfil restringe quais estágios rodam; ferramentas de um estágio rodam em
+  paralelo; ferramenta ausente/faltando adapter é pulada sem derrubar o fluxo.
+- **Finding** (`findings/schema.py`): campo `perspective` entra no `fingerprint`
+  — findings de perspectivas diferentes **não** são fundidos. A correlação
+  entre perspectivas para o mesmo ativo é feita por `dedup.correlate_by_asset`,
+  preservando a origem.
+
+Próximo incremento do pipeline: encaminhamento dinâmico de assets entre estágios
+(subfinder → dnsx → naabu → httpx), re-aplicando o guardrail de escopo aos
+assets descobertos. Perspectivas reservadas (`ASSUMED_BREACH`, `AUTHENTICATED`)
+são extensões futuras do enum + `_PROFILES`.
+
 ## Modo com IA × sem IA
 
 Cada função de enriquecimento passa pelo `Enricher`: se há provedor com chave,

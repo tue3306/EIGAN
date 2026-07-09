@@ -6,6 +6,11 @@
 authorized: false          # mude para true APENAS com autorização real
 engagement: "Pentest de exemplo - lab local"
 
+# Perspectiva do engajamento (pode ser sobreposta por --perspective):
+#   external → visão de atacante na internet; recusa RFC1918/loopback por padrão.
+#   internal → dentro da rede; recusa IP público por padrão (evita vazar scan).
+perspective: internal
+
 hosts:
   - 127.0.0.1              # alvo local de teste
   - localhost
