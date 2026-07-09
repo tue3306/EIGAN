@@ -52,6 +52,7 @@ class PluginMetadata:
     chained_after: tuple[str, ...] = ()   # capabilities que rodam antes
     enabled_by_default: bool = True
     roadmap: bool = False          # scaffolded honesto: declarado, ainda não operante
+    install_hint: str = ""         # como instalar a ferramenta (usado por `doctor`)
     path: Path | None = None
 
     @classmethod
@@ -97,6 +98,7 @@ class PluginMetadata:
             chained_after=tuple(_as_list(data.get("chained_after"))),
             enabled_by_default=bool(data.get("enabled_by_default", True)),
             roadmap=bool(data.get("roadmap", False)),
+            install_hint=str(data.get("install_hint", "")),
             path=p,
         )
 

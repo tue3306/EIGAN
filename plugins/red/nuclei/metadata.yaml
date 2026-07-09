@@ -15,3 +15,4 @@ commercial_use: verify
 requires_credentials: false
 chained_after: [web_probe]
 enabled_by_default: true
+install_hint: "https://github.com/projectdiscovery/nuclei#installation"

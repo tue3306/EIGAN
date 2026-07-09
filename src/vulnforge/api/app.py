@@ -11,6 +11,7 @@ de escopo do CLI.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -21,15 +22,17 @@ from ..findings.store import FindingStore
 
 app = FastAPI(
     title="VulnForge API",
-    version="0.1.0",
-    description="Plataforma de scanning e gestão de vulnerabilidades (uso autorizado).",
+    version="0.2.0",
+    description="Plataforma modular de operações de segurança (uso autorizado).",
 )
 
-_DB = "vulnforge.db"
+
+def _db_path() -> str:
+    return os.getenv("VULNFORGE_DB", "vulnforge.db")
 
 
 def _store() -> FindingStore:
-    return FindingStore(_DB)
+    return FindingStore(_db_path())
 
 
 class HealthOut(BaseModel):

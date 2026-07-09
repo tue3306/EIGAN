@@ -16,3 +16,4 @@ commercial_use: verify
 requires_credentials: false
 chained_after: [port_discovery]
 enabled_by_default: true
+install_hint: "https://github.com/projectdiscovery/httpx#installation"

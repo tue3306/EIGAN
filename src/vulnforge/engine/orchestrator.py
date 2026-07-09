@@ -49,7 +49,8 @@ class Orchestrator:
                  registry: Optional[PluginRegistry] = None,
                  risk: Optional["RiskScorer"] = None) -> None:
         self._store = store
-        self._registry = registry or PluginRegistry.discover()
+        # registry vazio é falsy (tem __len__); checagem explícita evita redescobrir.
+        self._registry = registry if registry is not None else PluginRegistry.discover()
         self._risk = risk
 
     def _resolve_stage_plugins(self, stage: Stage, perspective: Perspective,
