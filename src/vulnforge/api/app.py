@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from .. import __version__
 from ..ai.provider import default_provider
 from ..analysis.attack import map_attack
 from ..analysis.compliance import assess_compliance
@@ -25,12 +26,12 @@ from ..findings.store import FindingStore
 
 app = FastAPI(
     title="VulnForge API",
-    version="0.2.0",
+    version=__version__,
     description="Plataforma modular de operações de segurança (uso autorizado).",
 )
 
 _AI_ENV = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "OLLAMA_HOST")
-_TOOL_VERSION = "0.2.0"
+_TOOL_VERSION = __version__
 
 
 def _db_path() -> str:
@@ -109,8 +110,7 @@ def scan_detail(scan_id: int) -> dict:
 
 
 @app.get("/api/v1/scans/{scan_id}/findings")
-def scan_findings(scan_id: int,
-                  severity: str | None = Query(default=None)) -> dict:
+def scan_findings(scan_id: int, severity: str | None = Query(default=None)) -> dict:
     store = _store()
     findings = _findings_or_404(store, scan_id)
     if severity:
@@ -146,5 +146,7 @@ def dashboard() -> str:
     index = Path(__file__).parent / "static" / "index.html"
     if index.exists():
         return index.read_text()
-    return ("<h1>VulnForge</h1><p>API ativa. Veja <a href='/docs'>/docs</a> e "
-            "<code>/api/v1/scans</code>.</p>")
+    return (
+        "<h1>VulnForge</h1><p>API ativa. Veja <a href='/docs'>/docs</a> e "
+        "<code>/api/v1/scans</code>.</p>"
+    )

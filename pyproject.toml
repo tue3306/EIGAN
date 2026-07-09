@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vulnforge"
-version = "0.1.0"
-description = "Plataforma modular de scanning e gestão de vulnerabilidades para Linux (uso autorizado)."
+version = "0.2.0"
+description = "Plataforma modular de operações de segurança (Red/Blue/Purple) — Core Engine próprio, plugins, IA opcional. Uso autorizado."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

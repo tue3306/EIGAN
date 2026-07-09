@@ -15,9 +15,11 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: Lint
-        run: ruff check src tests
+        run: ruff check src plugins tests
+      - name: Format
+        run: ruff format --check src plugins tests
       - name: Type-check
-        run: mypy src || true   # não-bloqueante nesta fase
+        run: mypy src
       - name: Tests
         run: pytest -q --cov=vulnforge --cov-report=term-missing
 
