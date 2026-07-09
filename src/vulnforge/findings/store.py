@@ -52,6 +52,7 @@ class FindingStore:
             (engagement, profile, json.dumps(targets), datetime.now(timezone.utc).isoformat()),
         )
         self._conn.commit()
+        assert cur.lastrowid is not None  # garantido após INSERT bem-sucedido
         return int(cur.lastrowid)
 
     def finish_scan(self, scan_id: int) -> None:

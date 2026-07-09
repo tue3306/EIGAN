@@ -15,7 +15,10 @@ from __future__ import annotations
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
+
+if TYPE_CHECKING:
+    from .risk import RiskScorer
 
 from ..findings.dedup import deduplicate
 from ..findings.schema import Finding
@@ -151,10 +154,3 @@ class Orchestrator:
         except Exception as exc:  # noqa: BLE001 — um plugin não derruba o pipeline
             emit(f"[{spec.name}] erro em {target}: {exc}")
         return []
-
-
-# Import tardio só para type hints do scorer opcional (evita ciclo em runtime).
-try:  # pragma: no cover
-    from .risk import RiskScorer
-except Exception:  # pragma: no cover
-    RiskScorer = object  # type: ignore
