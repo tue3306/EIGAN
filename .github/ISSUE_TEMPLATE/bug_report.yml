@@ -1,0 +1,60 @@
+name: "🐛 Bug report"
+description: Reportar um comportamento incorreto do VulnForge (não use para vulnerabilidades de segurança).
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por reportar! ⚠️ **Vulnerabilidade de segurança no VulnForge?**
+        Não abra Issue pública — siga o [SECURITY.md](../security/policy).
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pré-checagem
+      options:
+        - label: Rodei `vulnforge doctor` e li a saída.
+          required: true
+        - label: Procurei Issues existentes e não encontrei duplicata.
+          required: true
+        - label: Isto não é uma vulnerabilidade de segurança (essas vão pelo SECURITY.md).
+          required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: O que aconteceu?
+      description: Descreva o bug e o que você esperava que acontecesse.
+      placeholder: Ao rodar `vulnforge scan ...`, esperava X mas obtive Y.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Passos para reproduzir
+      description: Comando exato e contexto. **Não inclua alvos de terceiros nem segredos.**
+      placeholder: |
+        1. vulnforge scan --target localhost --perspective internal ...
+        2. ...
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Saída do `vulnforge doctor`
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Versão do VulnForge
+      placeholder: "0.2.0 (ou commit)"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Ambiente
+      placeholder: "Ex.: Kali Linux, Python 3.11, instalação via pip / Docker"
+    validations:
+      required: true

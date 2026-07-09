@@ -1,0 +1,49 @@
+name: "✨ Feature request / novo plugin"
+description: Sugerir uma capability, plugin ou melhoria.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pensa em capacidades, não só em ferramentas. Se for um **novo plugin**,
+        veja como adicionar um em ~5 min no [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md).
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Tipo
+      options:
+        - Novo plugin (ferramenta para uma capability existente)
+        - Nova capability
+        - Melhoria no Core Engine (pipeline, risco, correlação)
+        - Relatório / dashboard / API
+        - Documentação / DX
+        - Outro
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domínio
+      options: ["Red", "Blue", "Purple", "Core/Plataforma", "N/A"]
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema / motivação
+      description: Que dor isso resolve? Qual pergunta Outside-In / Inside-Out ajuda a responder?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+      description: Comportamento esperado. Se envolve uma ferramenta, cite-a e sua licença/uso comercial (sem inventar — marcaremos `VERIFICAR`).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+    validations:
+      required: false
