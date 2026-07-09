@@ -1,0 +1,16 @@
+# Escopo autorizado — copie para scope.yaml e edite.
+# REGRA INEGOCIÁVEL: só escaneie alvos que você tem AUTORIZAÇÃO DOCUMENTADA
+# para testar. 'authorized: true' é sua afirmação legal de consentimento.
+# Sem este arquivo (ou com authorized:false), todo scan ativo é BLOQUEADO.
+
+authorized: false          # mude para true APENAS com autorização real
+engagement: "Pentest de exemplo - lab local"
+
+hosts:
+  - 127.0.0.1              # alvo local de teste
+  - localhost
+  # - 10.0.0.0/24         # rede CIDR
+  # - "*.lab.internal"    # wildcard de subdomínio
+
+exclude:
+  # - 127.0.0.1:22         # exceções têm precedência sobre hosts

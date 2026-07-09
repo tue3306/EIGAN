@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 2cm; @bottom-center { content: "Página " counter(page) " / " counter(pages); font-size: 9px; color: #888; } }
+  body { font-family: "DejaVu Sans", Arial, sans-serif; color: #1a1a1a; font-size: 11px; }
+  h1 { color: #0b3d5c; } h2 { color: #0b3d5c; border-bottom: 2px solid #0b3d5c; padding-bottom: 3px; margin-top: 24px; }
+  .cover { text-align: center; margin-top: 30%; }
+  .meta { color: #555; font-size: 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { border: 1px solid #ccc; padding: 5px; text-align: left; vertical-align: top; }
+  th { background: #0b3d5c; color: #fff; }
+  .sev-critical { color: #fff; background: #7b0000; padding: 1px 6px; border-radius: 3px; }
+  .sev-high { color: #fff; background: #c0392b; padding: 1px 6px; border-radius: 3px; }
+  .sev-medium { color: #000; background: #f39c12; padding: 1px 6px; border-radius: 3px; }
+  .sev-low { color: #000; background: #f1c40f; padding: 1px 6px; border-radius: 3px; }
+  .sev-info { color: #fff; background: #7f8c8d; padding: 1px 6px; border-radius: 3px; }
+  .ai-tag { font-size: 8px; background: #6c5ce7; color:#fff; padding: 1px 4px; border-radius: 3px; }
+  .finding { page-break-inside: avoid; border-left: 3px solid #0b3d5c; padding-left: 10px; margin: 14px 0; }
+  code, pre { background: #f4f4f4; font-family: "DejaVu Sans Mono", monospace; font-size: 9px; white-space: pre-wrap; word-break: break-all; }
+  .legal { border: 1px solid #c0392b; background: #fdf0ef; padding: 8px; font-size: 9px; }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <h1>{{ brand }}</h1>
+    <h2 style="border:none">Relatório de Avaliação de Vulnerabilidades</h2>
+    <p class="meta">Engajamento: {{ engagement }}</p>
+    <p class="meta">Gerado em: {{ generated_at }}</p>
+    <p class="meta">Metodologia: PTES · NIST SP 800-115</p>
+    <p class="meta">Versão da ferramenta: {{ tool_version }}</p>
+    <p class="meta">Hash de integridade do dataset: <code>{{ dataset_hash }}</code></p>
+  </div>
+
+  <div style="page-break-before: always"></div>
+  <div class="legal">
+    <strong>Aviso legal:</strong> este relatório documenta testes realizados
+    exclusivamente contra os alvos autorizados listados no escopo. Uso não
+    autorizado de técnicas de scanning é ilegal em diversas jurisdições.
+  </div>
+
+  <h2>1. Escopo autorizado</h2>
+  <ul>{% for t in targets %}<li>{{ t }}</li>{% endfor %}</ul>
+
+  <h2>2. Sumário por severidade</h2>
+  <table>
+    <tr><th>Severidade</th><th>Quantidade</th></tr>
+    {% for sev, count in summary.items() %}
+    <tr><td><span class="sev-{{ sev }}">{{ sev|upper }}</span></td><td>{{ count }}</td></tr>
+    {% endfor %}
+  </table>
+  {% if executive_summary %}
+  <h2>3. Sumário executivo {% if executive_ai %}<span class="ai-tag">gerado por IA</span>{% endif %}</h2>
+  <p>{{ executive_summary }}</p>
+  {% endif %}
+
+  <h2>4. Findings</h2>
+  <table>
+    <tr><th>#</th><th>Título</th><th>Severidade</th><th>Ativo</th><th>CWE</th><th>OWASP</th><th>Fonte</th></tr>
+    {% for f in findings %}
+    <tr>
+      <td>{{ loop.index }}</td><td>{{ f.title }}</td>
+      <td><span class="sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span></td>
+      <td>{{ f.affected_asset }}</td><td>{{ f.cwe or "—" }}</td>
+      <td>{{ f.owasp or "—" }}</td><td>{{ f.source_tool }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>5. Detalhamento</h2>
+  {% for f in findings %}
+  <div class="finding">
+    <h3>{{ loop.index }}. {{ f.title }}
+      <span class="sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span>
+      {% if f.confidence.value == "unverified" %}<span class="ai-tag" style="background:#c0392b">UNVERIFIED</span>{% endif %}
+      {% if f.ai_generated %}<span class="ai-tag">IA</span>{% endif %}
+    </h3>
+    <p><strong>Ativo:</strong> {{ f.affected_asset }} · <strong>Fonte:</strong> {{ f.source_tool }}
+    {% if f.cvss %} · <strong>CVSS {{ f.cvss.version }}:</strong> {{ f.cvss.score }}{% endif %}</p>
+    <p><strong>Descrição:</strong> {{ enrichment[loop.index0].text }}</p>
+    {% if f.evidence %}<p><strong>Evidência:</strong></p><pre>{{ f.evidence }}</pre>{% endif %}
+    {% if f.reproduction %}<p><strong>Reprodução:</strong> <code>{{ f.reproduction }}</code></p>{% endif %}
+    <p><strong>Remediação:</strong> {{ enrichment[loop.index0].remediation }}</p>
+    {% if f.references %}<p><strong>Referências:</strong></p>
+    <ul>{% for r in f.references %}<li><code>{{ r }}</code></li>{% endfor %}</ul>{% endif %}
+    <p class="meta">Técnica ATT&CK: {{ f.attack_technique or "—" }} · Confiança: {{ f.confidence.value }}</p>
+  </div>
+  {% endfor %}
+
+  <p class="meta" style="margin-top:30px">
+    Seções marcadas com <span class="ai-tag">IA</span> foram geradas pela camada de IA e
+    requerem revisão humana. Itens <span class="ai-tag" style="background:#c0392b">UNVERIFIED</span>
+    não foram confirmados contra fonte oficial (NVD/OSV).
+  </p>
+</body>
+</html>

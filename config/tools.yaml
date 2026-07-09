@@ -1,0 +1,39 @@
+# Catálogo de ferramentas externas do engine.
+# REGRA ANTI-INVENÇÃO (CLAUDE.md §5): versões NÃO são fixadas de memória.
+# Cada versão fica marcada como VERIFICAR e é resolvida por rotina que consulta
+# o registry/repo oficial antes do release. Itens não confirmados = UNVERIFIED.
+
+tools:
+  nmap:
+    binary: nmap
+    category: network-discovery
+    source: https://nmap.org/
+    version: "VERIFICAR"      # resolver via `nmap --version` / repo oficial
+    sandbox_image: "instrumentisto/nmap"   # VERIFICAR tag no release
+  nuclei:
+    binary: nuclei
+    category: vuln-templates
+    source: https://github.com/projectdiscovery/nuclei
+    version: "VERIFICAR"
+    sandbox_image: "projectdiscovery/nuclei"   # VERIFICAR tag
+    templates_repo: https://github.com/projectdiscovery/nuclei-templates
+  nikto:
+    binary: nikto
+    category: web
+    source: https://github.com/sullo/nikto
+    version: "VERIFICAR"
+  trivy:
+    binary: trivy
+    category: sca-container
+    source: https://github.com/aquasecurity/trivy
+    version: "VERIFICAR"
+  testssl:
+    binary: testssl.sh
+    category: tls
+    source: https://github.com/drwetter/testssl.sh
+    version: "VERIFICAR"
+
+# Fontes de enriquecimento de CVE (consultadas com cache; nunca inventadas):
+cve_feeds:
+  nvd: https://services.nvd.nist.gov/rest/json/cves/2.0
+  osv: https://api.osv.dev/v1/query

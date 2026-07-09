@@ -1,0 +1,26 @@
+# Configuração da camada de IA (OPCIONAL).
+# A IA nunca é dependência de função básica (CLAUDE.md §3.3/§7). Sem chave, tudo
+# funciona via fallback determinístico (base de conhecimento).
+# Chaves vêm SEMPRE de variáveis de ambiente, NUNCA deste arquivo.
+
+ai:
+  enabled: false          # ativado automaticamente se houver chave/provedor
+  default_provider: null  # anthropic | openai | google | ollama
+
+  redaction:
+    # remove segredos/PII antes de enviar a provedor EXTERNO (não local).
+    enabled: true
+
+  providers:
+    anthropic:
+      api_key_env: ANTHROPIC_API_KEY
+      model: "VERIFICAR"     # ex.: claude-* — confirmar id atual antes do release
+    openai:
+      api_key_env: OPENAI_API_KEY
+      model: "VERIFICAR"
+    google:
+      api_key_env: GOOGLE_API_KEY
+      model: "VERIFICAR"
+    ollama:
+      host_env: OLLAMA_HOST   # ex.: http://localhost:11434 — modelo local, sem redaction obrigatória
+      model: "VERIFICAR"

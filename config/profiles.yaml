@@ -1,0 +1,27 @@
+# Perfis de scan. Determinam quais adapters rodam e com quais opções.
+# Espelha o registro em engine/orchestrator.py; mantido em config para permitir
+# ajuste sem alterar código.
+
+profiles:
+  quick:
+    description: "Descoberta rápida de portas/serviços."
+    tools: [nmap]
+  standard:
+    description: "Descoberta + templates de vulnerabilidade."
+    tools: [nmap, nuclei]
+    options:
+      nuclei:
+        severity: "low,medium,high,critical"
+        rate_limit: 150
+  deep:
+    description: "Cobertura ampla (mais scripts NSE + todos os templates)."
+    tools: [nmap, nuclei]
+    options:
+      nmap:
+        scripts: true
+  network-only:
+    description: "Apenas rede."
+    tools: [nmap]
+  web-only:
+    description: "Apenas aplicação web."
+    tools: [nuclei]
