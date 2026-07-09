@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 2cm; @bottom-center { content: "Página " counter(page) " / " counter(pages); font-size: 9px; color: #888; } }
+  body { font-family: "DejaVu Sans", Arial, sans-serif; color: #1a1a1a; font-size: 11px; }
+  h1 { color: #0b3d5c; } h2 { color: #0b3d5c; border-bottom: 2px solid #0b3d5c; padding-bottom: 3px; margin-top: 24px; }
+  .cover { text-align: center; margin-top: 25%; }
+  .meta { color: #555; font-size: 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { border: 1px solid #ccc; padding: 5px; text-align: left; vertical-align: top; }
+  th { background: #0b3d5c; color: #fff; }
+  .sev-critical { color: #fff; background: #7b0000; padding: 1px 6px; border-radius: 3px; }
+  .sev-high { color: #fff; background: #c0392b; padding: 1px 6px; border-radius: 3px; }
+  .sev-medium { color: #000; background: #f39c12; padding: 1px 6px; border-radius: 3px; }
+  .sev-low { color: #000; background: #f1c40f; padding: 1px 6px; border-radius: 3px; }
+  .sev-info { color: #fff; background: #7f8c8d; padding: 1px 6px; border-radius: 3px; }
+  .ai-tag { font-size: 8px; background: #6c5ce7; color:#fff; padding: 1px 4px; border-radius: 3px; }
+  .kev { font-size: 8px; background: #7b0000; color:#fff; padding: 1px 4px; border-radius: 3px; }
+  .chain { font-size: 9px; color: #444; margin: 2px 0 0 0; }
+  .legal { border: 1px solid #c0392b; background: #fdf0ef; padding: 8px; font-size: 9px; }
+  .bar { height: 12px; background: #0b3d5c; display: inline-block; }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <h1>{{ brand }}</h1>
+    <h2 style="border:none">Relatório Executivo de Riscos</h2>
+    <p class="meta">Engajamento: {{ engagement }}</p>
+    <p class="meta">Gerado em: {{ generated_at }}</p>
+    <p class="meta">Metodologia: PTES · NIST SP 800-115</p>
+    <p class="meta">Versão da ferramenta: {{ tool_version }}</p>
+    <p class="meta">Feeds — KEV: {{ feeds.kev or "UNVERIFIED" }} · EPSS: {{ feeds.epss or "UNVERIFIED" }}</p>
+    <p class="meta">Hash de integridade: <code>{{ dataset_hash }}</code></p>
+  </div>
+
+  <div style="page-break-before: always"></div>
+  <div class="legal">
+    <strong>Aviso legal:</strong> avaliação realizada exclusivamente contra os
+    alvos autorizados listados no escopo.
+  </div>
+
+  <h2>1. Sumário executivo {% if executive_ai %}<span class="ai-tag">gerado por IA</span>{% endif %}</h2>
+  <p>{{ executive_summary }}</p>
+
+  <h2>2. Postura de risco</h2>
+  <table>
+    <tr><th>Severidade</th><th>Quantidade</th><th></th></tr>
+    {% for sev, count in summary.items() %}
+    <tr>
+      <td><span class="sev-{{ sev }}">{{ sev|upper }}</span></td>
+      <td>{{ count }}</td>
+      <td><span class="bar" style="width: {{ (count * 12) if count < 20 else 240 }}px"></span></td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="meta">Ativos avaliados: {{ correlations|length }} ·
+     Em CISA KEV (exploração ativa conhecida): {{ kev_count }}{% if not feeds.kev %} (KEV UNVERIFIED){% endif %}</p>
+
+  <h2>3. Riscos prioritários</h2>
+  <table>
+    <tr><th>#</th><th>Risco</th><th>Severidade</th><th>Ativo</th><th>Risco composto</th><th>EPSS</th><th>KEV</th></tr>
+    {% for f in top_risks %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ f.title }}</td>
+      <td><span class="sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span></td>
+      <td>{{ f.affected_asset }}</td>
+      <td>{{ "%.0f"|format(f.risk_rank) }}</td>
+      <td>{% if f.risk and f.risk.epss_verified %}{{ "%.3f"|format(f.risk.epss) }}{% else %}<span class="ai-tag" style="background:#c0392b">UNVERIFIED</span>{% endif %}</td>
+      <td>{% if f.risk and f.risk.kev %}<span class="kev">KEV</span>{% elif f.risk and f.risk.kev_verified %}não{% else %}?{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>4. Ativos mais críticos</h2>
+  {% for a in correlations[:10] %}
+  <div style="page-break-inside: avoid; margin: 8px 0;">
+    <strong>{{ a.asset }}</strong>
+    <span class="meta">— risco {{ "%.0f"|format(a.max_risk) }} · perspectivas: {{ a.perspectives|join(", ") }}
+    {% if a.cross_perspective %}<span class="ai-tag">Outside-In × Inside-Out</span>{% endif %}</span>
+    {% if a.attack_chain %}
+    <p class="chain">Cadeia possível (heurística): {{ a.attack_chain|join("  →  ") }}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <h2>5. Recomendações</h2>
+  <ol>
+    {% for rec in recommendations %}<li>{{ rec }}</li>{% endfor %}
+  </ol>
+
+  <p class="meta" style="margin-top:30px">
+    Sinais marcados <span class="ai-tag" style="background:#c0392b">UNVERIFIED</span> não foram
+    confirmados contra a fonte oficial (rode <code>vulnforge feeds update</code>). A cadeia de
+    ataque é heurística e requer validação por especialista.
+  </p>
+</body>
+</html>
