@@ -1,106 +1,205 @@
-# VulnForge
+<p align="center">
+  <img src="web/assets/logo.svg" alt="VulnForge" height="72">
+</p>
 
-Plataforma modular de **scanning e gestão de vulnerabilidades para Linux** —
-estilo OpenVAS/Greenbone + OWASP ZAP, unificada, com uma **camada opcional de
-IA** para leitura e explicação dos resultados. O núcleo (engine + store +
-relatório) funciona **100% sem IA e offline**.
+<p align="center">
+  <strong>Plataforma modular de operações de segurança — Red · Blue · Purple.</strong><br>
+  Core Engine próprio, arquitetura de plugins, <strong>funciona offline e sem chave de IA</strong>.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="Licença" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-blue"></a>
+  <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
+  <a href="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="IA opcional" src="https://img.shields.io/badge/IA-opcional-6c5ce7">
+</p>
 
 ---
 
 > ## ⚠️ AVISO LEGAL — USO AUTORIZADO APENAS
 >
 > Scanning ativo de vulnerabilidades **sem autorização documentada é ilegal** em
-> muitas jurisdições. Esta ferramenta **bloqueia por padrão** qualquer alvo que
-> não esteja declarado em um `scope.yaml` com `authorized: true`. Você é o único
-> responsável por operar exclusivamente contra sistemas que tem permissão
-> explícita e por escrito para testar. Testes de integração rodam apenas contra
-> alvos vulneráveis **locais** (DVWA/Juice Shop), nunca contra terceiros.
+> muitas jurisdições. O VulnForge **bloqueia por padrão** qualquer alvo fora de um
+> `scope.yaml` autorizado e exige confirmação de autorização. Você é o único
+> responsável por operar **apenas** contra sistemas que possui ou tem permissão
+> escrita para testar. Testes de integração rodam somente contra alvos
+> vulneráveis **locais** (DVWA/Juice Shop), nunca contra terceiros.
 
----
-
-## Princípios de arquitetura
-
-- **Perspectiva (vantage point) de primeira classe:** o mesmo alvo é avaliado de
-  fora (`external` — visão de atacante, bloqueia RFC1918 por padrão) ou de dentro
-  (`internal` — assumed breach, bloqueia IP público por padrão). A perspectiva
-  dirige guardrail, ferramentas ativas, rate limit e pipeline **via configuração**
-  (`perspective.py`), não por `if` espalhado. Ver `docs/architecture.md`.
-- **Determinístico primeiro (CLAUDE.md §7):** toda função de IA tem um caminho
-  equivalente que roda sem nenhuma chave de API. A IA apenas *lê e explica*
-  findings já produzidos pelo engine — nunca escaneia sozinha.
-- **Guardrail de escopo é parte do produto**, não um extra: `security/scope.py`
-  + consent gate bloqueiam alvos fora do escopo.
-- **Anti-invenção (CLAUDE.md §5):** versões de ferramentas e CVEs não são
-  fixados "de memória" — ficam marcados `VERIFICAR`/`UNVERIFIED` até confirmação
-  contra fonte oficial (NVD/OSV).
-- **Findings normalizados:** schema único para toda ferramenta; dedup e
-  correlação entre fontes.
-- **Camadas desacopladas:** domínio (findings/scope) sem I/O; adapters, store,
-  IA e report implementam portas.
-
-## Stack
-
-Python 3.11+ · Pydantic v2 (schema) · SQLite via stdlib (Repository Pattern,
-Postgres opcional) · Click (CLI) · FastAPI + Uvicorn (API/WS) · Jinja2 +
-WeasyPrint (PDF) · pytest.
-
-## Instalação (dev)
+## ⚡ Quickstart (3 minutos)
 
 ```bash
-pip install -e ".[pdf,dev]"      # ou: pip install -e .
+# 1. instalar (Python 3.11+)
+pip install -e ".[pdf,dev]"
+
+# 2. checar o ambiente (ferramentas, IA, Docker, feeds) — veredito claro
+vulnforge doctor
+
+# 3. subir um alvo de teste LOCAL que você controla (exemplo)
+docker run --rm -d -p 3000:3000 bkimminich/juice-shop
+
+# 4. wizard: alvo → perspectiva → autorização inline → progresso → PDF
+vulnforge
+
+# 5. dashboard web
+vulnforge serve            # http://127.0.0.1:8000
 ```
 
-Ferramentas externas (nmap, nuclei, ...) são detectadas no PATH; adapters
-indisponíveis são pulados com aviso (não quebram o scan). Ver `docker/` para o
-caminho recomendado com sandbox.
+Sem nenhuma chave de API, **tudo acima funciona** — a IA só enriquece quando presente.
+
+## 🗺️ Mapa do projeto
+
+```
+src/vulnforge/       Core: domínio, engine, análises, report, IA, API, CLI
+plugins/             Capabilities intercambiáveis (red/ blue/ purple/) — auto-discovery
+config/              profiles.yaml · tools.yaml · ai.yaml (zero-config por padrão)
+knowledge/           Base determinística: skills/ (SKILL.md), attack/, compliance/
+web/                 Landing page + design tokens + logo/favicon
+docs/                architecture · adr/ · design/ · roadmap/ · AUDIT · BLOCKERS
+examples/            Alvos de exemplo + laboratório local
+docker/              Dockerfile + compose (sandbox das ferramentas)
+tests/               Unit + integração (só contra alvos locais)
+```
+
+Cada diretório tem seu próprio `README.md`.
+
+## O que é (e o que não é)
+
+O VulnForge não é "só um scanner": é uma **plataforma** com **Core Engine
+próprio** que orquestra ferramentas, **normaliza** os resultados em um schema
+único, **correlaciona** entre fontes, **prioriza risco** (CVSS/EPSS/KEV) e
+**gera relatórios** — extensível por **plugins** e pensada para crescer a 100+
+módulos sem reescrever o núcleo. É **AI-native por design e AI-opcional por
+requisito**.
+
+Tudo gira em torno de duas perguntas:
+
+- **Outside-In** — o que um atacante descobre vindo de fora?
+- **Inside-Out** — o que um analista identifica estando dentro da rede?
+
+## Diferenciais
+
+- 🧩 **Plugins/capabilities** — adicionar uma ferramenta é criar uma pasta; o
+  Core não muda (auto-discovery por `metadata.yaml`).
+- 🧭 **Perspectiva de 1ª classe** — Outside-In/Inside-Out dirigem guardrails,
+  ferramentas e rate limit por configuração, não por `if` espalhado.
+- 🎯 **Risk Engine honesto** — CVSS v3.1/v4, EPSS (FIRST.org) e CISA KEV de fonte
+  oficial; sinal não confirmado sai `UNVERIFIED`, **nunca** fabricado.
+- 🔗 **Correlação + inventário + ATT&CK** — dedup entre ferramentas por ativo,
+  mapa MITRE e gap analysis, sem fundir perspectivas cegamente.
+- 📄 **Relatórios** técnico e executivo em **HTML/PDF/JSON/CSV/SARIF** — todos
+  sem IA, com hash de integridade e metodologia (PTES/NIST 800-115).
+- 🤖 **IA opcional** multi-provedor (Anthropic/OpenAI/Google/Ollama) com
+  **fallback determinístico** e grounding; explica e prioriza, jamais escaneia.
+- 🚀 **Baixa e roda** — wizard, `doctor`, consent inline e zero-config.
+
+## Arquitetura
+
+```
+Interfaces:  CLI & Wizard  ·  API REST + WebSocket  ·  Dashboard  ·  Landing
+      │
+Core Engine: Discovery → Fingerprint → Execução (plugins) → Normalização
+             → Correlação → Enriquecimento (ATT&CK·CVSS·CWE·CAPEC·EPSS/KEV)
+             → Risco → Reporting                                    ← núcleo estável
+      │
+Infra:  plugins (red/blue/purple)  ·  Store (SQLite/Postgres)
+        ·  Relatórios (PDF/HTML/JSON/CSV/SARIF)  ·  IA (opcional, com fallback)
+```
+
+Dependências apontam para dentro: o domínio (`findings/`, `security/`,
+`perspective.py`) não conhece banco, rede nem ferramentas. Detalhes em
+[docs/architecture.md](docs/architecture.md) e nos [ADRs](docs/adr/).
+
+## Tecnologias
+
+Python 3.11+ · Pydantic v2 (schema) · SQLite via stdlib (Repository Pattern,
+Postgres opcional via `DATABASE_URL`) · Click (CLI) + wizard · FastAPI + Uvicorn
+(API/WS) · Jinja2 + WeasyPrint (PDF) · pytest · ruff · mypy.
+
+## Instalação
+
+```bash
+git clone https://github.com/tue3306/vulnerability-scanner.git
+cd vulnerability-scanner
+pip install -e ".[pdf,dev]"        # extras: pdf, ai, dev
+```
+
+Ferramentas externas (nmap, nuclei, subfinder, ...) são detectadas no PATH;
+adapters indisponíveis são **pulados com aviso** (não quebram o scan). `vulnforge
+doctor` diz exatamente o que falta e como instalar. Caminho recomendado com
+sandbox: [docker/](docker/) (`docker compose up`).
 
 ## Uso
 
 ```bash
-# 1. copie e edite o escopo (só alvos autorizados!)
+# escopo: copie e edite com APENAS os seus alvos autorizados
 cp scope.example.yaml scope.yaml
 
-# 2. scan determinístico (sem IA) — escolha a perspectiva
-vulnforge scan --target app.example.com --perspective external --profile standard --scope scope.yaml
-vulnforge scan --target 10.0.0.5      --perspective internal --profile standard --scope scope.yaml
+# scan determinístico (sem IA) — escolha a perspectiva
+vulnforge scan --target app.local --perspective external --profile standard --scope scope.yaml
+vulnforge scan --target 10.0.0.5  --perspective internal --profile standard --scope scope.yaml
 
-# 3. relatório PDF sem nenhuma chave de API
-vulnforge report --scan 1 --format pdf
+# relatório (sem nenhuma chave de API); estilos: technical | executive
+vulnforge report --scan 1 --format pdf --style executive
 
-# 4. API + dashboard
-vulnforge serve            # http://127.0.0.1:8000  (/docs, /api/v1/...)
+# API + dashboard
+vulnforge serve                    # http://127.0.0.1:8000  (/docs, /api/v1/...)
 
 # CI: falha o pipeline se houver finding alto
-vulnforge scan --target-list targets.txt --profile web-only \
+vulnforge scan --target-list examples/targets.example.txt --profile web-only \
   --scope scope.yaml --yes --fail-on high
 ```
 
-Perfis: `quick`, `standard`, `deep`, `network-only`, `web-only`.
+Perfis: `quick`, `standard`, `deep`, `network-only`, `web-only`. Mais exemplos e
+laboratório local em [examples/](examples/).
 
 ## Camada de IA (opcional)
 
-Sem chave configurada, tudo funciona via fallback determinístico (base de
-conhecimento em `knowledge/skills/`, padrão agentskills.io). Com uma chave
-(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`) ou Ollama local
-(`OLLAMA_HOST`), o sumário executivo e as explicações são enriquecidos e
-marcados `ai_generated`. Configuração em `config/ai.yaml`.
+Sem chave, tudo funciona via fallback determinístico (base de conhecimento em
+`knowledge/skills/`). Com uma chave (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+`GOOGLE_API_KEY`) ou Ollama local (`OLLAMA_HOST`), o sumário executivo e as
+explicações são enriquecidos e marcados `ai_generated`. Configure em
+`config/ai.yaml` (chaves só por env — nunca no arquivo). A IA **nunca** escaneia
+nem descobre vulnerabilidade: só interpreta findings já produzidos.
 
-## Testes
+## Screenshots
 
-```bash
-pytest -q          # 21 testes: escopo, schema, dedup, store, parsers, report
-```
+A landing page ([`web/index.html`](web/index.html)) traz uma prévia do dashboard
+com a identidade visual do produto. O dashboard real sobe com `vulnforge serve`.
 
-## Status do projeto (roadmap por fases)
+> 📸 _GIFs/screenshots animados do wizard e do dashboard entram aqui em uma
+> próxima iteração (placeholder)._ Para vê-los agora, rode `vulnforge serve` ou
+> abra a landing localmente (`python -m http.server -d web 5500`).
 
-Implementado nesta fundação: guardrail de escopo + consent gate, schema de
-finding, store SQLite, `BaseToolAdapter` + adapters nmap/nuclei, orquestrador
-com dedup, base de conhecimento, relatório determinístico HTML/PDF, camada de IA
-com fallback, API REST + esqueleto de dashboard, CLI headless com `--fail-on`.
+## FAQ
 
-Próximas fases (ver `docs/architecture.md`): mais adapters (ZAP/nikto/trivy/
-testssl), dashboard React, provedores de IA concretos, `.deb`/systemd, feeds.
+**Preciso de uma chave de IA?** **Não.** O VulnForge funciona 100% sem IA —
+scans, correlação, risco, dashboard e relatórios completos saem do caminho
+determinístico. A IA só adiciona riqueza quando há um provedor configurado.
+
+**É legal usar?** Depende de **você** ter autorização. Só escaneie o que você
+possui ou tem permissão escrita para testar. O produto bloqueia alvos fora do
+escopo por padrão — trate isso como recurso, não obstáculo. Veja o
+[SECURITY.md](SECURITY.md) e o aviso legal acima.
+
+**Como adiciono uma ferramenta?** Criando uma pasta em `plugins/` — o Core faz
+auto-discovery. Passo a passo no [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Mais perguntas na seção FAQ da [landing page](web/index.html).
+
+## Roadmap
+
+MVP entregue (Red/Blue/Purple), módulos futuros como *scaffold honesto* e a visão
+de plataforma estão em [docs/ROADMAP.md](docs/ROADMAP.md). Itens comerciais são
+**apenas documentados** em [docs/roadmap/commercial.md](docs/roadmap/commercial.md)
+(sem código).
+
+## Contribuindo
+
+Contribuições são bem-vindas! Veja [CONTRIBUTING.md](CONTRIBUTING.md) (inclui
+"adicionar um plugin em ~5 min" e a Definition of Done) e o
+[Código de Conduta](CODE_OF_CONDUCT.md). Mudanças de comportamento vêm com teste;
+`ruff` + `mypy` + `pytest` verdes antes do PR.
 
 ## Licença
 
-Apache-2.0 — ver [LICENSE](LICENSE).
+[Apache-2.0](LICENSE) — © 2026 VulnForge contributors.
