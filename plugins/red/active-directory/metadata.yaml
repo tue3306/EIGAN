@@ -1,0 +1,12 @@
+# SCAFFOLD HONESTO (roadmap) — descoberto e catalogado, ainda NÃO executa (§B).
+# Contrato declarado; a implementação é trabalho futuro (ver docs/ROADMAP.md).
+name: active-directory
+category: red
+subcategory: network
+capabilities: [ad_enumeration]
+supported_perspectives: [internal]
+tool: active-directory
+roadmap: true
+enabled_by_default: false
+description: >-
+  Enumeração de Active Directory (LDAP/Kerberos/SMB), shares e delegações.

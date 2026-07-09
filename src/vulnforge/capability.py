@@ -65,6 +65,26 @@ class Capability(str, Enum):
     HARDENING_AUDIT = "hardening_audit"
     IOC_INVENTORY = "ioc_inventory"
 
+    # ── roadmap (scaffolded honesto — §B) ────────────────────────────────────
+    # Contratos declarados para os módulos ainda NÃO construídos. Plugins com
+    # estas capabilities têm ``roadmap: true`` no metadata: são descobertos e
+    # catalogados, porém NÃO executam. Existem para provar que a arquitetura
+    # comporta 100+ módulos sem tocar no Core.
+    AD_ENUMERATION = "ad_enumeration"           # red
+    CLOUD_AUDIT = "cloud_audit"                 # red
+    WIRELESS_AUDIT = "wireless_audit"           # red
+    PASSWORD_AUDIT = "password_audit"           # red
+    EXPLOITATION = "exploitation"               # red (autorizada)
+    SIEM_INGEST = "siem_ingest"                 # blue
+    DETECTION_RULES = "detection_rules"         # blue
+    THREAT_HUNTING = "threat_hunting"           # blue
+    MALWARE_ANALYSIS = "malware_analysis"       # blue
+    LOG_ANALYSIS = "log_analysis"               # blue
+    INCIDENT_RESPONSE = "incident_response"     # blue
+    ATTACK_SIMULATION = "attack_simulation"     # purple
+    DETECTION_VALIDATION = "detection_validation"  # purple
+    CONTROL_VALIDATION = "control_validation"   # purple
+
     @classmethod
     def from_str(cls, value: str) -> "Capability":
         """Resolve a partir do ``metadata.yaml`` (aceita o valor exato do enum)."""

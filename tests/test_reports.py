@@ -15,6 +15,7 @@ _KB = Path(__file__).resolve().parents[1] / "knowledge" / "skills"
 def _findings():
     f1 = Finding(title="SQLi", severity=Severity.HIGH, affected_asset="http://h/app",
                  source_tool="nuclei", cwe="CWE-89", owasp="A03:2021",
+                 attack_technique="T1190",
                  cvss=CVSS(version="3.1", score=8.8),
                  references=["https://nvd.nist.gov/vuln/detail/CVE-2024-0001"])
     f1.risk = RiskScore(score=96.0, epss=0.9, epss_verified=True, kev=True,
@@ -62,6 +63,8 @@ def test_executive_report_without_ai():
     assert "Riscos prioritários" in html
     assert "CISA KEV" in html  # KEV verificado aparece
     assert "2026-07-07" in html  # provenance do feed
+    assert "MITRE ATT&amp;CK" in html  # seção Purple
+    assert "T1190" in html and "Initial Access" in html  # técnica mapeada
 
 
 def test_executive_marks_unverified_when_no_feed():

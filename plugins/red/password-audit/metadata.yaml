@@ -1,0 +1,12 @@
+# SCAFFOLD HONESTO (roadmap) — descoberto e catalogado, ainda NÃO executa (§B).
+# Contrato declarado; a implementação é trabalho futuro (ver docs/ROADMAP.md).
+name: password-audit
+category: red
+subcategory: network
+capabilities: [password_audit]
+supported_perspectives: [internal]
+tool: password-audit
+roadmap: true
+enabled_by_default: false
+description: >-
+  Auditoria de credenciais fracas quando autorizado (spray/brute controlado).

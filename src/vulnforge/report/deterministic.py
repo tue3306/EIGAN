@@ -20,6 +20,8 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ..ai.provider import Enricher
+from ..analysis.attack import map_attack
+from ..analysis.inventory import build_inventory, summarize
 from ..engine.correlation import AssetCorrelation, correlate_assets
 from ..findings.schema import Finding, Severity
 from . import exporters
@@ -94,6 +96,7 @@ class ReportGenerator:
             executive_summary = self._deterministic_executive(
                 findings, correlations, summary, kev_count)
 
+        inventory = build_inventory(findings)
         ctx = self._base_meta(findings, engagement, targets)
         ctx.update({
             "summary": summary,
@@ -103,6 +106,8 @@ class ReportGenerator:
             "recommendations": self._recommendations(findings),
             "executive_summary": executive_summary,
             "executive_ai": ai,
+            "attack": map_attack(findings),          # Purple: cobertura ATT&CK + gap
+            "inventory_summary": summarize(inventory),  # Blue: números do inventário
         })
         return self._env.get_template("executive.html.j2").render(**ctx)
 

@@ -57,6 +57,12 @@
   </table>
   <p class="meta">Ativos avaliados: {{ correlations|length }} ·
      Em CISA KEV (exploração ativa conhecida): {{ kev_count }}{% if not feeds.kev %} (KEV UNVERIFIED){% endif %}</p>
+  {% if inventory_summary %}
+  <p class="meta">Inventário: {{ inventory_summary.assets }} ativo(s) ·
+     {{ inventory_summary.with_open_ports }} com portas abertas ·
+     {{ inventory_summary.with_web }} com web ·
+     {{ inventory_summary.total_ports }} porta(s) no total.</p>
+  {% endif %}
 
   <h2>3. Riscos prioritários</h2>
   <table>
@@ -86,7 +92,24 @@
   </div>
   {% endfor %}
 
-  <h2>5. Recomendações</h2>
+  {% if attack %}
+  <h2>5. Cobertura MITRE ATT&amp;CK (Purple)</h2>
+  {% if attack.hits %}
+  <table>
+    <tr><th>Técnica</th><th>Nome</th><th>Tática</th><th>Ocorrências</th></tr>
+    {% for h in attack.hits %}
+    <tr><td><code>{{ h.technique }}</code></td><td>{{ h.name }}</td><td>{{ h.tactic }}</td><td>{{ h.count }}</td></tr>
+    {% endfor %}
+  </table>
+  <p class="meta"><strong>Táticas com sinal:</strong> {{ attack.tactics_covered|join(", ") or "nenhuma" }}</p>
+  <p class="meta"><strong>Gap (táticas sem sinal neste scan):</strong> {{ attack.tactics_gap|join(", ") }}</p>
+  {% if attack.unmapped %}<p class="meta">Técnicas fora do catálogo curado (não mapeadas): {{ attack.unmapped|join(", ") }}</p>{% endif %}
+  {% else %}
+  <p class="meta">Nenhuma técnica ATT&amp;CK associada aos findings deste scan.</p>
+  {% endif %}
+  {% endif %}
+
+  <h2>6. Recomendações</h2>
   <ol>
     {% for rec in recommendations %}<li>{{ rec }}</li>{% endfor %}
   </ol>
