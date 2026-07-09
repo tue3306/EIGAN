@@ -135,8 +135,8 @@ sandbox: [docker/](docker/) (`docker compose up`).
 cp scope.example.yaml scope.yaml
 
 # scan determinístico (sem IA) — escolha a perspectiva
-vulnforge scan --target app.local --perspective external --profile standard --scope scope.yaml
-vulnforge scan --target 10.0.0.5  --perspective internal --profile standard --scope scope.yaml
+vulnforge scan app.local --perspective external --profile standard --scope scope.yaml
+vulnforge scan 10.0.0.5   --perspective internal --profile standard --scope scope.yaml
 
 # relatório (sem nenhuma chave de API); estilos: technical | executive
 vulnforge report --scan 1 --format pdf --style executive
