@@ -3,56 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VulnForge — Dashboard</title>
-<style>
-  :root {
-    --bg: #0b1220; --panel: #131c2e; --panel2: #0f1728; --border: #24304a;
-    --fg: #e6ecf5; --muted: #8ea0bd; --accent: #4f8cff; --accent2: #6c5ce7;
-    --crit: #ff4d4f; --high: #ff7a45; --med: #ffc53d; --low: #73d13d; --info: #8c9bb5;
-  }
-  @media (prefers-color-scheme: light) {
-    :root { --bg:#f4f6fb; --panel:#fff; --panel2:#eef2f9; --border:#dde3ee;
-            --fg:#16202e; --muted:#5b6b85; --info:#7f8c9e; }
-  }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-         background: var(--bg); color: var(--fg); font-size: 14px; }
-  header { display:flex; align-items:center; gap:12px; padding:14px 20px;
-           border-bottom:1px solid var(--border); background:var(--panel);
-           position:sticky; top:0; z-index:10; }
-  .logo { font-weight:700; font-size:18px; letter-spacing:.5px; }
-  .logo span { color: var(--accent); }
-  .badge { font-size:11px; padding:2px 8px; border-radius:10px; background:var(--panel2);
-           color:var(--muted); border:1px solid var(--border); }
-  .ai-badge { background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#fff; border:none; }
-  .spacer { flex:1; }
-  select, button { background:var(--panel2); color:var(--fg); border:1px solid var(--border);
-                   border-radius:8px; padding:7px 10px; font-size:13px; cursor:pointer; }
-  main { padding:20px; max-width:1200px; margin:0 auto; }
-  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
-  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; }
-  .kpi { font-size:30px; font-weight:700; }
-  .kpi small { font-size:12px; color:var(--muted); font-weight:400; display:block; margin-top:2px; }
-  h2 { font-size:15px; margin:26px 0 10px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; }
-  .bars { display:flex; flex-direction:column; gap:8px; }
-  .barrow { display:flex; align-items:center; gap:10px; }
-  .barrow .lbl { width:78px; font-size:12px; text-transform:capitalize; }
-  .bar { height:16px; border-radius:4px; min-width:2px; }
-  .barrow .n { width:34px; text-align:right; color:var(--muted); }
-  table { width:100%; border-collapse:collapse; }
-  th,td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); font-size:13px; }
-  th { color:var(--muted); font-weight:600; position:sticky; top:57px; background:var(--panel); }
-  .tablewrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; }
-  .pill { font-size:11px; padding:1px 7px; border-radius:10px; color:#111; font-weight:600; }
-  .s-critical{background:var(--crit);color:#fff} .s-high{background:var(--high);color:#fff}
-  .s-medium{background:var(--med)} .s-low{background:var(--low)} .s-info{background:var(--info);color:#fff}
-  .kev{background:var(--crit);color:#fff;font-size:10px;padding:1px 5px;border-radius:8px}
-  .unv{color:var(--muted);font-style:italic;font-size:11px}
-  .muted{color:var(--muted)} .mono{font-family:ui-monospace,monospace;font-size:12px}
-  .empty{color:var(--muted); padding:30px; text-align:center;}
-  .cols{display:grid;gap:14px;grid-template-columns:1fr 1fr}
-  @media (max-width:760px){ .cols{grid-template-columns:1fr} th{position:static} }
-</style>
+<title>VulnForge — Plataforma de Operações de Segurança</title>
+<link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
 <header>
@@ -60,126 +12,15 @@
   <span class="badge" id="ver">v—</span>
   <span class="badge ai-badge" id="ai" style="display:none">IA ativa</span>
   <div class="spacer"></div>
-  <select id="scanSel" aria-label="Selecionar scan"></select>
+  <nav>
+    <a href="#/">Painel</a>
+    <a href="#/scans">Histórico</a>
+    <a href="#/new">+ Novo Scan</a>
+  </nav>
 </header>
 <main>
-  <div class="grid" id="kpis"></div>
-
-  <div class="cols">
-    <div class="card">
-      <h2 style="margin-top:0">Distribuição por severidade</h2>
-      <div class="bars" id="sevbars"></div>
-    </div>
-    <div class="card">
-      <h2 style="margin-top:0">Cobertura MITRE ATT&amp;CK</h2>
-      <div id="attack"><div class="empty">—</div></div>
-    </div>
-  </div>
-
-  <h2>Findings <select id="sevFilter" style="margin-left:8px">
-    <option value="">todas as severidades</option>
-    <option value="critical">critical</option><option value="high">high</option>
-    <option value="medium">medium</option><option value="low">low</option><option value="info">info</option>
-  </select></h2>
-  <div class="tablewrap"><table id="findings">
-    <thead><tr><th>Severidade</th><th>Risco</th><th>Título</th><th>Ativo</th><th>Persp.</th><th>CWE</th><th>KEV</th><th>Fonte</th></tr></thead>
-    <tbody></tbody>
-  </table></div>
-
-  <h2>Inventário de ativos</h2>
-  <div class="tablewrap"><table id="inventory">
-    <thead><tr><th>Ativo</th><th>Portas</th><th>Web</th><th>Perspectivas</th><th>Findings</th><th>Risco máx.</th></tr></thead>
-    <tbody></tbody>
-  </table></div>
-
-  <p class="muted" style="margin-top:24px;font-size:12px">
-    Sinais <span class="unv">UNVERIFIED</span> não foram confirmados contra a fonte oficial
-    (rode <span class="mono">vulnforge feeds update</span>). Dados servidos por <span class="mono">/api/v1</span>.
-  </p>
+  <div id="view"><div class="empty"><span class="spin"></span> carregando…</div></div>
 </main>
-<script>
-const $ = s => document.querySelector(s);
-const api = p => fetch('/api/v1' + p).then(r => r.ok ? r.json() : Promise.reject(r.status));
-const SEV = ['critical','high','medium','low','info'];
-const sevColor = s => getComputedStyle(document.documentElement).getPropertyValue('--'+({critical:'crit',high:'high',medium:'med',low:'low',info:'info'}[s]));
-
-async function boot() {
-  try {
-    const m = await api('/meta');
-    $('#ver').textContent = 'v' + m.tool_version;
-    if (m.ai_enabled) $('#ai').style.display = '';
-  } catch(e){}
-  const scans = await api('/scans').catch(()=>[]);
-  const sel = $('#scanSel');
-  if (!scans.length) { sel.innerHTML = '<option>nenhum scan</option>'; renderEmpty(); return; }
-  sel.innerHTML = scans.map(s => `<option value="${s.id}">#${s.id} · ${s.profile} · ${s.engagement||'—'}</option>`).join('');
-  sel.onchange = () => loadScan(sel.value);
-  loadScan(scans[0].id);
-}
-
-function renderEmpty(){
-  $('#kpis').innerHTML = kpi('0','scans')+kpi('0','findings')+kpi('0','críticos')+kpi('0','em KEV');
-  $('#sevbars').innerHTML = '<div class="empty">Rode um scan para ver dados.</div>';
-}
-const kpi = (v,l)=>`<div class="card"><div class="kpi">${v}<small>${l}</small></div></div>`;
-
-async function loadScan(id) {
-  const [detail, fnd, inv, atk, stats] = await Promise.all([
-    api('/scans/'+id), api('/scans/'+id+'/findings'), api('/scans/'+id+'/inventory'),
-    api('/scans/'+id+'/attack'), api('/stats'),
-  ]);
-  const sev = detail.severity;
-  $('#kpis').innerHTML =
-      kpi(stats.scans,'scans') + kpi(detail.count,'findings') +
-      kpi(sev.critical+sev.high,'críticos/altos') + kpi(stats.kev,'em CISA KEV');
-
-  const max = Math.max(1, ...SEV.map(s=>sev[s]));
-  $('#sevbars').innerHTML = SEV.map(s=>`<div class="barrow">
-     <span class="lbl">${s}</span>
-     <span class="bar" style="width:${Math.round(sev[s]/max*100)}%;background:${sevColor(s)}"></span>
-     <span class="n">${sev[s]}</span></div>`).join('');
-
-  window._findings = fnd.findings; renderFindings();
-  renderInventory(inv.assets);
-  renderAttack(atk);
-}
-
-function renderFindings() {
-  const filt = $('#sevFilter').value;
-  const rows = (window._findings||[]).filter(f=>!filt||f.severity===filt);
-  const tb = $('#findings tbody');
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhum finding.</td></tr>'; return; }
-  tb.innerHTML = rows.map(f=>{
-    const r = f.risk; const risk = r ? Math.round(r.score) : '—';
-    const kev = r ? (r.kev ? '<span class="kev">KEV</span>' : (r.kev_verified?'não':'<span class="unv">?</span>')) : '<span class="unv">?</span>';
-    return `<tr>
-      <td><span class="pill s-${f.severity}">${f.severity.toUpperCase()}</span></td>
-      <td>${risk}</td><td>${esc(f.title)}</td><td class="mono">${esc(f.affected_asset)}</td>
-      <td>${f.perspective}</td><td>${f.cwe||'—'}</td><td>${kev}</td><td>${f.source_tool}</td></tr>`;
-  }).join('');
-}
-$('#sevFilter').onchange = renderFindings;
-
-function renderInventory(assets){
-  const tb = $('#inventory tbody');
-  if (!assets||!assets.length){ tb.innerHTML='<tr><td colspan="6" class="empty">Sem ativos.</td></tr>'; return; }
-  tb.innerHTML = assets.map(a=>`<tr>
-    <td class="mono">${esc(a.host)}</td><td>${a.ports.join(', ')||'—'}</td>
-    <td>${a.web_endpoints.length}</td><td>${a.perspectives.join(', ')}</td>
-    <td>${a.finding_count}</td><td>${Math.round(a.max_risk)}</td></tr>`).join('');
-}
-
-function renderAttack(atk){
-  const el = $('#attack');
-  if (!atk.hits||!atk.hits.length){ el.innerHTML='<div class="empty">Nenhuma técnica associada.</div>'; return; }
-  el.innerHTML = atk.hits.map(h=>`<div class="barrow"><span class="mono" style="width:66px">${h.technique}</span>
-     <span>${esc(h.name)} <span class="muted">· ${h.tactic}</span></span>
-     <div class="spacer"></div><span class="n">${h.count}</span></div>`).join('')
-     + `<p class="muted" style="font-size:12px;margin-top:8px">Gap (táticas sem sinal): ${atk.tactics_gap.join(', ')||'—'}</p>`;
-}
-
-const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-boot();
-</script>
+<script src="/static/app.js"></script>
 </body>
 </html>

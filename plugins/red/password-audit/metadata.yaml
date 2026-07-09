@@ -10,3 +10,10 @@ roadmap: true
 enabled_by_default: false
 description: >-
   Auditoria de credenciais fracas quando autorizado (spray/brute controlado).
+
+# Cascata (ADR-0004): serviços de autenticação expostos → auditoria de senha
+# fraca (roadmap; sempre gated por autorização, nunca brute automático cego).
+triggers_on:
+  - port: [22, 21, 3389, 445, 3306, 5432]
+    then_execute: [weak_credential_check]
+    reason: "serviço de autenticação exposto → checagem de credenciais fracas (gated)"

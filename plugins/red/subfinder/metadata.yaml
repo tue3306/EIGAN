@@ -17,3 +17,9 @@ requires_credentials: false
 chained_after: []
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/subfinder#installation"
+
+# Cascata (ADR-0004): subdomínio encontrado → resolver antes de sondar.
+triggers_on:
+  - source_tool: [subfinder]
+    then_execute: [dnsx]
+    reason: "subdomínio descoberto → resolução DNS antes de sondar portas/web"

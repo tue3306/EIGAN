@@ -338,7 +338,44 @@ testes verdes**.
 
 ---
 
-## 18. Filosofia final
+## 18. Interface Inteligente + Orquestração em Cascata
+
+A interface web é o **ponto de entrada principal**. O usuário final **não toca a
+CLI** para escanear (a CLI fica para dev/CI/power user). Ver
+[ADR-0004](docs/adr/0004-cascade-orchestration-and-web-ui.md),
+[docs/user-flows.md](docs/user-flows.md) e
+[docs/design/](docs/design/) (personas, components).
+
+### Fluxo esperado
+1. Clica **Novo Scan**.
+2. Responde 5 passos (alvo → perspectiva → objetivo → opções → confirmação com
+   **autorização inline obrigatória**).
+3. Vê **progresso em tempo real** (fases, descobertas, cascatas) via WebSocket.
+4. O engine **orquestra em cascata** automaticamente (porta 445 encontrada →
+   `enum4linux` dispara sozinho).
+5. Recebe resultados no dashboard e gera relatório.
+
+### Orquestração em cascata (`engine/cascade*.py`)
+Cada plugin declara `triggers_on` no `metadata.yaml`: condições sobre um finding
+(porta/serviço/severidade/…) → `then_execute`. O `CascadeGraph` casa de forma
+**determinística** e o `CascadeOrchestrator` executa a segunda onda pelo runner
+seguro. **A IA não decide nem executa** — o grafo é declarativo; a IA só
+interpreta depois. Core intacto: adicionar cascata = editar YAML.
+
+### Sem mágica
+Cada disparo é **registrado e justificado** ("enum4linux disparou porque a porta
+445 foi encontrada") e visível no `cascade-log` e na UI. Ferramentas roadmap
+aparecem como *sugeridas, não executadas*. Consent gate preservado: `POST
+/api/v1/scans` recusa (403) sem afirmação de autorização.
+
+### Frontend
+SPA vanilla sem build step (`api/static/`): design system em CSS com tokens,
+componentes reutilizáveis, roteador por hash, **zero regra de negócio** — tudo
+vem de `/api/v1`. Novo módulo = novo componente, sem tocar no resto.
+
+---
+
+## 19. Filosofia final
 
 Arquitetura antes de código. Qualidade antes de velocidade. Segurança e
 legalidade antes de conveniência. Modularidade antes de acoplamento. Este projeto

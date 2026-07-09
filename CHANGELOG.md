@@ -7,6 +7,23 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- **Orquestração em cascata dirigida por descoberta** (ADR-0004): plugins
+  declaram `triggers_on` no `metadata.yaml` (ex.: porta 445 → `enum4linux`,
+  `cme_smb_recon`). `CascadeGraph` casa de forma determinística e o
+  `CascadeOrchestrator` executa a segunda onda pelo runner seguro. Cada disparo é
+  **registrado e justificado** ("sem mágica"); ferramentas roadmap aparecem como
+  *sugeridas, não executadas*. 10 plugins com regras de cascata.
+- **Interface web (SPA, sem build step)**: dashboard com histórico e ativos em
+  risco, **wizard de 5 passos** (alvo → perspectiva → objetivo → avançado →
+  confirmação com autorização inline) e **tela de progresso em tempo real**
+  (fases, descobertas, cascatas justificadas) via WebSocket. Design system em
+  CSS com tokens; componentes reutilizáveis.
+- **API em tempo real**: `POST /api/v1/scans` (background, consent gate
+  preservado — 403 sem autorização), `GET /jobs/{id}/progress`, `cascade-log`,
+  `cancel`, `GET /findings`, `GET /assets` e WebSocket
+  `/ws/scans/{id}/progress`. Streaming por `EventSink` (porta) + `ScanManager`.
+
 ## [0.2.0] - 2026-07-09
 
 Transformação de "um scanner" em **plataforma modular de operações de segurança**

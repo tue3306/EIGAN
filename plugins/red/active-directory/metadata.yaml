@@ -10,3 +10,13 @@ roadmap: true
 enabled_by_default: false
 description: >-
   Enumeração de Active Directory (LDAP/Kerberos/SMB), shares e delegações.
+
+# Cascata (ADR-0004): declara os disparos que fará quando implementado. Até lá é
+# alvo honesto — a cascata registra "sugerido, não executado" (roadmap).
+triggers_on:
+  - port: [88, 464]
+    then_execute: [kerberoast, asreproast]
+    reason: "Kerberos exposto → tentativa de Kerberoast/AS-REP roast (autorizado)"
+  - service: ["ldap", "microsoft-ds"]
+    then_execute: [bloodhound_collect]
+    reason: "LDAP/SMB de domínio → coleta de grafo de relações (BloodHound)"

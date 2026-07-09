@@ -20,6 +20,7 @@ from ..capability import Capability, Category
 from ..findings.schema import Finding
 from ..perspective import Perspective
 from .base import BaseToolPlugin
+from .cascade import CascadeRule
 
 
 class PluginMetadataError(ValueError):
@@ -53,6 +54,9 @@ class PluginMetadata:
     enabled_by_default: bool = True
     roadmap: bool = False  # scaffolded honesto: declarado, ainda não operante
     install_hint: str = ""  # como instalar a ferramenta (usado por `doctor`)
+    # Grafo de cascata (ADR-0004): regras que, dado um finding, sugerem disparar
+    # outras ferramentas. Declarativo — a decisão vive no metadata, não no Core.
+    triggers_on: tuple[CascadeRule, ...] = ()
     path: Path | None = None
 
     @classmethod
@@ -84,6 +88,14 @@ class PluginMetadata:
         except ValueError as exc:
             raise PluginMetadataError(f"{p}: valor inválido: {exc}") from exc
 
+        triggers_raw = data.get("triggers_on") or []
+        triggers: list[CascadeRule] = []
+        if isinstance(triggers_raw, list):
+            for item in triggers_raw:
+                rule = CascadeRule.from_dict(item)
+                if rule is not None:
+                    triggers.append(rule)
+
         return cls(
             name=name,
             category=category,
@@ -100,6 +112,7 @@ class PluginMetadata:
             enabled_by_default=bool(data.get("enabled_by_default", True)),
             roadmap=bool(data.get("roadmap", False)),
             install_hint=str(data.get("install_hint", "")),
+            triggers_on=tuple(triggers),
             path=p,
         )
 

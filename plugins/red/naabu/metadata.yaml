@@ -15,3 +15,12 @@ requires_credentials: false
 chained_after: [dns_resolution]
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/naabu#installation"
+
+# Cascata (ADR-0004): naabu só sabe que a porta está aberta; encaminha para o
+# nmap fazer service/version, que então dispara as cascatas específicas.
+triggers_on:
+  - port: [80, 443, 8080, 8443, 8000]
+    then_execute: [httpx]
+    reason: "porta web aberta → confirmar serviço HTTP vivo (httpx)"
+  - then_execute: [nmap]
+    reason: "porta aberta → detecção de serviço/versão (nmap -sV)"

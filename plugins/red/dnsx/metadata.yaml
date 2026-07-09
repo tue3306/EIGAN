@@ -15,3 +15,9 @@ requires_credentials: false
 chained_after: [subdomain_enumeration]
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/dnsx#installation"
+
+# Cascata (ADR-0004): host vivo resolvido → descoberta de portas.
+triggers_on:
+  - source_tool: [dnsx]
+    then_execute: [naabu]
+    reason: "host vivo resolvido → descoberta de portas (naabu)"

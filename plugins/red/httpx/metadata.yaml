@@ -17,3 +17,12 @@ requires_credentials: false
 chained_after: [port_discovery]
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/httpx#installation"
+
+# Cascata (ADR-0004): serviço web vivo → crawl, templates e checagem TLS.
+triggers_on:
+  - source_tool: [httpx]
+    then_execute: [katana, nuclei]
+    reason: "serviço web vivo → crawl de URLs (katana) e templates de vuln (nuclei)"
+  - title_contains: ["https", "tls", "ssl"]
+    then_execute: [testssl]
+    reason: "endpoint TLS → avaliação de ciphers/protocolos fracos"

@@ -16,3 +16,14 @@ requires_credentials: false
 chained_after: [web_probe]
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/nuclei#installation"
+
+# Cascata (ADR-0004): um finding crítico/alto pode justificar validação de
+# exploração. A validação é gated: só roda se autorizada explicitamente e em modo
+# "validar" — nunca dispara exploit por conta própria.
+triggers_on:
+  - severity_min: high
+    then_execute: [exploit_validation]
+    reason: "vulnerabilidade alta/crítica confirmada por template → validação de PoC (gated)"
+  - title_contains: ["cve-"]
+    then_execute: [cve_enrich]
+    reason: "CVE referenciado no template → enriquecimento EPSS/KEV (fonte oficial)"

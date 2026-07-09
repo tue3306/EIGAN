@@ -10,3 +10,10 @@ roadmap: true
 enabled_by_default: false
 description: >-
   Avaliação de postura em nuvem (Azure/AWS/GCP): configurações, IAM e exposição.
+
+# Cascata (ADR-0004): indícios de ativo em nuvem no fingerprint web → auditoria
+# de postura (roadmap).
+triggers_on:
+  - title_contains: ["amazonaws", "azure", "cloudfront", "storage.googleapis"]
+    then_execute: [cloud_posture_audit]
+    reason: "ativo hospedado em nuvem → auditoria de bucket/IAM/exposição"

@@ -16,3 +16,27 @@ requires_credentials: false
 chained_after: [port_discovery]
 enabled_by_default: true
 install_hint: "sudo apt install nmap  ·  https://nmap.org/download.html"
+
+# Grafo de cascata (ADR-0004): ao descobrir um serviço, sugere as próximas
+# ferramentas. Casamento determinístico por porta/serviço; cada disparo é logado
+# e justificado (sem mágica). Ferramentas ainda não construídas ficam como
+# "sugerido, não executado" até serem implementadas (scaffold honesto).
+triggers_on:
+  - port: [445, 139]
+    then_execute: [enum4linux, cme_smb_recon, smb_signing_check]
+    reason: "SMB exposto → enumeração de usuários/shares e checagem de assinatura"
+  - port: [389, 636, 3268]
+    then_execute: [ldapsearch, active_directory_enum]
+    reason: "LDAP/AD exposto → enumeração de diretório"
+  - port: [80, 443, 8080, 8443, 8000]
+    then_execute: [httpx, whatweb, nuclei]
+    reason: "HTTP(S) exposto → fingerprint e templates de vulnerabilidade"
+  - port: [22]
+    then_execute: [ssh_audit]
+    reason: "SSH exposto → auditoria de algoritmos/chaves fracas"
+  - port: [3389]
+    then_execute: [rdp_audit]
+    reason: "RDP exposto → checagem de NLA/exposição"
+  - port: [3306, 5432, 1433, 27017]
+    then_execute: [db_exposure_check]
+    reason: "Banco de dados exposto na rede → verificação de exposição"
