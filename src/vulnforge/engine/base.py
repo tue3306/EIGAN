@@ -1,12 +1,18 @@
-"""Interface uniforme de adapter de ferramenta.
+"""Execução segura de ferramenta externa — base do *runner* de um plugin.
 
-Todo scanner externo (nmap, nuclei, nikto, ...) é encapsulado por um
-:class:`BaseToolAdapter` que: verifica disponibilidade, monta argumentos de
-forma segura (lista, nunca string concatenada / nunca ``shell=True``), executa
-com timeout, captura saída e faz o parse para o schema normalizado de finding.
+Todo scanner externo (nmap, nuclei, httpx, ...) é encapsulado por um
+:class:`BaseToolPlugin` que: verifica disponibilidade, monta argumentos de forma
+segura (lista, nunca string concatenada / nunca ``shell=True``), executa com
+timeout, captura a saída e delega o parse para o ``parser.py`` do plugin.
 
-Regras de segurança do produto (CLAUDE.md §3.4): sempre lista de argumentos,
-nunca shell, timeout obrigatório, saída tratada.
+Regras de segurança do produto (inegociável §5): sempre lista de argumentos,
+nunca shell, timeout obrigatório, saída tratada. Este módulo é a única porta por
+onde um subprocess é disparado.
+
+Os **metadados declarativos** (perspectivas, licença, capabilities, ...) NÃO
+ficam aqui — vivem no ``metadata.yaml`` do plugin e são carregados como
+:class:`~vulnforge.engine.plugin.PluginMetadata`. Isto separa *como executar*
+(este arquivo) de *o que o plugin é* (metadados).
 """
 
 from __future__ import annotations
@@ -17,7 +23,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from ..findings.schema import Finding
-from ..perspective import Perspective
 
 
 class ToolNotAvailable(Exception):
@@ -32,37 +37,23 @@ class ToolResult:
     timed_out: bool = False
 
 
-class BaseToolAdapter(ABC):
-    """Porta única do domínio para qualquer ferramenta de scan.
+class BaseToolPlugin(ABC):
+    """Runner: encapsula a execução segura de uma ferramenta e o parse da saída.
 
-    Metadados declarativos (perspectivas, credenciais, licença, uso comercial,
-    fonte de versão) permitem que o orquestrador e o catálogo (config/tools.yaml)
-    decidam ativação sem `if` espalhado. Licença/manutenção que você não
-    confirmou entram como ``"verify"`` — nunca como fato (CLAUDE.md §5).
+    Subclasses (em ``plugins/<cat>/<nome>/runner.py``) definem ``binary``,
+    ``name``, ``build_args`` e ``parse``. Os metadados declarativos são anexados
+    pelo registry via :attr:`metadata` — mas o runner funciona isolado (testes de
+    parser) sem eles.
     """
 
     #: nome do binário no PATH
     binary: str = ""
-    #: nome lógico da ferramenta (vai para `source_tool` do finding)
+    #: nome lógico da ferramenta (vai para ``source_tool`` do finding)
     name: str = ""
     #: timeout padrão em segundos
     default_timeout: int = 600
-    #: perspectivas em que este adapter é aplicável
-    supported_perspectives: tuple[Perspective, ...] = (
-        Perspective.EXTERNAL,
-        Perspective.INTERNAL,
-    )
-    #: precisa de credenciais (scan autenticado)?
-    requires_credentials: bool = False
-    #: fonte para resolver a versão (nunca fixar de memória — §5)
-    version_source: str = "# VERIFICAR"
-    #: licença declarada; "VERIFICAR" até confirmação na fonte oficial
-    license: str = "VERIFICAR"
-    #: uso comercial: "ok" | "verify" | "restricted"
-    commercial_use: str = "verify"
-
-    def runs_in(self, perspective: Perspective) -> bool:
-        return perspective in self.supported_perspectives
+    #: alvo é passado via stdin em vez de argumento? (dnsx, httpx-PD)
+    target_via_stdin: bool = False
 
     def available(self) -> bool:
         return shutil.which(self.binary) is not None
@@ -74,21 +65,22 @@ class BaseToolAdapter(ABC):
 
     @abstractmethod
     def parse(self, result: ToolResult, target: str) -> list[Finding]:
-        """Converte a saída bruta em findings normalizados."""
+        """Converte a saída bruta em findings normalizados (delegado ao
+        ``parser.py`` do plugin)."""
 
     def _run(self, args: list[str], timeout: int | None = None,
              stdin_data: str | None = None) -> ToolResult:
         """Executa a ferramenta com segurança: lista de argumentos, ``shell=False``
-        e timeout obrigatório. ``stdin_data`` alimenta ferramentas que leem da
-        entrada padrão (dnsx, httpx-PD).
+        e timeout obrigatório.
 
         NOTA (sandbox): este é o modo "host". O caminho recomendado é rodar cada
-        ferramenta em container efêmero (rede/escopo controlados); o adapter
-        permanece o mesmo, trocando apenas o executor. Ver docker/.
+        ferramenta em container efêmero (rede/escopo controlados); o runner
+        permanece o mesmo, trocando apenas o executor. Ver ``docker/``.
         """
         if not self.available():
             raise ToolNotAvailable(
-                f"'{self.binary}' não encontrado. Instale-o ou rode via sandbox Docker."
+                f"'{self.binary}' não encontrado. Instale-o (veja `vulnforge doctor`) "
+                "ou rode via sandbox Docker."
             )
         cmd = [self.binary, *args]
         try:
@@ -110,11 +102,13 @@ class BaseToolAdapter(ABC):
                 timed_out=True,
             )
 
-    #: alvo é passado via stdin em vez de argumento? (sobrescrito por adapters)
-    target_via_stdin: bool = False
-
     def scan(self, target: str, *, timeout: int | None = None, **options) -> list[Finding]:
         args = self.build_args(target, **options)
         stdin_data = f"{target}\n" if self.target_via_stdin else None
         result = self._run(args, timeout=timeout, stdin_data=stdin_data)
         return self.parse(result, target)
+
+
+# Compat: o nome anterior era ``BaseToolAdapter``. Mantido como alias para não
+# quebrar imports externos; o nome canônico é ``BaseToolPlugin``.
+BaseToolAdapter = BaseToolPlugin

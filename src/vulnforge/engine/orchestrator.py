@@ -1,13 +1,13 @@
-"""Orquestrador de scan — dirigido por perspectiva e pipeline.
+"""Orquestrador de scan — dirigido por perspectiva, pipeline e registry.
 
-Coordena os adapters respeitando escopo E perspectiva: valida cada alvo contra a
-perspectiva (público×privado) antes de executar, ativa apenas adapters
-compatíveis com a perspectiva do job (via ``supported_perspectives``), roda os
-estágios do pipeline em ordem (ferramentas de um mesmo estágio em paralelo),
-carimba a perspectiva em cada finding e deduplica dentro da perspectiva.
+Coordena os plugins respeitando escopo E perspectiva: valida cada alvo antes de
+executar, resolve por *capability* quais plugins rodam (via
+:class:`~vulnforge.engine.registry.PluginRegistry`), executa os estágios em ordem
+(plugins de um estágio em paralelo), carimba a perspectiva em cada finding,
+deduplica dentro da perspectiva e — opcionalmente — pontua risco.
 
-Caso de uso da camada de aplicação: depende de portas (adapters, store, scope,
-pipeline) e não de infra concreta.
+O Core **não muda** para adicionar um plugin: a resolução é 100% por capability +
+metadados. Caso de uso da camada de aplicação (depende de portas, não de infra).
 """
 
 from __future__ import annotations
@@ -22,27 +22,14 @@ from ..findings.schema import Finding
 from ..findings.store import FindingStore
 from ..perspective import Perspective, profile_for
 from ..security.scope import Scope, ScopeViolation
-from .adapters.dnsx_adapter import DnsxAdapter
-from .adapters.httpx_adapter import HttpxAdapter
-from .adapters.naabu_adapter import NaabuAdapter
-from .adapters.nmap_adapter import NmapAdapter
-from .adapters.nuclei_adapter import NucleiAdapter
-from .adapters.subfinder_adapter import SubfinderAdapter
-from .base import BaseToolAdapter, ToolNotAvailable
+from .base import ToolNotAvailable
 from .pipeline import Stage, stages_for
+from .plugin import PluginSpec
+from .registry import PluginRegistry
 
 log = logging.getLogger("vulnforge.orchestrator")
 
-# Registry: nome lógico → adapter. Ferramentas do pipeline sem adapter aqui são
-# simplesmente puladas (registradas), não quebram o fluxo.
-_REGISTRY: dict[str, BaseToolAdapter] = {
-    "nmap": NmapAdapter(),
-    "nuclei": NucleiAdapter(),
-    "naabu": NaabuAdapter(),
-    "dnsx": DnsxAdapter(),
-    "subfinder": SubfinderAdapter(),
-    "httpx": HttpxAdapter(),
-}
+ProgressCb = Callable[[str], None]
 
 
 @dataclass
@@ -54,34 +41,36 @@ class ScanReport:
     stages_run: list[str] = field(default_factory=list)
 
 
-ProgressCb = Callable[[str], None]
-
-
 class Orchestrator:
     def __init__(self, store: Optional[FindingStore] = None,
-                 registry: Optional[dict[str, BaseToolAdapter]] = None) -> None:
+                 registry: Optional[PluginRegistry] = None,
+                 risk: Optional["RiskScorer"] = None) -> None:
         self._store = store
-        self._registry = registry or _REGISTRY
+        self._registry = registry or PluginRegistry.discover()
+        self._risk = risk
 
-    def _resolve_stage_tools(self, stage: Stage, perspective: Perspective,
-                             skipped: list[str], emit: ProgressCb) -> list[BaseToolAdapter]:
-        """Filtra as ferramentas de um estágio: precisam existir no registry,
-        suportar a perspectiva e estar disponíveis. Decisão via metadados, sem
-        ``if`` de perspectiva no meio do fluxo."""
-        adapters: list[BaseToolAdapter] = []
-        for tool in stage.tools:
-            adapter = self._registry.get(tool)
-            if adapter is None:
-                continue  # ferramenta declarada no pipeline mas ainda sem adapter
-            if not adapter.runs_in(perspective):
-                continue  # incompatível com a perspectiva (ex.: subfinder em INTERNAL)
-            if not adapter.available():
-                if tool not in skipped:
-                    skipped.append(tool)
-                    emit(f"[{tool}] indisponível — pulado")
+    def _resolve_stage_plugins(self, stage: Stage, perspective: Perspective,
+                               skipped: list[str], emit: ProgressCb) -> list[PluginSpec]:
+        """Plugins de um estágio: todos que provêem alguma capability do estágio,
+        suportam a perspectiva, estão habilitados e disponíveis. Decisão via
+        metadados — sem ``if`` de perspectiva no meio do fluxo."""
+        specs: dict[str, PluginSpec] = {}
+        for cap in stage.capabilities:
+            for spec in self._registry.for_capability(cap, perspective):
+                specs.setdefault(spec.name, spec)  # dedupe: 1 plugin, N capabilities
+
+        selected: list[PluginSpec] = []
+        for spec in specs.values():
+            if not spec.metadata.enabled_by_default:
                 continue
-            adapters.append(adapter)
-        return adapters
+            if not spec.available():
+                if spec.name not in skipped:
+                    skipped.append(spec.name)
+                    reason = "degradado" if spec.degraded else "indisponível"
+                    emit(f"[{spec.name}] {reason} — pulado")
+                continue
+            selected.append(spec)
+        return selected
 
     def run(self, targets: list[str], *, scope: Scope,
             perspective: Optional[Perspective] = None, profile: str = "standard",
@@ -116,13 +105,13 @@ class Orchestrator:
         stages_run: list[str] = []
 
         for stage in stages:
-            adapters = self._resolve_stage_tools(stage, persp, skipped, emit)
-            if not adapters:
+            specs = self._resolve_stage_plugins(stage, persp, skipped, emit)
+            if not specs:
                 continue
             stages_run.append(stage.name)
-            emit(f"== estágio '{stage.name}': {[a.name for a in adapters]} ==")
-            # ferramentas do mesmo estágio rodam em paralelo (respeitando rate limit).
-            jobs = [(adapter, target) for adapter in adapters for target in targets]
+            emit(f"== estágio '{stage.name}': {[s.name for s in specs]} ==")
+            # plugins do mesmo estágio rodam em paralelo (respeitando rate limit).
+            jobs = [(spec, target) for spec in specs for target in targets]
             max_workers = len(jobs) if stage.parallel else 1
             with ThreadPoolExecutor(max_workers=max(1, max_workers)) as pool:
                 results = pool.map(lambda j: self._safe_scan(*j, emit=emit, **tool_opts), jobs)
@@ -134,26 +123,38 @@ class Orchestrator:
             f.perspective = persp
 
         findings = deduplicate(raw)  # dedup dentro da perspectiva (fingerprint inclui persp)
-        findings.sort(key=lambda f: f.severity.rank, reverse=True)
+
+        # Risk scoring opcional (CVSS/EPSS/KEV) — só se um scorer foi injetado.
+        if self._risk is not None:
+            findings = self._risk.score(findings)
+
+        findings.sort(key=lambda f: (f.risk_rank, f.severity.rank), reverse=True)
 
         if self._store and scan_id is not None:
             self._store.add_findings(scan_id, findings)
             self._store.finish_scan(scan_id)
 
         emit(f"scan concluído: {len(findings)} findings, {len(stages_run)} estágios, "
-             f"{len(skipped)} ferramentas puladas")
+             f"{len(skipped)} plugins pulados")
         return ScanReport(scan_id=scan_id, perspective=persp, findings=findings,
                           skipped_tools=skipped, stages_run=stages_run)
 
-    def _safe_scan(self, adapter: BaseToolAdapter, target: str, *,
+    def _safe_scan(self, spec: PluginSpec, target: str, *,
                    emit: ProgressCb, **opts) -> list[Finding]:
-        """Executa um adapter isolando falhas: um erro registra e segue (§13)."""
+        """Executa um plugin isolando falhas: um erro registra e segue."""
         try:
-            return adapter.scan(target, **opts)
+            return spec.scan(target, **opts)
         except ToolNotAvailable as exc:
-            emit(f"[{adapter.name}] indisponível: {exc}")
+            emit(f"[{spec.name}] indisponível: {exc}")
         except ScopeViolation:
             raise
-        except Exception as exc:  # noqa: BLE001 — um adapter não derruba o pipeline
-            emit(f"[{adapter.name}] erro em {target}: {exc}")
+        except Exception as exc:  # noqa: BLE001 — um plugin não derruba o pipeline
+            emit(f"[{spec.name}] erro em {target}: {exc}")
         return []
+
+
+# Import tardio só para type hints do scorer opcional (evita ciclo em runtime).
+try:  # pragma: no cover
+    from .risk import RiskScorer
+except Exception:  # pragma: no cover
+    RiskScorer = object  # type: ignore

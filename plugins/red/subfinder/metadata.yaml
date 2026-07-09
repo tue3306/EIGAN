@@ -1,0 +1,18 @@
+# Plugin: subfinder — enumeração passiva de subdomínio (OSINT).
+# REGRA ANTI-INVENÇÃO (§5): license/version não são fato até confirmados na
+# fonte oficial. version_source diz como resolver a versão real.
+name: subfinder
+category: red
+subcategory: recon
+capabilities: [subdomain_enumeration]
+supported_perspectives: [external]   # dentro da rede não há OSINT de subdomínio
+tool: subfinder
+description: >-
+  Enumeração passiva de subdomínios via múltiplas fontes OSINT (ProjectDiscovery).
+  Alimenta o inventário de assets; não gera Finding de vulnerabilidade.
+version_source: "subfinder -version  # VERIFICAR"
+license: VERIFICAR          # provável MIT (ProjectDiscovery) — confirmar na fonte
+commercial_use: verify
+requires_credentials: false
+chained_after: []
+enabled_by_default: true

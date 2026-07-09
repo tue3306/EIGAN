@@ -1,54 +1,56 @@
 """Pipeline de scan como grafo de estágios, parametrizado pela perspectiva.
 
-Cada estágio agrupa ferramentas que podem rodar em paralelo; os estágios são
-executados em ordem (o encadeamento lógico do recon → probe → vuln). As
-ferramentas são referenciadas por nome; o orquestrador resolve o que existe no
-registry, está disponível e suporta a perspectiva — o resto é pulado com
-registro (a falha/ausência de uma ferramenta não derruba o pipeline).
+Cada estágio referencia **capabilities** (ADR-0001), não ferramentas: o
+orquestrador resolve, via registry, quais *plugins* implementam cada capability,
+estão disponíveis e suportam a perspectiva. Trocar a ferramenta que provê uma
+capability não muda o pipeline. Estágios sem nenhum plugin disponível são
+pulados com registro (não derrubam o fluxo).
 
-Esta é a fonte declarativa dos pipelines EXTERNAL e INTERNAL (Parte 4).
+Esta é a fonte declarativa dos pipelines EXTERNAL e INTERNAL.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..capability import Capability
 from ..perspective import Perspective
+
+C = Capability
 
 
 @dataclass(frozen=True)
 class Stage:
     name: str
-    tools: tuple[str, ...]
+    capabilities: tuple[Capability, ...]
     parallel: bool = True
 
 
 # EXTERNAL: OSINT/superfície → validação → portas → web → crawl → params → vuln.
 _EXTERNAL: tuple[Stage, ...] = (
-    Stage("subdomain", ("subfinder", "amass")),
-    Stage("resolve", ("dnsx",)),
-    Stage("ports", ("naabu", "masscan", "nmap")),
-    Stage("web-probe", ("httpx", "whatweb", "wafw00f")),
-    Stage("screenshot", ("gowitness",)),
-    Stage("crawl", ("katana", "gau", "gf")),
-    Stage("params", ("arjun", "gxss")),
-    Stage("vuln-templates", ("nuclei", "dalfox", "sqlmap", "crlfuzz", "corsy",
-                             "ssrfmap", "sstimap", "jwt_tool")),
-    Stage("cms", ("cmseek", "wpscan", "joomscan", "droopescan")),
-    Stage("tls", ("testssl",)),
-    Stage("cloud-api", ("s3scanner", "kiterunner")),
+    Stage("subdomain", (C.SUBDOMAIN_ENUMERATION,)),
+    Stage("resolve", (C.DNS_RESOLUTION,)),
+    Stage("ports", (C.PORT_DISCOVERY,)),
+    Stage("web-probe", (C.WEB_PROBE,)),
+    Stage("screenshot", (C.SCREENSHOT,)),
+    Stage("crawl", (C.WEB_CRAWL,)),
+    Stage("params", (C.PARAM_DISCOVERY,)),
+    Stage("vuln-templates", (C.VULN_TEMPLATE_SCAN,)),
+    Stage("cms", (C.CMS_SCAN,)),
+    Stage("tls", (C.TLS_ASSESSMENT,)),
+    Stage("cloud-api", (C.CLOUD_STORAGE_ENUM,)),
 )
 
 # INTERNAL: descoberta de host no CIDR → portas/serviços → (auth) → web → vuln.
 _INTERNAL: tuple[Stage, ...] = (
-    Stage("host-discovery", ("nmap",)),
-    Stage("ports", ("naabu", "nmap")),
-    Stage("service-auth", ("nmap",)),   # NSE + scan autenticado se houver credencial
-    Stage("web-probe", ("httpx",)),
-    Stage("screenshot", ("gowitness",)),
-    Stage("crawl", ("katana",)),
-    Stage("vuln-templates", ("nuclei",)),
-    Stage("tls", ("testssl",)),
+    Stage("host-discovery", (C.HOST_DISCOVERY,)),
+    Stage("ports", (C.PORT_DISCOVERY,)),
+    Stage("service-auth", (C.SERVICE_DETECTION,)),   # NSE + scan autenticado se houver credencial
+    Stage("web-probe", (C.WEB_PROBE,)),
+    Stage("screenshot", (C.SCREENSHOT,)),
+    Stage("crawl", (C.WEB_CRAWL,)),
+    Stage("vuln-templates", (C.VULN_TEMPLATE_SCAN,)),
+    Stage("tls", (C.TLS_ASSESSMENT,)),
     # gancho p/ módulos futuros: AD/Windows/Linux/Container assessment.
 )
 

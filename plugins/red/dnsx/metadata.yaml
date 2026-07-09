@@ -1,0 +1,16 @@
+# Plugin: dnsx — resolução/validação de hosts vivos antes de web/porta.
+name: dnsx
+category: red
+subcategory: recon
+capabilities: [dns_resolution]
+supported_perspectives: [external, internal]
+tool: dnsx
+description: >-
+  Resolve e valida quais hosts respondem DNS (registros A) antes de httpx/naabu,
+  evitando trabalho contra alvos mortos. Recon: alimenta o inventário de assets.
+version_source: "dnsx -version  # VERIFICAR"
+license: VERIFICAR          # provável MIT (ProjectDiscovery) — confirmar na fonte
+commercial_use: verify
+requires_credentials: false
+chained_after: [subdomain_enumeration]
+enabled_by_default: true

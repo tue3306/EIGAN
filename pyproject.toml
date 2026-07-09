@@ -36,8 +36,11 @@ where = ["src"]
 vulnforge = ["report/templates/*.j2", "api/static/*"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
+# "." habilita `import plugins.<cat>.<nome>...` nos testes de plugin (ADR-0003).
+pythonpath = ["src", "."]
+testpaths = ["tests", "plugins"]
+# importlib: cada plugin tem tests/test_parser.py (mesmo basename) sem colisão.
+addopts = "--import-mode=importlib"
 
 [tool.ruff]
 line-length = 100

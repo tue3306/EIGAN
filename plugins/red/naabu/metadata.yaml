@@ -1,0 +1,16 @@
+# Plugin: naabu — descoberta rápida de portas (antes do nmap).
+name: naabu
+category: red
+subcategory: network
+capabilities: [port_discovery]
+supported_perspectives: [external, internal]
+tool: naabu
+description: >-
+  Descoberta rápida de portas abertas (ProjectDiscovery). Roda antes do nmap,
+  que faz service/version nas portas encontradas.
+version_source: "naabu -version  # VERIFICAR"
+license: VERIFICAR          # provável MIT (ProjectDiscovery) — confirmar na fonte
+commercial_use: verify
+requires_credentials: false
+chained_after: [dns_resolution]
+enabled_by_default: true

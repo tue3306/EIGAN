@@ -82,6 +82,31 @@ class CVSS(BaseModel):
     vector: Optional[str] = None
 
 
+class RiskScore(BaseModel):
+    """Risco composto calculado pelo Risk Engine (ADR-0002).
+
+    Combina CVSS (verificável localmente) com sinais externos EPSS/KEV. Sinais
+    externos só entram como fato se o feed oficial foi consultado — caso
+    contrário ``*_verified=False`` e o campo é ``UNVERIFIED`` no relatório
+    (nunca se fabrica número). ``provenance`` guarda fonte+data por sinal.
+    """
+
+    score: float = Field(ge=0.0, le=100.0, description="Risco composto 0-100.")
+    epss: Optional[float] = Field(default=None, ge=0.0, le=1.0,
+                                  description="Prob. de exploração (FIRST.org EPSS).")
+    epss_verified: bool = False
+    kev: bool = Field(default=False, description="Consta na CISA KEV?")
+    kev_verified: bool = False
+    exploit_available: Optional[bool] = None
+    rationale: str = ""
+    provenance: dict[str, str] = Field(default_factory=dict)
+
+    @property
+    def level(self) -> "Severity":
+        """Faixa qualitativa do risco composto (mesmas fronteiras do CVSS×10)."""
+        return Severity.from_cvss(self.score / 10.0)
+
+
 class Finding(BaseModel):
     """Vulnerabilidade normalizada. `fingerprint` é derivado deterministicamente
     e usado para deduplicação/correlação entre ferramentas."""
@@ -107,6 +132,9 @@ class Finding(BaseModel):
     status: FindingStatus = FindingStatus.OPEN
     ai_generated: bool = False
 
+    # Risco composto (CVSS/EPSS/KEV). Preenchido pelo Risk Engine; None até lá.
+    risk: Optional[RiskScore] = None
+
     first_seen: datetime = Field(default_factory=_now)
     last_seen: datetime = Field(default_factory=_now)
 
@@ -119,6 +147,14 @@ class Finding(BaseModel):
         if v and not v.upper().startswith("CWE-"):
             raise ValueError("cwe deve estar no formato 'CWE-<n>'")
         return v.upper() if v else v
+
+    @property
+    def risk_rank(self) -> float:
+        """Escala comparável para ordenação. Usa o risco composto quando o Risk
+        Engine já pontuou; senão deriva da severidade (0-100)."""
+        if self.risk is not None:
+            return self.risk.score
+        return float(self.severity.rank) * 20.0
 
     @property
     def fingerprint(self) -> str:

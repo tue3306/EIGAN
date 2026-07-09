@@ -1,0 +1,2 @@
+# Plugin 'dnsx': sem dependências Python — usa o binário externo 'dnsx'.
+# Instale a ferramenta (ver metadata.yaml) ou rode via sandbox Docker.

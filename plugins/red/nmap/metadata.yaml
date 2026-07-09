@@ -1,0 +1,17 @@
+# Plugin: nmap — descoberta de host/porta + detecção de serviço/versão.
+# nmap provê MÚLTIPLAS capabilities; o registry o indexa em todas.
+name: nmap
+category: red
+subcategory: network
+capabilities: [port_discovery, service_detection, host_discovery]
+supported_perspectives: [external, internal]
+tool: nmap
+description: >-
+  Scanner de rede de referência. Parse do XML nativo (-oX -). Portas abertas
+  viram findings correlacionáveis; NSE opcional para scripts de vuln.
+version_source: "nmap --version  # VERIFICAR"
+license: VERIFICAR          # NPSL (derivada de GPLv2, com restrições) — confirmar
+commercial_use: verify
+requires_credentials: false
+chained_after: [port_discovery]
+enabled_by_default: true

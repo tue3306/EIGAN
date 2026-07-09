@@ -1,0 +1,18 @@
+# Plugin: httpx — probe web + tech-detect (ProjectDiscovery).
+# ATENÇÃO: há um binário homônimo (cliente HTTP do Python). O runner faz um
+# guard de identidade em available() antes de habilitar (§5 na prática).
+name: httpx
+category: red
+subcategory: web
+capabilities: [web_probe]
+supported_perspectives: [external, internal]
+tool: httpx
+description: >-
+  Sonda serviços web vivos, status, título, servidor e tecnologias. Confirma que
+  o binário é o httpx da ProjectDiscovery, não o cliente HTTP homônimo do Python.
+version_source: "httpx -version  # VERIFICAR (ProjectDiscovery, não o cliente Python)"
+license: VERIFICAR          # provável MIT (ProjectDiscovery) — confirmar na fonte
+commercial_use: verify
+requires_credentials: false
+chained_after: [port_discovery]
+enabled_by_default: true
