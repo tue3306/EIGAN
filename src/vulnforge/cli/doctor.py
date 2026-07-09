@@ -58,14 +58,17 @@ class DoctorReport:
         if not self.python_ok:
             return "error", f"Python 3.11+ é requerido (encontrado {self.python_version})."
         if self.tools_available == 0:
-            return "warn", ("Nenhuma ferramenta externa disponível. Instale ao menos uma "
-                            "(ex.: nmap) ou use o modo Docker — o engine roda o que houver.")
-        return "ok", (f"{self.tools_available}/{len(self.tools)} ferramentas disponíveis. "
-                      "Pronto para escanear alvos autorizados.")
+            return "warn", (
+                "Nenhuma ferramenta externa disponível. Instale ao menos uma "
+                "(ex.: nmap) ou use o modo Docker — o engine roda o que houver."
+            )
+        return "ok", (
+            f"{self.tools_available}/{len(self.tools)} ferramentas disponíveis. "
+            "Pronto para escanear alvos autorizados."
+        )
 
 
-def gather(registry: PluginRegistry | None = None,
-           feeds: FeedCache | None = None) -> DoctorReport:
+def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = None) -> DoctorReport:
     # NB: um registry vazio é falsy (tem __len__), então checagem explícita.
     reg = registry if registry is not None else PluginRegistry.discover()
     tools = [
@@ -111,15 +114,21 @@ def render(report: DoctorReport, echo, secho) -> None:
 
     echo("\nIA (opcional):")
     if report.ai_provider:
-        echo(f"  [{ok}] provedor detectado: {report.ai_provider} "
-             "(modelo em config/ai.yaml — marcado VERIFICAR até confirmar).")
+        echo(
+            f"  [{ok}] provedor detectado: {report.ai_provider} "
+            "(modelo em config/ai.yaml — marcado VERIFICAR até confirmar)."
+        )
     else:
-        echo("  [i] nenhuma chave detectada — o VulnForge funciona 100% sem IA "
-             "(modo determinístico).")
+        echo(
+            "  [i] nenhuma chave detectada — o VulnForge funciona 100% sem IA "
+            "(modo determinístico)."
+        )
 
     echo("\nDocker (sandbox de ferramentas):")
-    echo(f"  [{ok if report.docker else no}] docker "
-         + ("disponível" if report.docker else "não encontrado (opcional)"))
+    echo(
+        f"  [{ok if report.docker else no}] docker "
+        + ("disponível" if report.docker else "não encontrado (opcional)")
+    )
 
     echo("\nFeeds de risco (EPSS/KEV):")
     echo(f"  KEV : {report.feeds_kev or 'UNVERIFIED — rode `vulnforge feeds update`'}")

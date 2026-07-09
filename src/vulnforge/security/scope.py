@@ -82,8 +82,9 @@ class Scope:
             return False
         return any(self._matches(host, h) for h in self.hosts)
 
-    def enforce(self, target: str, *, perspective: Perspective | None = None,
-                override: bool = False) -> None:
+    def enforce(
+        self, target: str, *, perspective: Perspective | None = None, override: bool = False
+    ) -> None:
         """Bloqueia por padrão. Ordem de verificação (todas obrigatórias):
 
         1. escopo autorizado (`authorized: true`);

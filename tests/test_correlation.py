@@ -6,16 +6,16 @@ from vulnforge.perspective import Perspective
 
 
 def _f(tool, asset, sev=Severity.INFO, **kw):
-    return Finding(title=f"{tool} em {asset}", severity=sev, affected_asset=asset,
-                   source_tool=tool, **kw)
+    return Finding(
+        title=f"{tool} em {asset}", severity=sev, affected_asset=asset, source_tool=tool, **kw
+    )
 
 
 def test_correlates_by_host_and_builds_chain():
     findings = [
         _f("nmap", "10.0.0.5:80"),
         _f("httpx", "http://10.0.0.5/"),
-        _f("nuclei", "http://10.0.0.5/app", sev=Severity.HIGH,
-           cvss=CVSS(version="3.1", score=8.8)),
+        _f("nuclei", "http://10.0.0.5/app", sev=Severity.HIGH, cvss=CVSS(version="3.1", score=8.8)),
     ]
     corr = correlate_assets(findings)
     assert len(corr) == 1

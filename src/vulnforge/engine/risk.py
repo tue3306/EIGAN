@@ -32,9 +32,14 @@ _SEV_BASE: dict[Severity, float] = {
 def cve_ids(finding: Finding) -> set[str]:
     """Extrai identificadores CVE das evidências do finding (título, descrição,
     evidência e referências). Não infere nada — só o que está escrito."""
-    blob = " ".join([
-        finding.title, finding.description, finding.evidence, *finding.references,
-    ])
+    blob = " ".join(
+        [
+            finding.title,
+            finding.description,
+            finding.evidence,
+            *finding.references,
+        ]
+    )
     return {m.upper() for m in _CVE_RE.findall(blob)}
 
 
@@ -43,8 +48,9 @@ class RiskScorer:
     CVEs do lote (cacheado); por padrão é **offline** (usa só o cache existente),
     preservando determinismo."""
 
-    def __init__(self, feeds: FeedCache | None = None, *, online: bool = False,
-                 getter=_http_get) -> None:
+    def __init__(
+        self, feeds: FeedCache | None = None, *, online: bool = False, getter=_http_get
+    ) -> None:
         self._feeds = feeds
         self._online = online
         self._getter = getter
@@ -101,7 +107,9 @@ class RiskScorer:
                 provenance["epss"] = f"FIRST.org EPSS {self._feeds.epss_date()}".strip()
                 rationale.append(f"EPSS {epss:.3f}")
         if epss is None:
-            provenance["epss"] = "UNVERIFIED (" + ("sem CVE" if not cves else "feed não atualizado") + ")"
+            provenance["epss"] = (
+                "UNVERIFIED (" + ("sem CVE" if not cves else "feed não atualizado") + ")"
+            )
 
         # ── modificadores compostos (auditáveis) ──────────────────────────────────
         if epss is not None:

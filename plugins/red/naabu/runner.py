@@ -12,8 +12,9 @@ class NaabuRunner(BaseToolPlugin):
     binary = "naabu"
     name = "naabu"
 
-    def build_args(self, target: str, *, ports: str | None = None,
-                   rate_limit: int = 1000, **_) -> list[str]:
+    def build_args(
+        self, target: str, *, ports: str | None = None, rate_limit: int = 1000, **_
+    ) -> list[str]:
         args = ["-host", target, "-json", "-silent", "-rate", str(int(rate_limit))]
         if ports:
             args += ["-p", ports]

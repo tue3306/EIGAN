@@ -18,8 +18,8 @@ from enum import Enum
 class Category(str, Enum):
     """Domínio operacional de um plugin (§B do produto)."""
 
-    RED = "red"        # ofensivo: recon, enumeração, web, rede, exploração autorizada
-    BLUE = "blue"      # defensivo: compliance, hardening, inventário, detecção
+    RED = "red"  # ofensivo: recon, enumeração, web, rede, exploração autorizada
+    BLUE = "blue"  # defensivo: compliance, hardening, inventário, detecção
     PURPLE = "purple"  # correlação ATT&CK, gap analysis, validação de controles
 
 
@@ -49,7 +49,7 @@ class Capability(str, Enum):
     SERVICE_DETECTION = "service_detection"
 
     # ── web ──────────────────────────────────────────────────────────────────
-    WEB_PROBE = "web_probe"                 # fingerprint HTTP/tecnologias/WAF
+    WEB_PROBE = "web_probe"  # fingerprint HTTP/tecnologias/WAF
     SCREENSHOT = "screenshot"
     WEB_CRAWL = "web_crawl"
     PARAM_DISCOVERY = "param_discovery"
@@ -61,7 +61,7 @@ class Capability(str, Enum):
     CLOUD_STORAGE_ENUM = "cloud_storage_enum"
 
     # ── blue (defensivo) ─────────────────────────────────────────────────────
-    COMPLIANCE_AUDIT = "compliance_audit"   # mapeável a CIS/NIST
+    COMPLIANCE_AUDIT = "compliance_audit"  # mapeável a CIS/NIST
     HARDENING_AUDIT = "hardening_audit"
     IOC_INVENTORY = "ioc_inventory"
 
@@ -70,20 +70,20 @@ class Capability(str, Enum):
     # estas capabilities têm ``roadmap: true`` no metadata: são descobertos e
     # catalogados, porém NÃO executam. Existem para provar que a arquitetura
     # comporta 100+ módulos sem tocar no Core.
-    AD_ENUMERATION = "ad_enumeration"           # red
-    CLOUD_AUDIT = "cloud_audit"                 # red
-    WIRELESS_AUDIT = "wireless_audit"           # red
-    PASSWORD_AUDIT = "password_audit"           # red
-    EXPLOITATION = "exploitation"               # red (autorizada)
-    SIEM_INGEST = "siem_ingest"                 # blue
-    DETECTION_RULES = "detection_rules"         # blue
-    THREAT_HUNTING = "threat_hunting"           # blue
-    MALWARE_ANALYSIS = "malware_analysis"       # blue
-    LOG_ANALYSIS = "log_analysis"               # blue
-    INCIDENT_RESPONSE = "incident_response"     # blue
-    ATTACK_SIMULATION = "attack_simulation"     # purple
+    AD_ENUMERATION = "ad_enumeration"  # red
+    CLOUD_AUDIT = "cloud_audit"  # red
+    WIRELESS_AUDIT = "wireless_audit"  # red
+    PASSWORD_AUDIT = "password_audit"  # red
+    EXPLOITATION = "exploitation"  # red (autorizada)
+    SIEM_INGEST = "siem_ingest"  # blue
+    DETECTION_RULES = "detection_rules"  # blue
+    THREAT_HUNTING = "threat_hunting"  # blue
+    MALWARE_ANALYSIS = "malware_analysis"  # blue
+    LOG_ANALYSIS = "log_analysis"  # blue
+    INCIDENT_RESPONSE = "incident_response"  # blue
+    ATTACK_SIMULATION = "attack_simulation"  # purple
     DETECTION_VALIDATION = "detection_validation"  # purple
-    CONTROL_VALIDATION = "control_validation"   # purple
+    CONTROL_VALIDATION = "control_validation"  # purple
 
     @classmethod
     def from_str(cls, value: str) -> "Capability":
@@ -92,6 +92,5 @@ class Capability(str, Enum):
             return cls(value.strip().lower())
         except ValueError as exc:
             raise ValueError(
-                f"Capability desconhecida: {value!r}. Válidas: "
-                f"{[c.value for c in cls]}"
+                f"Capability desconhecida: {value!r}. Válidas: {[c.value for c in cls]}"
             ) from exc

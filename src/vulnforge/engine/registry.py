@@ -25,8 +25,8 @@ from .plugin import PluginMetadata, PluginMetadataError, PluginSpec
 log = logging.getLogger("vulnforge.registry")
 
 # raiz do pacote e do repositório, para resolver as pastas de plugins.
-_PKG_DIR = Path(__file__).resolve().parents[1]        # src/vulnforge
-_REPO_ROOT = Path(__file__).resolve().parents[3]      # raiz do repo
+_PKG_DIR = Path(__file__).resolve().parents[1]  # src/vulnforge
+_REPO_ROOT = Path(__file__).resolve().parents[3]  # raiz do repo
 
 
 class PluginLoadError(Exception):
@@ -71,7 +71,8 @@ def _instantiate_runner(module) -> BaseToolPlugin:
         return plugin_obj() if isinstance(plugin_obj, type) else plugin_obj
 
     candidates = [
-        v for v in vars(module).values()
+        v
+        for v in vars(module).values()
         if isinstance(v, type)
         and issubclass(v, BaseToolPlugin)
         and v is not BaseToolPlugin
@@ -144,8 +145,9 @@ class PluginRegistry:
         return PluginSpec(metadata=meta, runner=runner)
 
     # ── consultas ─────────────────────────────────────────────────────────────
-    def for_capability(self, capability: Capability,
-                       perspective: Perspective | None = None) -> list[PluginSpec]:
+    def for_capability(
+        self, capability: Capability, perspective: Perspective | None = None
+    ) -> list[PluginSpec]:
         specs = self._by_capability.get(capability, [])
         if perspective is None:
             return list(specs)

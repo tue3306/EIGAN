@@ -30,14 +30,23 @@ class ScanOutcome:
 
 def feeds_meta(feeds: FeedCache) -> dict:
     """Metadados de procedência dos feeds para o relatório (datas ou vazio)."""
-    return {"kev": feeds.kev_date() if feeds.kev_available else "",
-            "epss": feeds.epss_date()}
+    return {"kev": feeds.kev_date() if feeds.kev_available else "", "epss": feeds.epss_date()}
 
 
-def execute_scan(*, targets: list[str], perspective: Perspective | None, profile: str,
-                 scope_path: str | None, db: str, assume_yes: bool,
-                 override_perspective: bool, online_enrich: bool,
-                 progress=None, input_fn=input, echo=print) -> ScanOutcome:
+def execute_scan(
+    *,
+    targets: list[str],
+    perspective: Perspective | None,
+    profile: str,
+    scope_path: str | None,
+    db: str,
+    assume_yes: bool,
+    override_perspective: bool,
+    online_enrich: bool,
+    progress=None,
+    input_fn=input,
+    echo=print,
+) -> ScanOutcome:
     if not accept_terms(assume_yes=assume_yes, input_fn=input_fn, echo=echo):
         raise SessionAborted("Termo de uso não aceito.")
 
@@ -55,6 +64,12 @@ def execute_scan(*, targets: list[str], perspective: Perspective | None, profile
 
     store = FindingStore(db)
     orch = Orchestrator(store=store, risk=risk)
-    report = orch.run(targets, scope=scope, perspective=resolved, profile=profile,
-                      override_perspective=override_perspective, progress=progress)
+    report = orch.run(
+        targets,
+        scope=scope,
+        perspective=resolved,
+        profile=profile,
+        override_perspective=override_perspective,
+        progress=progress,
+    )
     return ScanOutcome(report=report, feeds_meta=feeds_meta(feeds))

@@ -12,8 +12,15 @@ class NucleiRunner(BaseToolPlugin):
     binary = "nuclei"
     name = "nuclei"
 
-    def build_args(self, target: str, *, severity: str | None = None,
-                   templates: str | None = None, rate_limit: int = 150, **_) -> list[str]:
+    def build_args(
+        self,
+        target: str,
+        *,
+        severity: str | None = None,
+        templates: str | None = None,
+        rate_limit: int = 150,
+        **_,
+    ) -> list[str]:
         args = ["-u", target, "-jsonl", "-silent", "-rate-limit", str(int(rate_limit))]
         if severity:
             args += ["-severity", severity]

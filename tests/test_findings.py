@@ -9,8 +9,13 @@ from vulnforge.findings.store import FindingStore
 
 
 def _f(**kw):
-    base = dict(title="SQLi", severity=Severity.HIGH, affected_asset="host:80",
-               source_tool="nuclei", cwe="CWE-89")
+    base = dict(
+        title="SQLi",
+        severity=Severity.HIGH,
+        affected_asset="host:80",
+        source_tool="nuclei",
+        cwe="CWE-89",
+    )
     base.update(kw)
     return Finding(**base)
 

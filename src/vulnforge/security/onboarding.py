@@ -58,15 +58,20 @@ def accept_terms(*, assume_yes: bool = False, input_fn=input, echo=print) -> boo
             return False
     path = _accept_file()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({
-        "accepted_at": datetime.now(timezone.utc).isoformat(),
-        "terms_version": _TERMS_VERSION,
-    }))
+    path.write_text(
+        json.dumps(
+            {
+                "accepted_at": datetime.now(timezone.utc).isoformat(),
+                "terms_version": _TERMS_VERSION,
+            }
+        )
+    )
     return True
 
 
-def build_scope(scope_path: str | Path | None, targets: list[str],
-                perspective: Perspective) -> Scope:
+def build_scope(
+    scope_path: str | Path | None, targets: list[str], perspective: Perspective
+) -> Scope:
     """Resolve o escopo: do ``scope.yaml`` (trava dura) ou efêmero dos alvos.
 
     No modo efêmero, ``authorized=True`` porque a autorização é afirmada inline

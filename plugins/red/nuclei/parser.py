@@ -43,8 +43,10 @@ def parse(result: ToolResult, target: str) -> list[Finding]:
         score = classification.get("cvss-score")
         if isinstance(score, (int, float)):
             vector = classification.get("cvss-metrics", "") or ""
-            version = "3.1" if vector.startswith("CVSS:3.1") else (
-                "4.0" if vector.startswith("CVSS:4.0") else "unknown"
+            version = (
+                "3.1"
+                if vector.startswith("CVSS:3.1")
+                else ("4.0" if vector.startswith("CVSS:4.0") else "unknown")
             )
             cvss = CVSS(version=version, score=float(score), vector=vector or None)
 
@@ -66,8 +68,9 @@ def parse(result: ToolResult, target: str) -> list[Finding]:
                 cwe=cwe,
                 description=info.get("description", "") or "",
                 evidence=(obj.get("extracted-results") and json.dumps(obj["extracted-results"]))
-                or obj.get("matcher-name", "") or line[:2000],
-                reproduction=f"nuclei -u {target} -t {obj.get('template-id','')}",
+                or obj.get("matcher-name", "")
+                or line[:2000],
+                reproduction=f"nuclei -u {target} -t {obj.get('template-id', '')}",
                 references=refs,
                 # CVE do template não confirmado contra NVD nesta camada:
                 confidence=Confidence.UNVERIFIED if cve_ids else Confidence.FIRM,

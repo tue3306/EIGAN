@@ -68,8 +68,9 @@ class BaseToolPlugin(ABC):
         """Converte a saída bruta em findings normalizados (delegado ao
         ``parser.py`` do plugin)."""
 
-    def _run(self, args: list[str], timeout: int | None = None,
-             stdin_data: str | None = None) -> ToolResult:
+    def _run(
+        self, args: list[str], timeout: int | None = None, stdin_data: str | None = None
+    ) -> ToolResult:
         """Executa a ferramenta com segurança: lista de argumentos, ``shell=False``
         e timeout obrigatório.
 

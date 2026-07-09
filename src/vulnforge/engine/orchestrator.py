@@ -45,16 +45,20 @@ class ScanReport:
 
 
 class Orchestrator:
-    def __init__(self, store: Optional[FindingStore] = None,
-                 registry: Optional[PluginRegistry] = None,
-                 risk: Optional["RiskScorer"] = None) -> None:
+    def __init__(
+        self,
+        store: Optional[FindingStore] = None,
+        registry: Optional[PluginRegistry] = None,
+        risk: Optional["RiskScorer"] = None,
+    ) -> None:
         self._store = store
         # registry vazio é falsy (tem __len__); checagem explícita evita redescobrir.
         self._registry = registry if registry is not None else PluginRegistry.discover()
         self._risk = risk
 
-    def _resolve_stage_plugins(self, stage: Stage, perspective: Perspective,
-                               skipped: list[str], emit: ProgressCb) -> list[PluginSpec]:
+    def _resolve_stage_plugins(
+        self, stage: Stage, perspective: Perspective, skipped: list[str], emit: ProgressCb
+    ) -> list[PluginSpec]:
         """Plugins de um estágio: todos que provêem alguma capability do estágio,
         suportam a perspectiva, estão habilitados e disponíveis. Decisão via
         metadados — sem ``if`` de perspectiva no meio do fluxo."""
@@ -76,10 +80,17 @@ class Orchestrator:
             selected.append(spec)
         return selected
 
-    def run(self, targets: list[str], *, scope: Scope,
-            perspective: Optional[Perspective] = None, profile: str = "standard",
-            override_perspective: bool = False,
-            progress: Optional[ProgressCb] = None, **tool_opts) -> ScanReport:
+    def run(
+        self,
+        targets: list[str],
+        *,
+        scope: Scope,
+        perspective: Optional[Perspective] = None,
+        profile: str = "standard",
+        override_perspective: bool = False,
+        progress: Optional[ProgressCb] = None,
+        **tool_opts,
+    ) -> ScanReport:
         persp = perspective or scope.perspective
         persp_profile = profile_for(persp)
 
@@ -97,8 +108,10 @@ class Orchestrator:
             if progress:
                 progress(msg)
 
-        emit(f"perspectiva={persp.value} perfil={profile} "
-             f"rate_limit={tool_opts['rate_limit']} estágios={[s.name for s in stages]}")
+        emit(
+            f"perspectiva={persp.value} perfil={profile} "
+            f"rate_limit={tool_opts['rate_limit']} estágios={[s.name for s in stages]}"
+        )
 
         scan_id = None
         if self._store:
@@ -138,13 +151,21 @@ class Orchestrator:
             self._store.add_findings(scan_id, findings)
             self._store.finish_scan(scan_id)
 
-        emit(f"scan concluído: {len(findings)} findings, {len(stages_run)} estágios, "
-             f"{len(skipped)} plugins pulados")
-        return ScanReport(scan_id=scan_id, perspective=persp, findings=findings,
-                          skipped_tools=skipped, stages_run=stages_run)
+        emit(
+            f"scan concluído: {len(findings)} findings, {len(stages_run)} estágios, "
+            f"{len(skipped)} plugins pulados"
+        )
+        return ScanReport(
+            scan_id=scan_id,
+            perspective=persp,
+            findings=findings,
+            skipped_tools=skipped,
+            stages_run=stages_run,
+        )
 
-    def _safe_scan(self, spec: PluginSpec, target: str, *,
-                   emit: ProgressCb, **opts) -> list[Finding]:
+    def _safe_scan(
+        self, spec: PluginSpec, target: str, *, emit: ProgressCb, **opts
+    ) -> list[Finding]:
         """Executa um plugin isolando falhas: um erro registra e segue."""
         try:
             return spec.scan(target, **opts)

@@ -12,8 +12,9 @@ class NmapRunner(BaseToolPlugin):
     binary = "nmap"
     name = "nmap"
 
-    def build_args(self, target: str, *, ports: str | None = None,
-                   scripts: bool = False, **_) -> list[str]:
+    def build_args(
+        self, target: str, *, ports: str | None = None, scripts: bool = False, **_
+    ) -> list[str]:
         args = ["-sV", "-oX", "-", "-Pn"]
         if ports:
             # `ports` é um token isolado (nunca concatenado em shell).

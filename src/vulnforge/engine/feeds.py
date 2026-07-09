@@ -54,7 +54,7 @@ class FeedCache:
     """Cache local dos feeds. Carregado do disco; atualizado só sob demanda."""
 
     cache_dir: Path = field(default_factory=default_cache_dir)
-    kev_cves: set[str] | None = None       # None = feed KEV nunca obtido (UNVERIFIED)
+    kev_cves: set[str] | None = None  # None = feed KEV nunca obtido (UNVERIFIED)
     kev_meta: dict = field(default_factory=dict)
     epss_scores: dict[str, float] = field(default_factory=dict)
     epss_meta: dict = field(default_factory=dict)
@@ -89,13 +89,13 @@ class FeedCache:
 
     def _save_kev(self) -> None:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self._kev_path.write_text(json.dumps(
-            {"meta": self.kev_meta, "cves": sorted(self.kev_cves or [])}, indent=0))
+        self._kev_path.write_text(
+            json.dumps({"meta": self.kev_meta, "cves": sorted(self.kev_cves or [])}, indent=0)
+        )
 
     def _save_epss(self) -> None:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self._epss_path.write_text(json.dumps(
-            {"meta": self.epss_meta, "scores": self.epss_scores}))
+        self._epss_path.write_text(json.dumps({"meta": self.epss_meta, "scores": self.epss_scores}))
 
     # ── atualização (rede) ──────────────────────────────────────────────────────
     def update_kev(self, getter=_http_get) -> dict:
@@ -125,7 +125,7 @@ class FeedCache:
         missing = [c for c in wanted if c not in self.epss_scores]
         feed_date = self.epss_meta.get("date", "")
         for i in range(0, len(missing), _EPSS_BATCH):
-            batch = missing[i:i + _EPSS_BATCH]
+            batch = missing[i : i + _EPSS_BATCH]
             url = f"{EPSS_API}?cve={','.join(batch)}"
             try:
                 payload = json.loads(getter(url))

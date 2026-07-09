@@ -8,8 +8,13 @@ from vulnforge.perspective import Perspective
 
 
 def _f(tool, asset, **kw):
-    return Finding(title=f"{tool}:{asset}", severity=Severity.INFO,
-                   affected_asset=asset, source_tool=tool, **kw)
+    return Finding(
+        title=f"{tool}:{asset}",
+        severity=Severity.INFO,
+        affected_asset=asset,
+        source_tool=tool,
+        **kw,
+    )
 
 
 # ── inventário ──────────────────────────────────────────────────────────────
@@ -40,7 +45,7 @@ def test_inventory_cross_perspective():
 # ── ATT&CK (Purple) ─────────────────────────────────────────────────────────
 def test_attack_maps_known_techniques_and_reports_gap():
     findings = [
-        _f("nmap", "h:80", attack_technique="T1046"),   # Discovery
+        _f("nmap", "h:80", attack_technique="T1046"),  # Discovery
         _f("subfinder", "sub.h", attack_technique="T1590"),  # Reconnaissance
     ]
     cov = map_attack(findings)
@@ -60,8 +65,7 @@ def test_attack_unknown_technique_is_unmapped_not_invented():
 
 # ── conformidade (Blue) ─────────────────────────────────────────────────────
 def test_compliance_maps_cwe_to_references():
-    findings = [_f("nuclei", "http://h/", cwe="CWE-89"),
-                _f("nmap", "h:80")]  # sem CWE => unmapped
+    findings = [_f("nuclei", "http://h/", cwe="CWE-89"), _f("nmap", "h:80")]  # sem CWE => unmapped
     rep = assess_compliance(findings)
     assert rep.unmapped == 1
     assert rep.indicative is True

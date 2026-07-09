@@ -54,6 +54,7 @@ def test_exclude_takes_precedence():
 
 # ── perspectiva × escopo ────────────────────────────────────────────────────
 
+
 def test_external_blocks_private_target():
     scope = Scope(authorized=True, hosts=["10.0.0.5"], perspective=EXTERNAL)
     with pytest.raises(PerspectiveViolation):

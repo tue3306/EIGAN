@@ -31,8 +31,14 @@ class FakePlugin(BaseToolPlugin):
         return [target]
 
     def scan(self, target, **_):
-        return [Finding(title=f"{self.name} finding", severity=Severity.LOW,
-                        affected_asset=target, source_tool=self.name)]
+        return [
+            Finding(
+                title=f"{self.name} finding",
+                severity=Severity.LOW,
+                affected_asset=target,
+                source_tool=self.name,
+            )
+        ]
 
     def parse(self, result: ToolResult, target):  # não usado
         return []
@@ -40,8 +46,11 @@ class FakePlugin(BaseToolPlugin):
 
 def _spec(name, caps, perspectives, category=Category.RED) -> PluginSpec:
     meta = PluginMetadata(
-        name=name, category=category, capabilities=tuple(caps),
-        supported_perspectives=tuple(perspectives), tool=name,
+        name=name,
+        category=category,
+        capabilities=tuple(caps),
+        supported_perspectives=tuple(perspectives),
+        tool=name,
     )
     return PluginSpec(metadata=meta, runner=FakePlugin(name))
 
@@ -68,8 +77,11 @@ def test_orchestrator_resolves_by_capability_and_perspective():
     reg = _registry(
         _spec("subfinder", [Capability.SUBDOMAIN_ENUMERATION], [EXTERNAL]),
         _spec("naabu", [Capability.PORT_DISCOVERY], [EXTERNAL, INTERNAL]),
-        _spec("nmap", [Capability.HOST_DISCOVERY, Capability.PORT_DISCOVERY,
-                       Capability.SERVICE_DETECTION], [EXTERNAL, INTERNAL]),
+        _spec(
+            "nmap",
+            [Capability.HOST_DISCOVERY, Capability.PORT_DISCOVERY, Capability.SERVICE_DETECTION],
+            [EXTERNAL, INTERNAL],
+        ),
     )
     orch = Orchestrator(store=None, registry=reg)
     scope = Scope(authorized=True, hosts=["10.0.0.5"], perspective=INTERNAL)
@@ -87,8 +99,9 @@ def test_orchestrator_resolves_by_capability_and_perspective():
 def test_plugin_with_multiple_capabilities_runs_once_per_stage():
     # nmap provê 2 capabilities que caem no MESMO estágio 'ports' (external).
     reg = _registry(
-        _spec("nmap", [Capability.PORT_DISCOVERY, Capability.SERVICE_DETECTION],
-              [EXTERNAL, INTERNAL]),
+        _spec(
+            "nmap", [Capability.PORT_DISCOVERY, Capability.SERVICE_DETECTION], [EXTERNAL, INTERNAL]
+        ),
     )
     orch = Orchestrator(store=None, registry=reg)
     scope = Scope(authorized=True, hosts=["example.com"], perspective=EXTERNAL)

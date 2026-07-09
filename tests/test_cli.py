@@ -55,9 +55,13 @@ class _AvailablePlugin(BaseToolPlugin):
 
 def test_doctor_gather_and_verdict():
     spec = PluginSpec(
-        metadata=PluginMetadata(name="nmap", category=Category.RED,
-                                capabilities=(Capability.PORT_DISCOVERY,),
-                                supported_perspectives=(Perspective.EXTERNAL,), tool="nmap"),
+        metadata=PluginMetadata(
+            name="nmap",
+            category=Category.RED,
+            capabilities=(Capability.PORT_DISCOVERY,),
+            supported_perspectives=(Perspective.EXTERNAL,),
+            tool="nmap",
+        ),
         runner=_AvailablePlugin(),
     )
     reg = PluginRegistry([spec])

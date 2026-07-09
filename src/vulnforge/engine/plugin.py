@@ -42,17 +42,17 @@ class PluginMetadata:
     category: Category
     capabilities: tuple[Capability, ...]
     supported_perspectives: tuple[Perspective, ...]
-    tool: str                      # binário/ferramenta subjacente
+    tool: str  # binário/ferramenta subjacente
     description: str = ""
-    subcategory: str = ""          # recon | network | web | cloud | ...
+    subcategory: str = ""  # recon | network | web | cloud | ...
     version_source: str = "# VERIFICAR"
-    license: str = "VERIFICAR"     # não é fato até confirmado na fonte oficial
+    license: str = "VERIFICAR"  # não é fato até confirmado na fonte oficial
     commercial_use: str = "verify"  # ok | verify | restricted
     requires_credentials: bool = False
-    chained_after: tuple[str, ...] = ()   # capabilities que rodam antes
+    chained_after: tuple[str, ...] = ()  # capabilities que rodam antes
     enabled_by_default: bool = True
-    roadmap: bool = False          # scaffolded honesto: declarado, ainda não operante
-    install_hint: str = ""         # como instalar a ferramenta (usado por `doctor`)
+    roadmap: bool = False  # scaffolded honesto: declarado, ainda não operante
+    install_hint: str = ""  # como instalar a ferramenta (usado por `doctor`)
     path: Path | None = None
 
     @classmethod
@@ -68,8 +68,9 @@ class PluginMetadata:
         try:
             name = str(data["name"])
             category = Category(str(data["category"]).strip().lower())
-            caps_raw = data.get("capabilities") or ([data["capability"]]
-                                                    if data.get("capability") else [])
+            caps_raw = data.get("capabilities") or (
+                [data["capability"]] if data.get("capability") else []
+            )
             capabilities = tuple(Capability.from_str(c) for c in _as_list(caps_raw))
             if not capabilities:
                 raise KeyError("capabilities")

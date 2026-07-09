@@ -79,13 +79,15 @@ def correlate_assets(findings: list[Finding]) -> list[AssetCorrelation]:
         max_risk = max((f.risk_rank for f in fs), default=0.0)
         counts = Counter(f.severity.value for f in fs)
         ordered = sorted(fs, key=lambda f: f.risk_rank, reverse=True)
-        out.append(AssetCorrelation(
-            asset=host,
-            findings=ordered,
-            perspectives=perspectives,
-            max_risk=max_risk,
-            severity_counts={s.value: counts.get(s.value, 0) for s in Severity},
-            attack_chain=_build_chain(fs),
-        ))
+        out.append(
+            AssetCorrelation(
+                asset=host,
+                findings=ordered,
+                perspectives=perspectives,
+                max_risk=max_risk,
+                severity_counts={s.value: counts.get(s.value, 0) for s in Severity},
+                attack_chain=_build_chain(fs),
+            )
+        )
     out.sort(key=lambda a: a.max_risk, reverse=True)
     return out

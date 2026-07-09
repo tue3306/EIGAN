@@ -22,7 +22,7 @@ _HOSTPORT = re.compile(r"^[^/]+:(\d{1,5})$")
 class Asset:
     host: str
     perspectives: list[str] = field(default_factory=list)
-    ports: list[str] = field(default_factory=list)         # ex.: "80", "443"
+    ports: list[str] = field(default_factory=list)  # ex.: "80", "443"
     web_endpoints: list[str] = field(default_factory=list)  # URLs vivas
     finding_count: int = 0
     max_risk: float = 0.0

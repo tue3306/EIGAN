@@ -14,16 +14,30 @@ def client(tmp_path, monkeypatch):
     db = tmp_path / "api.db"
     store = FindingStore(db)
     sid = store.create_scan("lab", "external/standard", ["http://h/"])
-    f = Finding(title="SQLi", severity=Severity.HIGH, affected_asset="http://h/app",
-                source_tool="nuclei", cwe="CWE-89", attack_technique="T1190",
-                cvss=CVSS(version="3.1", score=8.8))
+    f = Finding(
+        title="SQLi",
+        severity=Severity.HIGH,
+        affected_asset="http://h/app",
+        source_tool="nuclei",
+        cwe="CWE-89",
+        attack_technique="T1190",
+        cvss=CVSS(version="3.1", score=8.8),
+    )
     f.risk = RiskScore(score=96.0, kev=True, kev_verified=True)
-    store.add_findings(sid, [f, Finding(title="Porta 80", severity=Severity.INFO,
-                                        affected_asset="h:80", source_tool="nmap")])
+    store.add_findings(
+        sid,
+        [
+            f,
+            Finding(
+                title="Porta 80", severity=Severity.INFO, affected_asset="h:80", source_tool="nmap"
+            ),
+        ],
+    )
     store.finish_scan(sid)
     store.close()
     monkeypatch.setenv("VULNFORGE_DB", str(db))
     from vulnforge.api.app import app
+
     return TestClient(app), sid
 
 

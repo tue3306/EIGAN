@@ -45,7 +45,7 @@ _EXTERNAL: tuple[Stage, ...] = (
 _INTERNAL: tuple[Stage, ...] = (
     Stage("host-discovery", (C.HOST_DISCOVERY,)),
     Stage("ports", (C.PORT_DISCOVERY,)),
-    Stage("service-auth", (C.SERVICE_DETECTION,)),   # NSE + scan autenticado se houver credencial
+    Stage("service-auth", (C.SERVICE_DETECTION,)),  # NSE + scan autenticado se houver credencial
     Stage("web-probe", (C.WEB_PROBE,)),
     Stage("screenshot", (C.SCREENSHOT,)),
     Stage("crawl", (C.WEB_CRAWL,)),

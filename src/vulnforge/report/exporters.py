@@ -26,9 +26,23 @@ _SARIF_LEVEL: dict[Severity, str] = {
 }
 
 _CSV_COLUMNS = [
-    "title", "severity", "risk_score", "epss", "epss_verified", "kev", "kev_verified",
-    "perspective", "affected_asset", "cwe", "owasp", "attack_technique",
-    "source_tool", "confidence", "cvss_version", "cvss_score", "references",
+    "title",
+    "severity",
+    "risk_score",
+    "epss",
+    "epss_verified",
+    "kev",
+    "kev_verified",
+    "perspective",
+    "affected_asset",
+    "cwe",
+    "owasp",
+    "attack_technique",
+    "source_tool",
+    "confidence",
+    "cvss_version",
+    "cvss_score",
+    "references",
 ]
 
 
@@ -53,30 +67,33 @@ def to_csv(findings: list[Finding]) -> str:
     writer.writeheader()
     for f in findings:
         risk = f.risk
-        writer.writerow({
-            "title": f.title,
-            "severity": f.severity.value,
-            "risk_score": risk.score if risk else "",
-            "epss": (risk.epss if risk and risk.epss is not None else ""),
-            "epss_verified": (risk.epss_verified if risk else ""),
-            "kev": (risk.kev if risk else ""),
-            "kev_verified": (risk.kev_verified if risk else ""),
-            "perspective": f.perspective.value,
-            "affected_asset": f.affected_asset,
-            "cwe": f.cwe or "",
-            "owasp": f.owasp or "",
-            "attack_technique": f.attack_technique or "",
-            "source_tool": f.source_tool,
-            "confidence": f.confidence.value,
-            "cvss_version": f.cvss.version if f.cvss else "",
-            "cvss_score": f.cvss.score if f.cvss else "",
-            "references": " ".join(f.references),
-        })
+        writer.writerow(
+            {
+                "title": f.title,
+                "severity": f.severity.value,
+                "risk_score": risk.score if risk else "",
+                "epss": (risk.epss if risk and risk.epss is not None else ""),
+                "epss_verified": (risk.epss_verified if risk else ""),
+                "kev": (risk.kev if risk else ""),
+                "kev_verified": (risk.kev_verified if risk else ""),
+                "perspective": f.perspective.value,
+                "affected_asset": f.affected_asset,
+                "cwe": f.cwe or "",
+                "owasp": f.owasp or "",
+                "attack_technique": f.attack_technique or "",
+                "source_tool": f.source_tool,
+                "confidence": f.confidence.value,
+                "cvss_version": f.cvss.version if f.cvss else "",
+                "cvss_score": f.cvss.score if f.cvss else "",
+                "references": " ".join(f.references),
+            }
+        )
     return buf.getvalue()
 
 
-def to_sarif(findings: list[Finding], *, tool_version: str = "0.2.0",
-             meta: dict | None = None) -> str:
+def to_sarif(
+    findings: list[Finding], *, tool_version: str = "0.2.0", meta: dict | None = None
+) -> str:
     """SARIF 2.1.0 — para GitHub code scanning e ferramentas compatíveis."""
     rules: dict[str, dict] = {}
     results: list[dict] = []
@@ -103,28 +120,34 @@ def to_sarif(findings: list[Finding], *, tool_version: str = "0.2.0",
                 props["epss"] = f.risk.epss
             if f.risk.kev_verified:
                 props["kev"] = f.risk.kev
-        results.append({
-            "ruleId": rule_id,
-            "level": _SARIF_LEVEL[f.severity],
-            "message": {"text": f.title + (f" — {f.description}" if f.description else "")},
-            "locations": [{
-                "physicalLocation": {"artifactLocation": {"uri": f.affected_asset}}
-            }],
-            "properties": props,
-        })
+        results.append(
+            {
+                "ruleId": rule_id,
+                "level": _SARIF_LEVEL[f.severity],
+                "message": {"text": f.title + (f" — {f.description}" if f.description else "")},
+                "locations": [
+                    {"physicalLocation": {"artifactLocation": {"uri": f.affected_asset}}}
+                ],
+                "properties": props,
+            }
+        )
 
     log = {
         "version": "2.1.0",
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
-        "runs": [{
-            "tool": {"driver": {
-                "name": "VulnForge",
-                "version": tool_version,
-                "informationUri": "https://github.com/tue3306/vulnerability-scanner",
-                "rules": list(rules.values()),
-            }},
-            "results": results,
-            "properties": meta or {},
-        }],
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "VulnForge",
+                        "version": tool_version,
+                        "informationUri": "https://github.com/tue3306/vulnerability-scanner",
+                        "rules": list(rules.values()),
+                    }
+                },
+                "results": results,
+                "properties": meta or {},
+            }
+        ],
     }
     return json.dumps(log, indent=2, ensure_ascii=False)

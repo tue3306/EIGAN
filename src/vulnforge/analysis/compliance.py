@@ -53,8 +53,9 @@ def load_mappings(path: Path | None = None) -> dict[str, list[dict]]:
     return data.get("mappings", {}) if isinstance(data, dict) else {}
 
 
-def assess_compliance(findings: list[Finding],
-                      mappings: dict[str, list[dict]] | None = None) -> ComplianceReport:
+def assess_compliance(
+    findings: list[Finding], mappings: dict[str, list[dict]] | None = None
+) -> ComplianceReport:
     table = mappings if mappings is not None else load_mappings()
     items: list[ComplianceItem] = []
     fw_counter: Counter[str] = Counter()
@@ -65,9 +66,14 @@ def assess_compliance(findings: list[Finding],
         if not entries:
             unmapped += 1
             continue
-        refs = [ComplianceRef(framework=str(e.get("framework", "")),
-                              ref=str(e.get("ref", "")), url=str(e.get("url", "")))
-                for e in entries]
+        refs = [
+            ComplianceRef(
+                framework=str(e.get("framework", "")),
+                ref=str(e.get("ref", "")),
+                url=str(e.get("url", "")),
+            )
+            for e in entries
+        ]
         items.append(ComplianceItem(finding_title=f.title, cwe=f.cwe or "", refs=refs))
         for r in refs:
             fw_counter[r.framework] += 1

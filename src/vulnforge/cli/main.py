@@ -43,20 +43,46 @@ def cli(ctx: click.Context) -> None:
 @cli.command()
 @click.argument("targets", nargs=-1)
 @click.option("--target-list", type=click.Path(exists=True), help="Arquivo com um alvo por linha.")
-@click.option("--perspective", type=click.Choice([p.value for p in Perspective]), default=None,
-              help="external|internal. Padrão: external (ou o do scope.yaml).")
+@click.option(
+    "--perspective",
+    type=click.Choice([p.value for p in Perspective]),
+    default=None,
+    help="external|internal. Padrão: external (ou o do scope.yaml).",
+)
 @click.option("--profile", default="standard", show_default=True)
-@click.option("--scope", "scope_path", type=click.Path(exists=True), default=None,
-              help="scope.yaml (trava dura, opcional). Sem ele, usa consent inline.")
+@click.option(
+    "--scope",
+    "scope_path",
+    type=click.Path(exists=True),
+    default=None,
+    help="scope.yaml (trava dura, opcional). Sem ele, usa consent inline.",
+)
 @click.option("--db", default="vulnforge.db", show_default=True)
 @click.option("--yes", is_flag=True, help="Consent + termo não-interativos (CI autorizado).")
 @click.option("--online-enrich", is_flag=True, help="Buscar EPSS (FIRST.org) para os CVEs achados.")
-@click.option("--override-perspective", is_flag=True,
-              help="Libera a regra público×privado da perspectiva (auditado).")
-@click.option("--fail-on", type=click.Choice([s.value for s in Severity]), default=None,
-              help="Sai !=0 se houver finding >= esta severidade (gate de CI).")
-def scan(targets, target_list, perspective, profile, scope_path, db, yes,
-         online_enrich, override_perspective, fail_on):
+@click.option(
+    "--override-perspective",
+    is_flag=True,
+    help="Libera a regra público×privado da perspectiva (auditado).",
+)
+@click.option(
+    "--fail-on",
+    type=click.Choice([s.value for s in Severity]),
+    default=None,
+    help="Sai !=0 se houver finding >= esta severidade (gate de CI).",
+)
+def scan(
+    targets,
+    target_list,
+    perspective,
+    profile,
+    scope_path,
+    db,
+    yes,
+    online_enrich,
+    override_perspective,
+    fail_on,
+):
     """Executa um scan contra ALVOS autorizados (ex.: `vulnforge scan example.com`)."""
     tlist = list(targets)
     if target_list:
@@ -69,9 +95,14 @@ def scan(targets, target_list, perspective, profile, scope_path, db, yes,
 
     try:
         outcome = execute_scan(
-            targets=tlist, perspective=Perspective(perspective) if perspective else None,
-            profile=profile, scope_path=scope_path, db=db, assume_yes=yes,
-            override_perspective=override_perspective, online_enrich=online_enrich,
+            targets=tlist,
+            perspective=Perspective(perspective) if perspective else None,
+            profile=profile,
+            scope_path=scope_path,
+            db=db,
+            assume_yes=yes,
+            override_perspective=override_perspective,
+            online_enrich=online_enrich,
             progress=lambda m: click.echo(f"  {m}"),
         )
     except SessionAborted as exc:
@@ -82,14 +113,21 @@ def scan(targets, target_list, perspective, profile, scope_path, db, yes,
         sys.exit(2)
 
     report = outcome.report
-    click.secho(f"\nScan #{report.scan_id} [{report.perspective.value}]: "
-                f"{len(report.findings)} findings", fg="green")
+    click.secho(
+        f"\nScan #{report.scan_id} [{report.perspective.value}]: {len(report.findings)} findings",
+        fg="green",
+    )
     for f in report.findings:
         risk = f"{f.risk.score:.0f}" if f.risk else "—"
-        click.echo(f"  [{f.severity.value.upper():8}] risco {risk:>3}  {f.title}  ({f.affected_asset})")
+        click.echo(
+            f"  [{f.severity.value.upper():8}] risco {risk:>3}  {f.title}  ({f.affected_asset})"
+        )
     if report.skipped_tools:
-        click.secho(f"Ferramentas indisponíveis: {', '.join(report.skipped_tools)} "
-                    "(rode `vulnforge doctor`).", fg="yellow")
+        click.secho(
+            f"Ferramentas indisponíveis: {', '.join(report.skipped_tools)} "
+            "(rode `vulnforge doctor`).",
+            fg="yellow",
+        )
 
     if fail_on:
         threshold = Severity(fail_on).rank
@@ -102,10 +140,16 @@ def scan(targets, target_list, perspective, profile, scope_path, db, yes,
 @cli.command()
 @click.option("--scan", "scan_id", required=True, type=int)
 @click.option("--db", default="vulnforge.db", show_default=True)
-@click.option("--format", "fmt", type=click.Choice(["pdf", "html", "json", "csv", "sarif"]),
-              default="html", show_default=True)
-@click.option("--style", type=click.Choice(["technical", "executive"]), default="technical",
-              show_default=True)
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["pdf", "html", "json", "csv", "sarif"]),
+    default="html",
+    show_default=True,
+)
+@click.option(
+    "--style", type=click.Choice(["technical", "executive"]), default="technical", show_default=True
+)
 @click.option("--out", default=None)
 @click.option("--ai/--no-ai", default=False, help="Enriquecer narrativa com IA (se houver chave).")
 def report(scan_id, db, fmt, style, out, ai):
@@ -113,8 +157,9 @@ def report(scan_id, db, fmt, style, out, ai):
     store = FindingStore(db)
     fmeta = feeds_meta(FeedCache.load())
     try:
-        path, ai_used = write_report(store, scan_id, fmt=fmt, style=style, out=out,
-                                     use_ai=ai, feeds_meta=fmeta)
+        path, ai_used = write_report(
+            store, scan_id, fmt=fmt, style=style, out=out, use_ai=ai, feeds_meta=fmeta
+        )
     except ValueError as exc:
         raise click.UsageError(str(exc)) from exc
     except RuntimeError as exc:  # ex.: WeasyPrint ausente
@@ -132,10 +177,12 @@ def serve(host, port, db):
     import os
 
     import uvicorn
+
     os.environ["VULNFORGE_DB"] = db
     url = f"http://{host}:{port}"
-    click.secho(f"VulnForge — dashboard em {url}  ·  API em {url}/api/v1  ·  docs em {url}/docs",
-                fg="green")
+    click.secho(
+        f"VulnForge — dashboard em {url}  ·  API em {url}/api/v1  ·  docs em {url}/docs", fg="green"
+    )
     uvicorn.run("vulnforge.api.app:app", host=host, port=port)
 
 
@@ -161,12 +208,18 @@ def feeds_update():
     try:
         meta = fc.update_kev()
     except Exception as exc:  # noqa: BLE001 — rede/parse: mensagem acionável, sem stack trace
-        click.secho(f"Falha ao atualizar KEV: {exc}\n"
-                    "Verifique a conexão; sem o feed, KEV sai UNVERIFIED (não fabricado).",
-                    fg="red", err=True)
+        click.secho(
+            f"Falha ao atualizar KEV: {exc}\n"
+            "Verifique a conexão; sem o feed, KEV sai UNVERIFIED (não fabricado).",
+            fg="red",
+            err=True,
+        )
         sys.exit(1)
-    click.secho(f"KEV atualizado: {meta['count']} CVEs · versão {meta.get('catalogVersion','?')} "
-                f"· {meta.get('dateReleased','?')}", fg="green")
+    click.secho(
+        f"KEV atualizado: {meta['count']} CVEs · versão {meta.get('catalogVersion', '?')} "
+        f"· {meta.get('dateReleased', '?')}",
+        fg="green",
+    )
     click.echo(f"Cache: {fc.cache_dir}")
 
 

@@ -92,8 +92,9 @@ class RiskScore(BaseModel):
     """
 
     score: float = Field(ge=0.0, le=100.0, description="Risco composto 0-100.")
-    epss: Optional[float] = Field(default=None, ge=0.0, le=1.0,
-                                  description="Prob. de exploração (FIRST.org EPSS).")
+    epss: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Prob. de exploração (FIRST.org EPSS)."
+    )
     epss_verified: bool = False
     kev: bool = Field(default=False, description="Consta na CISA KEV?")
     kev_verified: bool = False

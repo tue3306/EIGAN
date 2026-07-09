@@ -101,7 +101,9 @@ def default_provider() -> AIProvider | None:
     nenhuma chave estiver configurada — o produto segue funcionando sem IA."""
     # A implementação concreta (chamada HTTP ao provedor) fica na infra; aqui só
     # sinalizamos ausência de chave para manter o núcleo sem dependência de rede.
-    if not any(os.getenv(k) for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY",
-                                       "GOOGLE_API_KEY", "OLLAMA_HOST")):
+    if not any(
+        os.getenv(k)
+        for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "OLLAMA_HOST")
+    ):
         return None
     return None  # placeholder: adapters concretos plugam aqui (Fase 4)

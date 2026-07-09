@@ -24,10 +24,20 @@ _CATALOG = Path(__file__).resolve().parents[3] / "knowledge" / "attack" / "techn
 
 # Táticas do ATT&CK Enterprise, na ordem canônica (kill chain).
 ENTERPRISE_TACTICS = [
-    "Reconnaissance", "Resource Development", "Initial Access", "Execution",
-    "Persistence", "Privilege Escalation", "Defense Evasion", "Credential Access",
-    "Discovery", "Lateral Movement", "Collection", "Command and Control",
-    "Exfiltration", "Impact",
+    "Reconnaissance",
+    "Resource Development",
+    "Initial Access",
+    "Execution",
+    "Persistence",
+    "Privilege Escalation",
+    "Defense Evasion",
+    "Credential Access",
+    "Discovery",
+    "Lateral Movement",
+    "Collection",
+    "Command and Control",
+    "Exfiltration",
+    "Impact",
 ]
 
 
@@ -43,7 +53,7 @@ class TechniqueHit:
 @dataclass
 class AttackCoverage:
     hits: list[TechniqueHit] = field(default_factory=list)
-    unmapped: list[str] = field(default_factory=list)   # técnicas sem catálogo
+    unmapped: list[str] = field(default_factory=list)  # técnicas sem catálogo
     tactics_covered: list[str] = field(default_factory=list)
     tactics_gap: list[str] = field(default_factory=list)
 
@@ -69,15 +79,21 @@ def map_attack(findings: list[Finding], catalog: dict[str, dict] | None = None) 
             unmapped.append(tid)
             continue
         tactic = str(entry.get("tactic", ""))
-        hits.append(TechniqueHit(
-            technique=tid, name=str(entry.get("name", tid)),
-            tactic=tactic, url=str(entry.get("url", "")), count=n,
-        ))
+        hits.append(
+            TechniqueHit(
+                technique=tid,
+                name=str(entry.get("name", tid)),
+                tactic=tactic,
+                url=str(entry.get("url", "")),
+                count=n,
+            )
+        )
         if tactic:
             covered.add(tactic)
 
     hits.sort(key=lambda h: h.count, reverse=True)
     covered_ordered = [t for t in ENTERPRISE_TACTICS if t in covered]
     gap = [t for t in ENTERPRISE_TACTICS if t not in covered]
-    return AttackCoverage(hits=hits, unmapped=unmapped,
-                          tactics_covered=covered_ordered, tactics_gap=gap)
+    return AttackCoverage(
+        hits=hits, unmapped=unmapped, tactics_covered=covered_ordered, tactics_gap=gap
+    )

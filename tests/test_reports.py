@@ -13,15 +13,31 @@ _KB = Path(__file__).resolve().parents[1] / "knowledge" / "skills"
 
 
 def _findings():
-    f1 = Finding(title="SQLi", severity=Severity.HIGH, affected_asset="http://h/app",
-                 source_tool="nuclei", cwe="CWE-89", owasp="A03:2021",
-                 attack_technique="T1190",
-                 cvss=CVSS(version="3.1", score=8.8),
-                 references=["https://nvd.nist.gov/vuln/detail/CVE-2024-0001"])
-    f1.risk = RiskScore(score=96.0, epss=0.9, epss_verified=True, kev=True,
-                        kev_verified=True, provenance={"kev": "CISA KEV 2026-07-07"})
-    f2 = Finding(title="Porta aberta 80", severity=Severity.INFO,
-                 affected_asset="10.0.0.5:80", source_tool="nmap")
+    f1 = Finding(
+        title="SQLi",
+        severity=Severity.HIGH,
+        affected_asset="http://h/app",
+        source_tool="nuclei",
+        cwe="CWE-89",
+        owasp="A03:2021",
+        attack_technique="T1190",
+        cvss=CVSS(version="3.1", score=8.8),
+        references=["https://nvd.nist.gov/vuln/detail/CVE-2024-0001"],
+    )
+    f1.risk = RiskScore(
+        score=96.0,
+        epss=0.9,
+        epss_verified=True,
+        kev=True,
+        kev_verified=True,
+        provenance={"kev": "CISA KEV 2026-07-07"},
+    )
+    f2 = Finding(
+        title="Porta aberta 80",
+        severity=Severity.INFO,
+        affected_asset="10.0.0.5:80",
+        source_tool="nmap",
+    )
     return [f1, f2]
 
 
@@ -55,10 +71,11 @@ def test_sarif_is_valid_2_1_0():
 
 
 def test_executive_report_without_ai():
-    gen = ReportGenerator(Enricher(KnowledgeBase(_KB), provider=None),
-                          feeds_meta={"kev": "2026-07-07", "epss": "2026-07-08"})
-    html = gen.render_html(_findings(), engagement="lab", targets=["10.0.0.5"],
-                           style="executive")
+    gen = ReportGenerator(
+        Enricher(KnowledgeBase(_KB), provider=None),
+        feeds_meta={"kev": "2026-07-07", "epss": "2026-07-08"},
+    )
+    html = gen.render_html(_findings(), engagement="lab", targets=["10.0.0.5"], style="executive")
     assert "Relatório Executivo de Riscos" in html
     assert "Riscos prioritários" in html
     assert "CISA KEV" in html  # KEV verificado aparece

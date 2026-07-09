@@ -24,8 +24,12 @@ def test_capability_index_and_perspective_filter():
     port = {s.name for s in reg.for_capability(Capability.PORT_DISCOVERY)}
     assert {"naabu", "nmap"} <= port
     # subfinder só EXTERNAL: some ao filtrar por INTERNAL.
-    ext = {s.name for s in reg.for_capability(Capability.SUBDOMAIN_ENUMERATION, Perspective.EXTERNAL)}
-    intr = {s.name for s in reg.for_capability(Capability.SUBDOMAIN_ENUMERATION, Perspective.INTERNAL)}
+    ext = {
+        s.name for s in reg.for_capability(Capability.SUBDOMAIN_ENUMERATION, Perspective.EXTERNAL)
+    }
+    intr = {
+        s.name for s in reg.for_capability(Capability.SUBDOMAIN_ENUMERATION, Perspective.INTERNAL)
+    }
     assert "subfinder" in ext and "subfinder" not in intr
 
 

@@ -35,7 +35,7 @@ class HostClass(str, Enum):
     tendo o escopo autorizado como backstop."""
 
     PUBLIC = "public"
-    PRIVATE = "private"        # RFC1918 / IPv6 unique-local
+    PRIVATE = "private"  # RFC1918 / IPv6 unique-local
     LOOPBACK = "loopback"
     LINK_LOCAL = "link_local"
     HOSTNAME = "hostname"
@@ -48,9 +48,9 @@ class PerspectiveProfile:
 
     description: str
     allowed_host_classes: frozenset[HostClass]
-    default_rate_limit: int          # pacotes/req por segundo (default do perfil)
-    allow_credentials: bool          # scan autenticado permitido?
-    osint_subdomains: bool           # enumeração passiva de subdomínio faz sentido?
+    default_rate_limit: int  # pacotes/req por segundo (default do perfil)
+    allow_credentials: bool  # scan autenticado permitido?
+    osint_subdomains: bool  # enumeração passiva de subdomínio faz sentido?
 
 
 # Configuração central. EXTERNAL protege contra apontar scan pra dentro por
@@ -60,7 +60,7 @@ _PROFILES: dict[Perspective, PerspectiveProfile] = {
     Perspective.EXTERNAL: PerspectiveProfile(
         description="Visão de atacante na internet pública, sem credencial.",
         allowed_host_classes=frozenset({HostClass.PUBLIC, HostClass.HOSTNAME}),
-        default_rate_limit=150,   # conservador: não derrubar produção exposta
+        default_rate_limit=150,  # conservador: não derrubar produção exposta
         allow_credentials=False,
         osint_subdomains=True,
     ),
@@ -71,7 +71,7 @@ _PROFILES: dict[Perspective, PerspectiveProfile] = {
         ),
         default_rate_limit=1000,  # mais agressivo permitido (ainda configurável)
         allow_credentials=True,
-        osint_subdomains=False,   # já se está dentro; sem OSINT de subdomínio
+        osint_subdomains=False,  # já se está dentro; sem OSINT de subdomínio
     ),
 }
 
@@ -110,8 +110,9 @@ def classify_host(host: str) -> HostClass:
     return HostClass.PUBLIC
 
 
-def target_allowed(perspective: Perspective, target: str, *, override: bool = False
-                   ) -> tuple[bool, str]:
+def target_allowed(
+    perspective: Perspective, target: str, *, override: bool = False
+) -> tuple[bool, str]:
     """Decide se ``target`` é compatível com a ``perspective`` (público×privado).
 
     Retorna (permitido, motivo). ``override`` força a liberação (exige flag

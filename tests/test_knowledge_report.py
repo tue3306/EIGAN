@@ -22,8 +22,9 @@ def test_deterministic_enricher_uses_skill():
     kb = KnowledgeBase(_KB)
     enr = Enricher(kb, provider=None)  # sem IA
     assert not enr.ai_enabled
-    f = Finding(title="SQLi", severity=Severity.HIGH, affected_asset="h",
-                source_tool="nuclei", cwe="CWE-89")
+    f = Finding(
+        title="SQLi", severity=Severity.HIGH, affected_asset="h", source_tool="nuclei", cwe="CWE-89"
+    )
     exp = enr.explain(f)
     assert not exp.ai_generated
     assert exp.remediation  # veio da skill
@@ -32,8 +33,12 @@ def test_deterministic_enricher_uses_skill():
 def test_report_html_without_ai():
     kb = KnowledgeBase(_KB)
     gen = ReportGenerator(Enricher(kb, provider=None))
-    f = Finding(title="Porta aberta", severity=Severity.INFO, affected_asset="127.0.0.1:80",
-                source_tool="nmap")
+    f = Finding(
+        title="Porta aberta",
+        severity=Severity.INFO,
+        affected_asset="127.0.0.1:80",
+        source_tool="nmap",
+    )
     html = gen.render_html([f], engagement="lab", targets=["127.0.0.1"])
     assert "Relatório de Avaliação de Vulnerabilidades" in html
     assert "127.0.0.1:80" in html

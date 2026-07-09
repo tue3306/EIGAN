@@ -11,8 +11,7 @@ from vulnforge.findings.schema import CVSS, Finding, Severity
 
 
 def _finding(**kw) -> Finding:
-    base = dict(title="RCE", severity=Severity.HIGH, affected_asset="h:443",
-                source_tool="nuclei")
+    base = dict(title="RCE", severity=Severity.HIGH, affected_asset="h:443", source_tool="nuclei")
     base.update(kw)
     return Finding(**base)
 
@@ -24,11 +23,15 @@ def test_cve_extraction_from_references():
 
 def test_kev_and_epss_verified_raise_score():
     feeds = FeedCache(
-        kev_cves={"CVE-2021-44228"}, kev_meta={"dateReleased": "2026-07-07"},
-        epss_scores={"CVE-2021-44228": 0.9999}, epss_meta={"date": "2026-07-08"},
+        kev_cves={"CVE-2021-44228"},
+        kev_meta={"dateReleased": "2026-07-07"},
+        epss_scores={"CVE-2021-44228": 0.9999},
+        epss_meta={"date": "2026-07-08"},
     )
-    f = _finding(cvss=CVSS(version="3.1", score=10.0),
-                 references=["https://nvd.nist.gov/vuln/detail/CVE-2021-44228"])
+    f = _finding(
+        cvss=CVSS(version="3.1", score=10.0),
+        references=["https://nvd.nist.gov/vuln/detail/CVE-2021-44228"],
+    )
     RiskScorer(feeds).score([f])
     assert f.risk.kev is True and f.risk.kev_verified is True
     assert f.risk.epss_verified is True and abs(f.risk.epss - 0.9999) < 1e-6
@@ -39,8 +42,10 @@ def test_kev_and_epss_verified_raise_score():
 
 
 def test_no_feeds_marks_unverified_never_fabricates():
-    f = _finding(cvss=CVSS(version="3.1", score=7.0),
-                 references=["https://nvd.nist.gov/vuln/detail/CVE-2024-9999"])
+    f = _finding(
+        cvss=CVSS(version="3.1", score=7.0),
+        references=["https://nvd.nist.gov/vuln/detail/CVE-2024-9999"],
+    )
     RiskScorer(None).score([f])
     # sem feeds: EPSS/KEV NÃO viram fato.
     assert f.risk.epss is None and f.risk.epss_verified is False
@@ -64,9 +69,18 @@ def test_online_epss_uses_getter_not_network():
 
     def fake_getter(url, timeout=30):
         fetched["url"] = url
-        return json.dumps({"data": [
-            {"cve": "CVE-2021-1234", "epss": "0.5", "percentile": "0.9", "date": "2026-07-08"}
-        ]}).encode()
+        return json.dumps(
+            {
+                "data": [
+                    {
+                        "cve": "CVE-2021-1234",
+                        "epss": "0.5",
+                        "percentile": "0.9",
+                        "date": "2026-07-08",
+                    }
+                ]
+            }
+        ).encode()
 
     feeds = FeedCache(epss_scores={}, epss_meta={})
     f = _finding(references=["https://nvd.nist.gov/vuln/detail/CVE-2021-1234"])
@@ -76,10 +90,13 @@ def test_online_epss_uses_getter_not_network():
 
 
 def test_update_kev_parses_catalog_and_records_integrity(tmp_path):
-    payload = json.dumps({
-        "catalogVersion": "2026.07.07", "dateReleased": "2026-07-07T00:00:00Z",
-        "vulnerabilities": [{"cveID": "CVE-2021-44228"}, {"cveID": "CVE-2020-1472"}],
-    }).encode()
+    payload = json.dumps(
+        {
+            "catalogVersion": "2026.07.07",
+            "dateReleased": "2026-07-07T00:00:00Z",
+            "vulnerabilities": [{"cveID": "CVE-2021-44228"}, {"cveID": "CVE-2020-1472"}],
+        }
+    ).encode()
     feeds = FeedCache(cache_dir=tmp_path / "feeds")
     feeds.update_kev(getter=lambda url, timeout=30: payload)
     assert feeds.kev_cves == {"CVE-2021-44228", "CVE-2020-1472"}

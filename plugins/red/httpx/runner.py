@@ -35,8 +35,12 @@ class HttpxRunner(BaseToolPlugin):
         HTTP homônimo do Python."""
         try:
             out = subprocess.run(
-                [self.binary, "-h"], capture_output=True, text=True,
-                timeout=10, shell=False, check=False,
+                [self.binary, "-h"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                shell=False,
+                check=False,
             )
         except (subprocess.SubprocessError, OSError):
             return False
@@ -45,8 +49,17 @@ class HttpxRunner(BaseToolPlugin):
         return "tech-detect" in blob or "projectdiscovery" in blob or "-td," in blob
 
     def build_args(self, target: str, *, rate_limit: int = 150, **_) -> list[str]:
-        return ["-u", target, "-json", "-silent", "-td", "-title",
-                "-status-code", "-rate-limit", str(int(rate_limit))]
+        return [
+            "-u",
+            target,
+            "-json",
+            "-silent",
+            "-td",
+            "-title",
+            "-status-code",
+            "-rate-limit",
+            str(int(rate_limit)),
+        ]
 
     def parse(self, result: ToolResult, target: str) -> list[Finding]:
         return parse(result, target)
