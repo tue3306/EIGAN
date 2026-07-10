@@ -87,6 +87,9 @@ pip install -e ".[tui]"           # + [pdf] p/ PDF, [dev] p/ desenvolver
 vulnforge                          # abre o mesmo menu
 vulnforge doctor                   # diagnóstico do ambiente
 vulnforge scan example.com         # scan direto (headless/CI)
+vulnforge plan example.com --goal attack-surface   # planner por objetivo (dry-run seguro)
+vulnforge diff --scan 7            # o que mudou desde o scan anterior do alvo
+vulnforge remediate --scan 7       # playbooks Ansible revisáveis (sugestão)
 vulnforge serve                    # dashboard web em http://127.0.0.1:8000
 ```
 

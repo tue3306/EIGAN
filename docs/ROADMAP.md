@@ -18,7 +18,14 @@ honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
   loop `Goal→Plano→Seleção→Execução→Feedback→replan→Stop`, com **Agente Recon
   real** e IA opcional (só ordena capacidades; fallback determinístico). CLI
   `vulnforge plan`.
+- **Memória entre scans (Pilar 2 / ADR-0008):** diff determinístico
+  (novos/corrigidos/persistentes + novos ativos/serviços). CLI `vulnforge diff`.
+- **Auto Remediation (Pilar 6 / ADR-0008):** playbooks Ansible revisáveis a partir
+  do finding (nunca auto-aplicados). CLI `vulnforge remediate`.
 - **Saídas:** HTML/PDF/JSON/CSV/SARIF, técnico e executivo.
+
+> Visão dos **10 pilares** da plataforma autônoma (status real × scaffold de cada
+> um): ver [ADR-0008](adr/0008-agent-platform-ten-pillars.md).
 
 ## Scaffolded (roadmap — contrato declarado, ainda não executa)
 

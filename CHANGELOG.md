@@ -8,6 +8,22 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **Plataforma autônoma — 10 pilares (Missão 4 / ADR-0008)**: contratos entre
+  planner ↔ agentes ↔ memória ↔ correlação ↔ reporting ↔ remediação, com o status
+  **real × scaffold** de cada pilar declarado no ADR e no `ROADMAP`.
+- **Pilar 2 — Memória entre scans (real)**: diff **determinístico**
+  (`analysis/diff.py` + `FindingStore.find_previous_scan`) entre dois scans do
+  mesmo alvo — novos/corrigidos/persistentes + novos ativos/serviços. CLI
+  `vulnforge diff --scan <id> [--against <id>] [--ai]`; a IA **só narra** (fallback
+  determinístico via `summary()`).
+- **Pilar 6 — Auto Remediation (real, formato Ansible)**: `report/remediation.py`
+  gera **playbooks Ansible revisáveis** a partir do finding (restringir serviço
+  exposto via firewall; cabeçalhos de segurança HTTP) — **sugestão, nunca
+  aplicada automaticamente**. CLI `vulnforge remediate --scan <id> --out <dir>`;
+  findings sem template são listados honestamente (scaffold), sem fabricar.
+- **CI `smoke-install` (Missão 5)**: job que, em ambiente limpo, instala o pacote
+  e roda `vulnforge --version`, `vulnforge doctor` e `vulnforge plan … (dry-run)`
+  sem erro — valida "baixa e roda".
 - **Núcleo Cognitivo goal-driven (Missão 3 / ADR-0007)**: subpacote
   `engine/cognitive/` acima do `Orchestrator`. O usuário informa um **objetivo**
   (`vulnforge plan <alvo> --goal attack-surface`) e o **Planner** deriva as

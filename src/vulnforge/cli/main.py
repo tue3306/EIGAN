@@ -294,6 +294,136 @@ def report(scan_id, db, fmt, style, out, ai):
 
 
 @cli.command()
+@click.option("--scan", "scan_id", required=True, type=int)
+@click.option("--db", default="vulnforge.db", show_default=True)
+@click.option(
+    "--out",
+    "out_dir",
+    default="remediation",
+    show_default=True,
+    help="Diretório onde gravar os playbooks (sugestões revisáveis).",
+)
+def remediate(scan_id, db, out_dir):
+    """Gera artefatos de correção (Ansible) revisáveis para um scan (Pilar 6).
+
+    SUGESTÕES — nunca aplicadas automaticamente. Findings sem template são
+    listados honestamente como pendentes.
+    """
+    from ..report.remediation import generate_all
+
+    store = FindingStore(db)
+    if store.get_scan(scan_id) is None:
+        raise click.UsageError(f"Scan #{scan_id} não encontrado no banco {db!r}.")
+    findings = store.get_findings(scan_id)
+    artifacts, uncovered = generate_all(findings)
+
+    if not artifacts:
+        click.secho(
+            "Nenhum finding deste scan tem template de remediação ainda "
+            "(nada foi fabricado). Veja o roadmap para os tipos cobertos.",
+            fg="yellow",
+        )
+        return
+
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    click.secho(f"Artefatos de remediação (SUGESTÕES revisáveis) em {out}/:", fg="green", bold=True)
+    for art in artifacts:
+        (out / art.filename).write_text(art.content)
+        click.echo(f"  [{art.format}] {art.filename}  — {art.title}  ({art.applies_to})")
+    click.secho(
+        "\nRevise cada playbook (variáveis/escopo) antes de aplicar. "
+        "O VulnForge NÃO executa remediação automaticamente.",
+        fg="yellow",
+    )
+    if uncovered:
+        click.secho(
+            f"\nSem template ainda ({len(uncovered)}): "
+            + ", ".join(sorted({f.title for f in uncovered}))[:200],
+            fg="yellow",
+        )
+
+
+@cli.command()
+@click.option("--scan", "scan_id", required=True, type=int, help="Scan atual (mais recente).")
+@click.option(
+    "--against",
+    "baseline_id",
+    type=int,
+    default=None,
+    help="Scan-base para comparar. Padrão: o scan anterior do mesmo alvo (automático).",
+)
+@click.option("--db", default="vulnforge.db", show_default=True)
+@click.option("--ai/--no-ai", default=False, help="IA narra a mudança (fallback determinístico).")
+def diff(scan_id, baseline_id, db, ai):
+    """Memória entre scans: o que mudou desde a última execução do alvo (Pilar 2).
+
+    Diff determinístico (novos/corrigidos/persistentes + novos ativos/serviços).
+    Ex.: `vulnforge diff --scan 7`  ·  `vulnforge diff --scan 7 --against 3`.
+    """
+    from ..analysis.diff import diff_findings
+
+    store = FindingStore(db)
+    if store.get_scan(scan_id) is None:
+        raise click.UsageError(f"Scan #{scan_id} não encontrado no banco {db!r}.")
+    if baseline_id is None:
+        baseline_id = store.find_previous_scan(scan_id)
+    previous = store.get_findings(baseline_id) if baseline_id is not None else []
+    current = store.get_findings(scan_id)
+    result = diff_findings(previous, current, previous_scan_id=baseline_id, current_scan_id=scan_id)
+
+    narrative = _narrate_diff(result) if ai else result.summary()
+    click.secho(f"\n{narrative}", fg="cyan", bold=True)
+
+    def _list(label: str, items, color: str) -> None:
+        if not items:
+            return
+        click.secho(f"\n{label}:", fg=color, bold=True)
+        for f in items:
+            risk = f"{f.risk.score:.0f}" if f.risk else "—"
+            click.echo(
+                f"  [{f.severity.value.upper():8}] risco {risk:>3}  {f.title}  ({f.affected_asset})"
+            )
+
+    _list("Novos", result.new, "red")
+    _list("Corrigidos", result.resolved, "green")
+    if result.new_services:
+        click.secho("\nNovos serviços/portas:", fg="yellow", bold=True)
+        for s in result.new_services:
+            click.echo(f"  {s}")
+    if result.new_assets:
+        click.secho("\nNovos ativos:", fg="yellow", bold=True)
+        for a in result.new_assets:
+            click.echo(f"  {a}")
+
+
+def _narrate_diff(result) -> str:
+    """Narrativa por IA do diff, com **fallback determinístico** (§3.4). A IA só
+    recebe contagens + títulos já normalizados (grounding); nunca inventa."""
+    base = result.summary()
+    try:
+        from ..ai.provider import default_provider
+
+        provider = default_provider()
+        if provider is None or not provider.available():
+            return base
+        counts = result.counts()
+        titles = "; ".join(f.title for f in result.new[:5]) or "nenhum"
+        system = (
+            "Você resume mudanças entre dois scans de segurança para um gestor. "
+            "Baseie-se SOMENTE nos dados fornecidos. NUNCA invente CVE, número ou "
+            "severidade. 2-3 frases, direto."
+        )
+        user = (
+            f"Contagens: {counts}. Novos findings (títulos): {titles}.\nBase determinística: {base}"
+        )
+        text = provider.complete(system, user).strip()  # type: ignore[attr-defined]
+        return text or base
+    except Exception:  # noqa: BLE001 — IA nunca quebra o diff
+        return base
+
+
+@cli.command()
 @click.option("--host", default="127.0.0.1", show_default=True)
 @click.option("--port", default=8000, type=int, show_default=True)
 @click.option("--db", default="vulnforge.db", show_default=True)

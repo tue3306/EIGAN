@@ -23,6 +23,24 @@ jobs:
       - name: Tests
         run: pytest -q --cov=vulnforge --cov-report=term-missing
 
+  # Valida a INSTALAÇÃO em ambiente limpo (Missão 5 / §13): instala o pacote e
+  # roda os pontos de entrada sem erro — o produto tem que "baixar e rodar".
+  smoke-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar pacote (sem extras)
+        run: pip install .
+      - name: Versão
+        run: vulnforge --version
+      - name: Doctor (diagnóstico do ambiente — deve sair 0)
+        run: vulnforge doctor
+      - name: Planner dry-run (núcleo cognitivo, não executa nada)
+        run: vulnforge plan example.com --goal attack-surface
+
   # Exemplo de gate de segurança em CI: o próprio VulnForge falha o pipeline se
   # houver findings acima do limiar (contra um alvo de teste LOCAL autorizado).
   # Descomente e forneça um scope.yaml + alvo local vulnerável (DVWA/Juice Shop).

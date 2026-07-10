@@ -90,5 +90,33 @@ class FindingStore:
         rows = self._conn.execute("SELECT * FROM scans ORDER BY id DESC").fetchall()
         return [dict(r) for r in rows]
 
+    def find_previous_scan(self, scan_id: int) -> Optional[int]:
+        """Scan concluído mais recente ANTES de ``scan_id`` com algum alvo em comum.
+
+        Base determinística da memória entre execuções (Pilar 2 / ADR-0008): dá o
+        baseline natural para o diff. Retorna ``None`` se for a primeira vez que o
+        alvo é escaneado.
+        """
+        cur = self.get_scan(scan_id)
+        if cur is None:
+            return None
+        try:
+            cur_targets = set(json.loads(cur["targets"]))
+        except (json.JSONDecodeError, TypeError):
+            return None
+        rows = self._conn.execute(
+            "SELECT id, targets FROM scans WHERE id < ? AND finished_at IS NOT NULL "
+            "ORDER BY id DESC",
+            (scan_id,),
+        ).fetchall()
+        for row in rows:
+            try:
+                prev_targets = set(json.loads(row["targets"]))
+            except (json.JSONDecodeError, TypeError):
+                continue
+            if cur_targets & prev_targets:
+                return int(row["id"])
+        return None
+
     def close(self) -> None:
         self._conn.close()
