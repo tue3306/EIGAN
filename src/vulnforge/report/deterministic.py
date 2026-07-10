@@ -210,13 +210,18 @@ class ReportGenerator:
             style=style,
         )
         out = Path(out_path)
+        # PDF é opcional (§12): ImportError = extra ausente; OSError = libs
+        # nativas (Pango/GDK-Pixbuf) faltando. Ambos viram um erro acionável e o
+        # chamador degrada para HTML — nunca stack trace cru (§13).
         try:
             from weasyprint import HTML  # import tardio: PDF é opcional
-        except ImportError as exc:  # pragma: no cover
+
+            HTML(string=html).write_pdf(str(out))
+        except (ImportError, OSError) as exc:
             raise RuntimeError(
-                "WeasyPrint não instalado. Use render_html() ou instale 'vulnforge[pdf]'."
+                "PDF indisponível (WeasyPrint ausente ou libs de sistema faltando). "
+                "Instale 'vulnforge[pdf]' + libs (veja `vulnforge doctor`) ou use HTML."
             ) from exc
-        HTML(string=html).write_pdf(str(out))
         return out
 
     # ── exporters de máquina (JSON/CSV/SARIF — sem IA) ──────────────────────────

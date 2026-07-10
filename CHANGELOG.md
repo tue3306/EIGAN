@@ -8,6 +8,32 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **Camada de IA concreta (Missão 2)**: adapters HTTP para **Anthropic, OpenAI,
+  Google e Ollama** substituem o placeholder `None` em `ai/provider.py`. Cada um
+  faz *grounding* (só finding + skill como contexto), *redaction* de segredos/PII
+  antes de sair para provedor externo (Ollama local não redige), marca
+  `ai_generated: true` e **cai para o fallback determinístico** em qualquer erro.
+  Seleção por ambiente (Anthropic → OpenAI → Google → Ollama): a Anthropic liga
+  só com a chave (modelo padrão verificado `claude-opus-4-8`); os demais exigem
+  `<PROVIDER>_MODEL` — sem id fabricado (§3.1). Chaves **só via env**.
+- **Download de relatório na API**: `GET /api/v1/scans/{id}/report?format=&style=&ai=`
+  serve HTML/PDF/JSON/CSV/SARIF como `FileResponse`; PDF **degrada para HTML**
+  (header `X-Report-Degraded: pdf->html`), sem stack trace. Botão **⬇ Exportar
+  relatório** no detalhe do scan no dashboard (estilo técnico/executivo + formato).
+- **`GET /api/v1/setup`** + banner de onboarding no dashboard: mostra o que está
+  degradado (IA desligada, PDF indisponível, ferramentas faltando) com o **comando
+  exato** para resolver — nada de tela em branco silenciosa.
+- **Degradação de PDF ponta-a-ponta**: `render_pdf` e o comando `report` da CLI
+  detectam WeasyPrint/libs ausentes e gravam **HTML** com aviso acionável
+  (`vulnforge doctor`), em vez de falhar.
+
+### Changed
+- **`config/ai.yaml` e `.env.example`**: refletem os padrões reais — Anthropic com
+  `claude-opus-4-8` por padrão e `<PROVIDER>_MODEL` obrigatório para os demais.
+- **Landing (`web/index.html`)**: quickstart alinhado ao launcher real
+  (`git clone … && python3 vulnforge.py`).
+
+### Added (Missão 1)
 - **Launcher "unzip e um comando" (Missão 1 / ADR-0006)**: `python3 vulnforge.py`
   agora confere Python ≥ 3.11 (com link oficial por SO), instala `.[pdf,tui]` por
   padrão e prepara diretórios de config. Flags: `--with-tools`, `--with-ai`,

@@ -164,7 +164,19 @@ def report(scan_id, db, fmt, style, out, ai):
         )
     except ValueError as exc:
         raise click.UsageError(str(exc)) from exc
-    except RuntimeError as exc:  # ex.: WeasyPrint ausente
+    except RuntimeError as exc:  # PDF indisponível → degrada para HTML (§13), sem stack trace
+        if fmt == "pdf":
+            click.secho(f"PDF indisponível: {exc}", fg="yellow", err=True)
+            click.secho("Gerando HTML equivalente…", fg="yellow", err=True)
+            path, ai_used = write_report(
+                store, scan_id, fmt="html", style=style, out=None, use_ai=ai, feeds_meta=fmeta
+            )
+            click.secho(
+                f"Relatório HTML gerado: {path}. Para PDF, habilite o WeasyPrint "
+                "(rode `vulnforge doctor`).",
+                fg="green",
+            )
+            return
         click.secho(f"Erro ao gerar {fmt}: {exc}", fg="red", err=True)
         sys.exit(1)
     click.secho(f"Relatório gerado: {path}  (IA: {'sim' if ai_used else 'não'})", fg="green")

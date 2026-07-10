@@ -14,7 +14,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -91,6 +91,33 @@ def meta() -> dict:
     }
 
 
+@app.get("/api/v1/setup")
+def setup_status() -> dict:
+    """Estado do ambiente para o onboarding visual: o que está degradado e como
+    resolver (IA opcional, PDF opcional, ferramentas ausentes)."""
+    from ..cli import doctor as doctor_mod
+
+    report = doctor_mod.gather()
+    missing = [t.name for t in report.tools if not t.roadmap and not t.available]
+    return {
+        "ai": {
+            "enabled": default_provider() is not None,
+            "key_detected": any(os.getenv(k) for k in _AI_ENV),
+            "hint": "Defina ANTHROPIC_API_KEY (ou OPENAI/GOOGLE + _MODEL, ou Ollama) — opcional.",
+        },
+        "pdf": {
+            "available": report.pdf_available,
+            "detail": report.pdf_detail,
+        },
+        "tools": {
+            "available": report.tools_available,
+            "total": len(report.tools),
+            "missing_real": missing,
+            "hint": "python3 vulnforge.py --with-tools  (ou vulnforge doctor --install)",
+        },
+    }
+
+
 # ── scans ───────────────────────────────────────────────────────────────────
 @app.get("/api/v1/scans")
 def list_scans() -> list[dict]:
@@ -152,6 +179,70 @@ def scan_attack(scan_id: int) -> dict:
 def scan_compliance(scan_id: int) -> dict:
     findings = _findings_or_404(_store(), scan_id)
     return asdict(assess_compliance(findings))
+
+
+_REPORT_MEDIA = {
+    "pdf": "application/pdf",
+    "html": "text/html",
+    "json": "application/json",
+    "csv": "text/csv",
+    "sarif": "application/json",
+}
+
+
+@app.get("/api/v1/scans/{scan_id}/report")
+def scan_report(
+    scan_id: int,
+    fmt: str = Query("html", alias="format"),
+    style: str = Query("executive"),
+    ai: bool = Query(False),
+) -> FileResponse:
+    """Gera e devolve o relatório para download. PDF degrada para HTML (§13)."""
+    from ..cli.reporting import write_report
+    from ..cli.session import feeds_meta
+    from ..engine.feeds import FeedCache
+
+    store = _store()
+    if not store.get_scan(scan_id):
+        raise HTTPException(404, "scan não encontrado")
+    fmt = fmt.lower()
+    if fmt not in _REPORT_MEDIA:
+        raise HTTPException(400, f"formato inválido: {fmt}")
+    if style not in ("technical", "executive"):
+        style = "executive"
+
+    import tempfile
+
+    fmeta = feeds_meta(FeedCache.load())
+    tmp = Path(tempfile.gettempdir())
+    headers: dict[str, str] = {}
+    try:
+        path, _ = write_report(
+            store,
+            scan_id,
+            fmt=fmt,
+            style=style,
+            out=str(tmp / f"vulnforge_scan{scan_id}_{style}.{fmt}"),
+            use_ai=ai,
+            feeds_meta=fmeta,
+        )
+    except RuntimeError as exc:  # PDF indisponível → HTML equivalente (§13)
+        if fmt != "pdf":
+            raise HTTPException(500, f"falha ao gerar relatório: {exc}") from exc
+        fmt = "html"
+        headers["X-Report-Degraded"] = "pdf->html"
+        path, _ = write_report(
+            store,
+            scan_id,
+            fmt="html",
+            style=style,
+            out=str(tmp / f"vulnforge_scan{scan_id}_{style}.html"),
+            use_ai=ai,
+            feeds_meta=fmeta,
+        )
+    return FileResponse(
+        str(path), media_type=_REPORT_MEDIA[fmt], filename=path.name, headers=headers
+    )
 
 
 # ── findings / assets globais (visão da UI, sobre o último scan) ─────────────

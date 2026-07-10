@@ -48,6 +48,48 @@ def test_health_and_meta(client):
     assert "ai_enabled" in m and "ai_key_detected" in m
 
 
+def test_setup_status_reports_degraded_items(client):
+    c, _ = client
+    s = c.get("/api/v1/setup").json()
+    assert "enabled" in s["ai"] and "key_detected" in s["ai"]
+    assert "available" in s["pdf"]
+    assert "missing_real" in s["tools"] and "hint" in s["tools"]
+
+
+def test_report_html_downloads(client):
+    c, sid = client
+    r = c.get(f"/api/v1/scans/{sid}/report?format=html&style=executive")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "attachment" in r.headers.get("content-disposition", "").lower()
+
+
+def test_report_json_downloads(client):
+    c, sid = client
+    assert c.get(f"/api/v1/scans/{sid}/report?format=json").status_code == 200
+
+
+def test_report_rejects_bad_format(client):
+    c, sid = client
+    assert c.get(f"/api/v1/scans/{sid}/report?format=xml").status_code == 400
+
+
+def test_report_missing_scan_404(client):
+    c, _ = client
+    assert c.get("/api/v1/scans/9999/report").status_code == 404
+
+
+def test_report_pdf_serves_or_degrades_to_html(client):
+    c, sid = client
+    r = c.get(f"/api/v1/scans/{sid}/report?format=pdf")
+    assert r.status_code == 200
+    # Com WeasyPrint + libs → PDF; sem elas → HTML degradado (sinalizado no header).
+    if r.headers.get("X-Report-Degraded"):
+        assert "text/html" in r.headers["content-type"]
+    else:
+        assert "application/pdf" in r.headers["content-type"]
+
+
 def test_stats_and_scan_detail(client):
     c, sid = client
     stats = c.get("/api/v1/stats").json()

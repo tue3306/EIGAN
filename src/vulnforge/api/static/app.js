@@ -95,11 +95,25 @@ async function boot() {
 }
 
 // ── VIEW: Dashboard ──────────────────────────────────────────────────────────
+function setupBanner(s) {
+  if (!s) return '';
+  const items = [];
+  if (!s.ai.enabled) items.push(`🤖 <b>IA desligada</b> — o produto funciona 100% sem ela. ${esc(s.ai.hint)}`);
+  if (s.pdf && !s.pdf.available) items.push(`📄 <b>PDF indisponível</b> — relatórios saem em HTML. ${esc(s.pdf.detail)}`);
+  const miss = (s.tools && s.tools.missing_real) || [];
+  if (miss.length) items.push(`🛠️ <b>${miss.length} ferramenta(s) ausente(s)</b> (${miss.slice(0, 6).map(esc).join(', ')}) — <span class="mono">${esc(s.tools.hint)}</span>`);
+  if (!items.length) return '';
+  return `<div class="card" style="border-left:3px solid var(--med);margin-bottom:8px">
+    <b>Primeiros passos</b> — itens opcionais degradados (nada bloqueia o uso):
+    <ul style="margin:6px 0 0 18px">${items.map((i) => `<li>${i}</li>`).join('')}</ul></div>`;
+}
+
 async function viewDashboard(root) {
-  const [stats, scans, assets] = await Promise.all([
+  const [stats, scans, assets, setup] = await Promise.all([
     api('/stats').catch(() => ({ scans: 0, findings: 0, severity: {}, kev: 0 })),
     api('/scans').catch(() => []),
     api('/assets').catch(() => ({ assets: [] })),
+    api('/setup').catch(() => null),
   ]);
   const sev = stats.severity || {};
   const latest = scans[0];
@@ -108,6 +122,7 @@ async function viewDashboard(root) {
       <div><h1>Painel</h1><p class="sub">Visão geral da sua superfície e do último scan.</p></div>
       <button class="btn-primary" onclick="location.hash='#/new'">+ Novo Scan</button>
     </div>
+    ${setupBanner(setup)}
     <div class="grid" style="margin-bottom:8px">
       ${kpiCard(stats.scans || 0, 'scans')}
       ${kpiCard(stats.findings || 0, 'findings')}
@@ -484,7 +499,12 @@ async function viewScanDetail(root, scanId) {
   root.innerHTML = `
     <div class="between">
       <div><h1>Scan #${scanId}</h1><p class="sub">${esc(detail.scan.engagement || '')} · ${esc(detail.scan.profile)}</p></div>
-      <button class="btn-ghost" onclick="location.hash='#/'">‹ Painel</button>
+      <div class="row">
+        <select id="expStyle" style="width:auto"><option value="executive">Executivo</option><option value="technical">Técnico</option></select>
+        <select id="expFmt" style="width:auto"><option value="pdf">PDF</option><option value="html">HTML</option><option value="json">JSON</option><option value="csv">CSV</option><option value="sarif">SARIF</option></select>
+        <button class="btn-primary" onclick="exportReport(${scanId})">⬇ Exportar relatório</button>
+        <button class="btn-ghost" onclick="location.hash='#/'">‹ Painel</button>
+      </div>
     </div>
     <div class="grid" style="margin-bottom:8px">
       ${kpiCard(detail.count, 'findings')}
@@ -526,6 +546,15 @@ async function viewScanDetail(root, scanId) {
   el('sevFilter').onchange = renderF;
   renderF();
 }
+
+// exportar relatório (PDF/HTML/JSON/CSV/SARIF). PDF sem libs degrada p/ HTML no backend.
+window.exportReport = (scanId) => {
+  const fmt = el('expFmt').value;
+  const style = el('expStyle').value;
+  toast('Gerando relatório ' + fmt.toUpperCase() + '…');
+  // navegação direta dispara o download (FileResponse define Content-Disposition).
+  window.location.href = `${API}/scans/${scanId}/report?format=${fmt}&style=${style}`;
+};
 
 // ── VIEW: Histórico ──────────────────────────────────────────────────────────
 async function viewHistory(root) {

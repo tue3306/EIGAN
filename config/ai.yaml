@@ -11,16 +11,25 @@ ai:
     # remove segredos/PII antes de enviar a provedor EXTERNO (não local).
     enabled: true
 
+  # Prioridade de seleção: anthropic → openai → google → ollama.
+  # Só a Anthropic tem modelo padrão fixo (verificado); os demais exigem
+  # <PROVIDER>_MODEL no ambiente — sem ele o provedor fica inativo (anti-invenção,
+  # não fabricamos um id de modelo não confirmado). O `model` abaixo é referência;
+  # a fonte de verdade em runtime é a variável de ambiente correspondente.
   providers:
     anthropic:
       api_key_env: ANTHROPIC_API_KEY
-      model: "VERIFICAR"     # ex.: claude-* — confirmar id atual antes do release
+      model_env: ANTHROPIC_MODEL
+      model: "claude-opus-4-8"   # padrão quando ANTHROPIC_MODEL não é definido
     openai:
       api_key_env: OPENAI_API_KEY
-      model: "VERIFICAR"
+      model_env: OPENAI_MODEL
+      model: null                # exige OPENAI_MODEL — sem padrão fabricado
     google:
       api_key_env: GOOGLE_API_KEY
-      model: "VERIFICAR"
+      model_env: GOOGLE_MODEL
+      model: null                # exige GOOGLE_MODEL
     ollama:
-      host_env: OLLAMA_HOST   # ex.: http://localhost:11434 — modelo local, sem redaction obrigatória
-      model: "VERIFICAR"
+      host_env: OLLAMA_HOST       # ex.: http://localhost:11434 — modelo local, sem redaction obrigatória
+      model_env: OLLAMA_MODEL
+      model: null                # exige OLLAMA_MODEL
