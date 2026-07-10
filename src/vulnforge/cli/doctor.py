@@ -12,11 +12,14 @@ from __future__ import annotations
 import os
 import platform
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass, field
+from typing import Callable
 
 from ..engine.feeds import FeedCache
 from ..engine.registry import PluginRegistry
+from ..report.pdf_support import pdf_status
 
 _AI_ENV = {
     "ANTHROPIC_API_KEY": "Anthropic",
@@ -33,6 +36,8 @@ class ToolStatus:
     available: bool
     degraded: bool
     install_hint: str
+    roadmap: bool = False
+    tool: str = ""  # binário subjacente (usado por `doctor --install`)
 
 
 @dataclass
@@ -44,6 +49,8 @@ class DoctorReport:
     docker: bool = False
     feeds_kev: str = ""
     feeds_epss: str = ""
+    pdf_available: bool = False
+    pdf_detail: str = ""
 
     @property
     def tools_available(self) -> int:
@@ -78,11 +85,14 @@ def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = Non
             available=s.available(),
             degraded=s.degraded,
             install_hint=s.metadata.install_hint or s.metadata.version_source,
+            roadmap=s.metadata.roadmap,
+            tool=s.metadata.tool,
         )
         for s in sorted(reg.all(), key=lambda s: s.name)
     ]
     ai_provider = next((label for env, label in _AI_ENV.items() if os.getenv(env)), None)
     fc = feeds if feeds is not None else FeedCache.load()
+    pdf_ok, pdf_detail = pdf_status()
     return DoctorReport(
         python_version=platform.python_version(),
         python_ok=sys.version_info >= (3, 11),
@@ -91,6 +101,8 @@ def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = Non
         docker=shutil.which("docker") is not None,
         feeds_kev=fc.kev_date() if fc.kev_available else "",
         feeds_epss=fc.epss_date(),
+        pdf_available=pdf_ok,
+        pdf_detail=pdf_detail,
     )
 
 
@@ -130,6 +142,9 @@ def render(report: DoctorReport, echo, secho) -> None:
         + ("disponível" if report.docker else "não encontrado (opcional)")
     )
 
+    echo("\nRelatórios (PDF opcional; HTML sempre funciona):")
+    echo(f"  [{ok if report.pdf_available else 'i'}] {report.pdf_detail}")
+
     echo("\nFeeds de risco (EPSS/KEV):")
     echo(f"  KEV : {report.feeds_kev or 'UNVERIFIED — rode `vulnforge feeds update`'}")
     echo(f"  EPSS: {report.feeds_epss or 'UNVERIFIED — enriquecido sob demanda no scan'}")
@@ -137,3 +152,143 @@ def render(report: DoctorReport, echo, secho) -> None:
     level, message = report.verdict()
     color = {"ok": "green", "warn": "yellow", "error": "red"}[level]
     secho(f"\nVeredito: {message}", fg=color, bold=True)
+
+
+# --------------------------------------------------------------------------- #
+# `doctor --install` — provisão consent-gated das ferramentas REAIS ausentes.
+#
+# Estratégia (c) do ADR-0006. Anti-invenção (§3.1/§5): só geramos um comando
+# executável quando ele é **padrão e verificável** (ex.: `nmap` no gerenciador de
+# pacotes do SO). Para as ferramentas ProjectDiscovery — cujo `install_hint` é a
+# URL oficial — NÃO fabricamos comando nem versão: apontamos a referência oficial
+# (e Docker como sandbox). Nunca `shell=True`; sempre lista de argumentos (§5).
+# --------------------------------------------------------------------------- #
+_YES = {"s", "sim", "y", "yes"}
+_PKG_MANAGERS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("apt-get", ("apt-get", "install", "-y")),
+    ("dnf", ("dnf", "install", "-y")),
+    ("pacman", ("pacman", "-S", "--noconfirm")),
+    ("apk", ("apk", "add")),
+    ("brew", ("brew", "install")),
+)
+
+
+@dataclass
+class InstallAction:
+    tool: str
+    method: str  # "package-manager" | "manual"
+    reference: str
+    command: list[str] | None = None  # executável só quando verificável
+    note: str = ""
+
+
+def _detect_pkg_manager() -> tuple[str, tuple[str, ...]] | None:
+    for name, base in _PKG_MANAGERS:
+        if shutil.which(name):
+            return name, base
+    return None
+
+
+def _needs_sudo(pkg_manager: str) -> bool:
+    if os.name != "posix" or pkg_manager == "brew":
+        return False
+    geteuid = getattr(os, "geteuid", None)
+    return geteuid is None or geteuid() != 0
+
+
+def plan_install(report: DoctorReport) -> list[InstallAction]:
+    """Plano de instalação apenas para ferramentas **reais ausentes** (não-roadmap)."""
+    actions: list[InstallAction] = []
+    pm = _detect_pkg_manager()
+    for t in report.tools:
+        if t.roadmap or t.available or not t.tool:
+            continue
+        if t.tool == "nmap" and pm is not None:
+            pm_name, base = pm
+            command = [*base, "nmap"]
+            if _needs_sudo(pm_name):
+                command = ["sudo", *command]
+            actions.append(
+                InstallAction(
+                    tool=t.tool,
+                    method="package-manager",
+                    reference=t.install_hint,
+                    command=command,
+                    note=f"via {pm_name} (pacote padrão do SO)",
+                )
+            )
+        else:
+            actions.append(
+                InstallAction(
+                    tool=t.tool,
+                    method="manual",
+                    reference=t.install_hint or "(sem referência oficial no metadata)",
+                    command=None,
+                    note="binário/imagem oficial (Docker é o caminho sandbox); versão # VERIFICAR",
+                )
+            )
+    return actions
+
+
+def _default_runner(command: list[str]) -> int:
+    # Segurança §5: lista de argumentos, shell=False; herda stdio (sudo pode pedir senha).
+    try:
+        return subprocess.run(command, shell=False, check=False).returncode
+    except OSError:
+        return 127
+
+
+def run_install(
+    actions: list[InstallAction],
+    *,
+    assume_yes: bool = False,
+    echo: Callable = print,
+    confirm: Callable[[str], str] = input,
+    runner: Callable[[list[str]], int] | None = None,
+) -> int:
+    """Executa o plano com **consentimento explícito** (§3.2). Retorna nº instalado.
+
+    Lista exatamente o que vai rodar antes de pedir confirmação; o que é manual
+    (fonte oficial) é só exibido, nunca executado por nós."""
+    auto = [a for a in actions if a.command]
+    manual = [a for a in actions if not a.command]
+
+    if not actions:
+        echo("Todas as ferramentas com runner real já estão presentes. Nada a instalar.")
+        return 0
+
+    echo("Plano de provisão (apenas ferramentas com runner real):\n")
+    if auto:
+        echo("Comandos que serão executados (mediante sua confirmação):")
+        for a in auto:
+            echo(f"  · {a.tool}: {' '.join(a.command or [])}   [{a.note}]")
+    if manual:
+        echo("\nInstalação manual — fonte oficial (não executo por você):")
+        for a in manual:
+            echo(f"  · {a.tool}: {a.reference}")
+            if a.note:
+                echo(f"      {a.note}")
+
+    if not auto:
+        echo("\nNada a executar automaticamente com segurança. Siga as referências oficiais")
+        echo("acima ou use Docker (sandbox). Cada ferramenta ausente é apenas *pulada* no scan.")
+        return 0
+
+    if not assume_yes:
+        answer = confirm("\nExecutar os comandos acima agora? [s/N]: ").strip().lower()
+        if answer not in _YES:
+            echo("Cancelado. Nada foi executado.")
+            return 0
+
+    run = runner or _default_runner
+    installed = 0
+    for a in auto:
+        assert a.command is not None
+        echo(f"\n→ {a.tool}: {' '.join(a.command)}")
+        code = run(a.command)
+        if code == 0:
+            echo(f"  ✔ {a.tool} instalado.")
+            installed += 1
+        else:
+            echo(f"  ✗ {a.tool}: falhou (código {code}). Verifique privilégios/conexão.")
+    return installed

@@ -1,15 +1,17 @@
-"""Testes do launcher raiz ``vulnforge.py`` (Missão 0 / ADR-0005).
+"""Testes do launcher raiz ``vulnforge.py`` (Missão 1 / ADR-0005+0006).
 
-O launcher é carregado **por caminho**, sob um nome de módulo distinto, para
-não colidir com o pacote ``vulnforge`` (mesmo nome do arquivo). Só exercitamos
-os helpers puros — criar venv de verdade / instalar deps envolve rede e fica de
-fora do teste unitário.
+O launcher é carregado **por caminho**, sob um nome de módulo distinto, para não
+colidir com o pacote ``vulnforge`` (mesmo nome do arquivo). Exercitamos os
+helpers puros e o roteamento de ``main`` — criar venv / instalar deps de verdade
+envolve rede e fica fora do teste unitário (é medido à parte, no README).
 """
 
+import collections
 import importlib.util
 from pathlib import Path
 
 _LAUNCHER = Path(__file__).resolve().parents[1] / "vulnforge.py"
+_VI = collections.namedtuple("_VI", "major minor micro releaselevel serial")
 
 
 def _load():
@@ -23,6 +25,17 @@ def _load():
 launcher = _load()
 
 
+def _opts(**over):
+    base = dict.fromkeys(
+        ("with_tools", "with_ai", "reinstall", "no_venv", "serve", "dev", "help"), False
+    )
+    base.update(over)
+    return base
+
+
+# --------------------------------------------------------------------------- #
+# Helpers puros
+# --------------------------------------------------------------------------- #
 def test_launcher_file_is_executable():
     assert _LAUNCHER.stat().st_mode & 0o111, "vulnforge.py precisa ser executável (chmod +x)"
 
@@ -37,10 +50,27 @@ def test_venv_python_windows(tmp_path, monkeypatch):
     assert launcher.venv_python(tmp_path) == tmp_path / "Scripts" / "python.exe"
 
 
-def test_install_specs_prefer_tui_then_base():
-    # Tenta a experiência premium primeiro; sempre com fallback para a base.
-    assert launcher._INSTALL_SPECS[0] == ".[tui]"
-    assert launcher._INSTALL_SPECS[-1] == "."
+def test_default_extras_include_pdf_and_tui():
+    assert "pdf" in launcher._DEFAULT_EXTRAS
+    assert "tui" in launcher._DEFAULT_EXTRAS
+
+
+def test_install_spec_default_and_flags():
+    assert launcher._install_spec(_opts()) == ".[pdf,tui]"
+    assert "ai" in launcher._install_spec(_opts(with_ai=True))
+    assert "dev" in launcher._install_spec(_opts(dev=True))
+
+
+def test_check_python_ok(monkeypatch):
+    monkeypatch.setattr(launcher.sys, "version_info", _VI(3, 11, 0, "final", 0))
+    assert launcher._check_python() is True
+
+
+def test_check_python_too_old(monkeypatch, capsys):
+    monkeypatch.setattr(launcher.sys, "version_info", _VI(3, 10, 9, "final", 0))
+    assert launcher._check_python() is False
+    out = capsys.readouterr().out
+    assert "3.11" in out and "python.org" in out
 
 
 def test_package_importable_returns_bool():
@@ -62,10 +92,58 @@ def test_ensure_env_file_keeps_existing(tmp_path, monkeypatch):
     assert (tmp_path / ".env").read_text() == "PRESERVE=1\n"
 
 
+# --------------------------------------------------------------------------- #
+# Parsing de flags do launcher
+# --------------------------------------------------------------------------- #
+def test_parse_flags_extracts_launcher_flags():
+    opts, cli = launcher._parse_launcher_flags(["--with-tools", "scan", "x"])
+    assert opts["with_tools"] is True
+    assert cli == ["scan", "x"]
+    assert opts["help"] is False
+
+
+def test_parse_flags_help_first_is_launcher_help():
+    opts, cli = launcher._parse_launcher_flags(["--help"])
+    assert opts["help"] is True and cli == []
+
+
+def test_parse_flags_help_after_subcommand_forwards():
+    opts, cli = launcher._parse_launcher_flags(["doctor", "--help"])
+    assert opts["help"] is False and cli == ["doctor", "--help"]
+
+
+# --------------------------------------------------------------------------- #
+# _run_phase_b: extras opcionais + hand-off para a CLI
+# --------------------------------------------------------------------------- #
+def test_run_phase_b_translates_serve(monkeypatch):
+    monkeypatch.setattr(launcher, "_pdf_notice", lambda: None)
+    calls = []
+    monkeypatch.setattr(launcher, "run_app", lambda argv: calls.append(argv) or 0)
+    launcher._run_phase_b(_opts(serve=True), [])
+    assert calls == [["serve", "--open"]]
+
+
+def test_run_phase_b_with_tools_runs_doctor_install(monkeypatch):
+    monkeypatch.setattr(launcher, "_pdf_notice", lambda: None)
+    calls = []
+    monkeypatch.setattr(launcher, "run_app", lambda argv: calls.append(argv) or 0)
+    launcher._run_phase_b(_opts(with_tools=True), [])
+    assert calls == [["doctor", "--install"], []]
+
+
+# --------------------------------------------------------------------------- #
+# main: roteamento (sem instalar de verdade)
+# --------------------------------------------------------------------------- #
+def test_main_help_prints_and_exits(monkeypatch, capsys):
+    assert launcher.main(["--help"]) == 0
+    assert "Flags do launcher" in capsys.readouterr().out
+
+
 def test_main_runs_app_when_importable(monkeypatch):
-    # Com o pacote importável, main() entrega direto ao app (sem bootstrap/venv).
     monkeypatch.setattr(launcher, "package_importable", lambda: True)
     monkeypatch.setattr(launcher, "ensure_env_file", lambda: None)
+    monkeypatch.setattr(launcher, "ensure_dirs", lambda: None)
+    monkeypatch.setattr(launcher, "_pdf_notice", lambda: None)
     seen = {}
 
     def fake_run_app(argv):
@@ -78,13 +156,12 @@ def test_main_runs_app_when_importable(monkeypatch):
 
 
 def test_main_bails_out_when_bootstrap_already_tried(monkeypatch):
-    # Se já reexecutamos com a flag e ainda assim não importa, é erro real (rc=1),
-    # sem loop de bootstrap.
     monkeypatch.setattr(launcher, "package_importable", lambda: False)
     monkeypatch.setattr(launcher, "ensure_env_file", lambda: None)
+    monkeypatch.setattr(launcher, "ensure_dirs", lambda: None)
     monkeypatch.setenv(launcher._BOOTSTRAP_FLAG, "1")
     called = {}
-    monkeypatch.setattr(launcher, "ensure_environment", lambda: called.setdefault("env", True))
+    monkeypatch.setattr(launcher, "ensure_environment", lambda opts: called.setdefault("env", True))
     assert launcher.main([]) == 1
     assert "env" not in called  # não tentou preparar ambiente de novo
 
@@ -92,9 +169,10 @@ def test_main_bails_out_when_bootstrap_already_tried(monkeypatch):
 def test_main_bootstraps_then_reexecs(monkeypatch):
     monkeypatch.setattr(launcher, "package_importable", lambda: False)
     monkeypatch.setattr(launcher, "ensure_env_file", lambda: None)
+    monkeypatch.setattr(launcher, "ensure_dirs", lambda: None)
     monkeypatch.delenv(launcher._BOOTSTRAP_FLAG, raising=False)
     fake_py = Path("/venv/bin/python")
-    monkeypatch.setattr(launcher, "ensure_environment", lambda: fake_py)
+    monkeypatch.setattr(launcher, "ensure_environment", lambda opts: fake_py)
     seen = {}
     monkeypatch.setattr(launcher, "_reexec", lambda py, argv: seen.update(py=py, argv=argv) or 7)
     assert launcher.main(["scan", "x"]) == 7
@@ -104,6 +182,7 @@ def test_main_bootstraps_then_reexecs(monkeypatch):
 def test_main_returns_error_when_environment_unavailable(monkeypatch):
     monkeypatch.setattr(launcher, "package_importable", lambda: False)
     monkeypatch.setattr(launcher, "ensure_env_file", lambda: None)
+    monkeypatch.setattr(launcher, "ensure_dirs", lambda: None)
     monkeypatch.delenv(launcher._BOOTSTRAP_FLAG, raising=False)
-    monkeypatch.setattr(launcher, "ensure_environment", lambda: None)
+    monkeypatch.setattr(launcher, "ensure_environment", lambda opts: None)
     assert launcher.main([]) == 1

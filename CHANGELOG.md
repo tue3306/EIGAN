@@ -7,6 +7,28 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- **Launcher "unzip e um comando" (Missão 1 / ADR-0006)**: `python3 vulnforge.py`
+  agora confere Python ≥ 3.11 (com link oficial por SO), instala `.[pdf,tui]` por
+  padrão e prepara diretórios de config. Flags: `--with-tools`, `--with-ai`,
+  `--serve`, `--reinstall`, `--no-venv`, `--dev`, `--help`. Aceite medido: **1
+  comando** do projeto descompactado ao menu/wizard (Kali, 2026-07-10).
+- **`vulnforge doctor --install`** (+ `python3 vulnforge.py --with-tools`):
+  provisão **consent-gated** das ferramentas com runner real ausentes — lista
+  exatamente o que vai rodar antes de confirmar; `nmap` via gerenciador de
+  pacotes do SO (lista de args, sem shell), ferramentas ProjectDiscovery apontam
+  a fonte oficial + Docker sem fabricar comando/versão (§3.1).
+- **Status de PDF no `doctor`** e detecção `report/pdf_support.py`: se as libs do
+  WeasyPrint faltarem, o relatório **degrada para HTML** com aviso acionável.
+- **`.github/workflows/publish.yml`**: publicação no PyPI via *trusted
+  publishing* (OIDC, sem token), disparo em Release — inerte até o dono
+  configurar o publisher (ver `docs/BLOCKERS.md` #5).
+
+### Docs
+- **ADR-0006** (estratégia de provisão de ferramentas: container × PyPI ×
+  `doctor --install`) e `docs/BLOCKERS.md` #4/#5 (executor em container;
+  publicação no PyPI).
+
 ## [0.3.0] - 2026-07-10
 
 Release **Interface & Experiência de Produto**: o VulnForge deixa de parecer uma

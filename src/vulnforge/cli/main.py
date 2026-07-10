@@ -199,10 +199,26 @@ def menu_cmd(db):
 
 
 @cli.command()
-def doctor():
-    """Diagnostica o ambiente (Python, ferramentas, IA, Docker, feeds)."""
+@click.option(
+    "--install",
+    "do_install",
+    is_flag=True,
+    help="Provisiona (com confirmação) as ferramentas com runner real que faltam.",
+)
+@click.option("--yes", is_flag=True, help="Confirma sem interação (automação autorizada).")
+def doctor(do_install, yes):
+    """Diagnostica o ambiente (Python, ferramentas, IA, Docker, PDF, feeds).
+
+    Com --install, lista exatamente o que vai rodar e, após sua confirmação
+    (consent gate), instala as ferramentas reais ausentes — nunca de fonte não
+    oficial, nunca com shell.
+    """
     report_ = doctor_mod.gather()
     doctor_mod.render(report_, click.echo, click.secho)
+    if do_install:
+        actions = doctor_mod.plan_install(report_)
+        doctor_mod.run_install(actions, assume_yes=yes, echo=click.echo)
+        return
     level, _ = report_.verdict()
     sys.exit(0 if level != "error" else 1)
 

@@ -55,6 +55,31 @@ avisa se faltar). Com uma TTY e o extra `[tui]`, o menu vira uma **interface
 full-screen** (Textual); sem isso, cai no menu numerado — a diferença é conforto,
 não funcionalidade.
 
+> **Aceite medido (não estimado):** do projeto descompactado até o menu/wizard
+> rodando = **1 comando** (`python3 vulnforge.py`). Medido em **2026-07-10**, em
+> **Kali Linux** (kernel 7.0.x, Python 3.13), a partir da working tree copiada
+> (202 arquivos) e de um Python **sem o pacote instalado**: o launcher criou o
+> `.venv`, instalou `.[pdf,tui]`, gerou o `.env` e abriu o menu — sem nenhum
+> outro passo manual. Sem `python3-venv`, o launcher diz exatamente o que instalar.
+
+### Flags do launcher
+
+```bash
+python3 vulnforge.py --with-tools   # provisiona ferramentas reais (doctor --install, com confirmação)
+python3 vulnforge.py --with-ai      # instala o extra de IA e mostra como configurar a chave
+python3 vulnforge.py --serve        # sobe o dashboard e abre o navegador
+python3 vulnforge.py --reinstall    # recria o .venv do zero
+python3 vulnforge.py --no-venv      # usa o interpretador atual (não cria .venv)
+python3 vulnforge.py --help         # ajuda do launcher (flags + comandos da CLI)
+```
+
+Provisão de ferramentas (ADR-0006): `--with-tools` (ou `vulnforge doctor
+--install`) lista **exatamente** o que vai rodar e instala só após sua
+confirmação; o que não é verificável (ferramentas ProjectDiscovery) aponta a
+fonte oficial + Docker, sem fabricar comando. PDF opcional: se as libs do
+WeasyPrint faltarem, o relatório **degrada para HTML** e o `doctor` avisa como
+habilitar.
+
 ### Prefere instalar como comando (igual nmap/sqlmap)?
 
 ```bash
