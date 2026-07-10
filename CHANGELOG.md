@@ -8,6 +8,22 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **Núcleo Cognitivo goal-driven (Missão 3 / ADR-0007)**: subpacote
+  `engine/cognitive/` acima do `Orchestrator`. O usuário informa um **objetivo**
+  (`vulnforge plan <alvo> --goal attack-surface`) e o **Planner** deriva as
+  **capacidades**; o **Tool Selection Engine** escolhe a ferramenta de cada
+  capacidade de forma determinística e **justificada** (ex.: `naabu` externo vs.
+  `nmap` interno para `port_discovery`); os **Agentes** roteiam por especialidade
+  (**Recon real**; Web/Cloud/AD/Exploitation *scaffold honesto*, visíveis no
+  `doctor`). Loop `Goal → Planner → Seleção → Execução → Feedback → replan →
+  Stop`, com replan pela cascata determinística e **rastro auditável** de cada
+  decisão. Fronteira garantida por código: a IA (opcional) só **ordena
+  capacidades** (ids inventados descartados — §3.1) e tem **fallback
+  determinístico**; nunca escolhe ferramenta nem executa. Consent gate/escopo
+  como pré-condição da execução real (`--execute`).
+- **CLI `vulnforge plan`** (dry-run por padrão, seguro) e **sinais de seleção**
+  (`selection:` em `metadata.yaml`) nos plugins recon. Nova seção **"Agentes
+  cognitivos"** no `doctor`.
 - **Camada de IA concreta (Missão 2)**: adapters HTTP para **Anthropic, OpenAI,
   Google e Ollama** substituem o placeholder `None` em `ai/provider.py`. Cada um
   faz *grounding* (só finding + skill como contexto), *redaction* de segredos/PII

@@ -14,12 +14,17 @@ honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
   postura de risco (dashboard/relatório).
 - **Purple:** Mapa MITRE ATT&CK dos findings + gap analysis + relatório executivo.
 - **Engine:** Correlação por ativo + Risk Engine (CVSS/EPSS/KEV com `UNVERIFIED`).
+- **Núcleo Cognitivo (ADR-0007):** Planner goal-driven + Tool Selection Engine +
+  loop `Goal→Plano→Seleção→Execução→Feedback→replan→Stop`, com **Agente Recon
+  real** e IA opcional (só ordena capacidades; fallback determinístico). CLI
+  `vulnforge plan`.
 - **Saídas:** HTML/PDF/JSON/CSV/SARIF, técnico e executivo.
 
 ## Scaffolded (roadmap — contrato declarado, ainda não executa)
 
 | Categoria | Módulo | Capability |
 |---|---|---|
+| Cognitivo | Agentes Web/Cloud/AD/Exploitation | especialidade (`built=false`) |
 | Red | Active Directory | `ad_enumeration` |
 | Red | Cloud (Azure/AWS/GCP) | `cloud_audit` |
 | Red | Wireless | `wireless_audit` |
@@ -37,8 +42,6 @@ honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
 
 ## Plataforma (futuro)
 
-- Provedores de IA concretos (Anthropic/OpenAI/Google/Ollama) plugados no
-  `ai/provider.py` (hoje: fallback determinístico + porta pronta).
 - Fila distribuída (Celery/RQ + Redis) trocável pela fila em processo.
 - Postgres via `DATABASE_URL` (Repository Pattern já desacopla).
 - Comercial (portal/billing/multi-tenant): **apenas planejado** —

@@ -17,6 +17,13 @@ chained_after: [web_probe]
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/nuclei#installation"
 
+# Sinais de seleção (ADR-0007) — heurística de tuning NOSSA, não benchmark.
+selection:
+  speed: medium
+  accuracy: high
+  resource_usage: medium
+  preferred_when: [http]
+
 # Cascata (ADR-0004): um finding crítico/alto pode justificar validação de
 # exploração. A validação é gated: só roda se autorizada explicitamente e em modo
 # "validar" — nunca dispara exploit por conta própria.

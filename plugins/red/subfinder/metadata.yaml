@@ -18,6 +18,13 @@ chained_after: []
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/subfinder#installation"
 
+# Sinais de seleção (ADR-0007) — heurística de tuning NOSSA, não benchmark.
+selection:
+  speed: high
+  accuracy: medium
+  resource_usage: low
+  preferred_when: [external]
+
 # Cascata (ADR-0004): subdomínio encontrado → resolver antes de sondar.
 triggers_on:
   - source_tool: [subfinder]

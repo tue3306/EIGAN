@@ -41,10 +41,21 @@ class ToolStatus:
 
 
 @dataclass
+class AgentStatus:
+    """Agente cognitivo (ADR-0007): real (executa) ou scaffold (sugerido)."""
+
+    name: str
+    description: str
+    built: bool
+    capabilities: str
+
+
+@dataclass
 class DoctorReport:
     python_version: str
     python_ok: bool
     tools: list[ToolStatus] = field(default_factory=list)
+    agents: list[AgentStatus] = field(default_factory=list)
     ai_provider: str | None = None
     docker: bool = False
     feeds_kev: str = ""
@@ -90,6 +101,17 @@ def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = Non
         )
         for s in sorted(reg.all(), key=lambda s: s.name)
     ]
+    from ..engine.cognitive import AgentRegistry
+
+    agents = [
+        AgentStatus(
+            name=a.name,
+            description=a.description,
+            built=a.built,
+            capabilities=", ".join(sorted(c.value for c in a.capabilities)),
+        )
+        for a in AgentRegistry.default().agents
+    ]
     ai_provider = next((label for env, label in _AI_ENV.items() if os.getenv(env)), None)
     fc = feeds if feeds is not None else FeedCache.load()
     pdf_ok, pdf_detail = pdf_status()
@@ -97,6 +119,7 @@ def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = Non
         python_version=platform.python_version(),
         python_ok=sys.version_info >= (3, 11),
         tools=tools,
+        agents=agents,
         ai_provider=ai_provider,
         docker=shutil.which("docker") is not None,
         feeds_kev=fc.kev_date() if fc.kev_available else "",
@@ -123,6 +146,14 @@ def render(report: DoctorReport, echo, secho) -> None:
         echo(line)
         if not t.available and t.install_hint:
             echo(f"          instalar: {t.install_hint}")
+
+    if report.agents:
+        echo("\nAgentes cognitivos (Planner goal-driven — ADR-0007):")
+        for a in report.agents:
+            mark = ok if a.built else "○"
+            state = "real" if a.built else "scaffold (sugerido, não executado)"
+            echo(f"  [{mark}] {a.name:16} — {state}")
+            echo(f"          {a.description}")
 
     echo("\nIA (opcional):")
     if report.ai_provider:

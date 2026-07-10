@@ -18,6 +18,13 @@ chained_after: [port_discovery]
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/httpx#installation"
 
+# Sinais de seleção (ADR-0007) — heurística de tuning NOSSA, não benchmark.
+selection:
+  speed: high
+  accuracy: high
+  resource_usage: low
+  preferred_when: [http]
+
 # Cascata (ADR-0004): serviço web vivo → crawl, templates e checagem TLS.
 triggers_on:
   - source_tool: [httpx]

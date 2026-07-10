@@ -23,7 +23,8 @@ from ..perspective import Perspective
 from ..security.scope import ScopeViolation
 from . import doctor as doctor_mod
 from .reporting import TOOL_VERSION, write_report
-from .session import SessionAborted, execute_scan, feeds_meta
+from ..engine.cognitive import GoalKind
+from .session import SessionAborted, execute_scan, feeds_meta, plan_scan
 
 
 @click.group(invoke_without_command=True)
@@ -137,6 +138,116 @@ def scan(
         if worst >= threshold:
             click.secho(f"Gate CI: finding >= {fail_on} encontrado.", fg="red", err=True)
             sys.exit(1)
+
+
+@cli.command()
+@click.argument("targets", nargs=-1)
+@click.option(
+    "--goal",
+    default=GoalKind.ATTACK_SURFACE.value,
+    show_default=True,
+    help="Objetivo (aceita hífen ou underscore): " + " | ".join(g.value for g in GoalKind),
+)
+@click.option(
+    "--perspective",
+    type=click.Choice([p.value for p in Perspective]),
+    default=None,
+    help="external|internal. Padrão: o da perspectiva do objetivo.",
+)
+@click.option("--profile", default="standard", show_default=True)
+@click.option("--scope", "scope_path", type=click.Path(exists=True), default=None)
+@click.option("--db", default="vulnforge.db", show_default=True)
+@click.option(
+    "--dry-run/--execute",
+    default=True,
+    show_default=True,
+    help="dry-run: só mostra o plano e a seleção justificada (não executa, sem consent).",
+)
+@click.option(
+    "--ai/--no-ai", default=False, help="IA prioriza capacidades (fallback determinístico)."
+)
+@click.option("--yes", is_flag=True, help="Consent + termo não-interativos (execução autorizada).")
+@click.option("--online-enrich", is_flag=True, help="Buscar EPSS (FIRST.org) na execução.")
+@click.option("--override-perspective", is_flag=True, help="Libera público×privado (auditado).")
+def plan(
+    targets,
+    goal,
+    perspective,
+    profile,
+    scope_path,
+    db,
+    dry_run,
+    ai,
+    yes,
+    online_enrich,
+    override_perspective,
+):
+    """Núcleo cognitivo: dado um OBJETIVO, o Planner escolhe capacidades e o
+    Selection Engine escolhe a ferramenta — tudo justificado (ADR-0007).
+
+    Ex.: `vulnforge plan example.com --goal attack-surface` (dry-run, seguro).
+    Adicione `--execute` para rodar de verdade (passa pelo consent gate).
+    """
+    tlist = list(targets)
+    if not tlist:
+        raise click.UsageError("Informe ao menos um alvo (posicional).")
+    try:
+        goal_kind = GoalKind.from_str(goal)
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    try:
+        outcome = plan_scan(
+            goal_kind=goal_kind,
+            targets=tlist,
+            perspective=Perspective(perspective) if perspective else None,
+            profile=profile,
+            scope_path=scope_path,
+            db=db,
+            assume_yes=yes,
+            override_perspective=override_perspective,
+            online_enrich=online_enrich,
+            dry_run=dry_run,
+            use_ai=ai,
+            echo=lambda m: click.echo(m),
+        )
+    except SessionAborted as exc:
+        click.secho(f"Cancelado: {exc}", fg="yellow", err=True)
+        sys.exit(1)
+    except ScopeViolation as exc:
+        click.secho(f"BLOQUEADO: {exc}", fg="red", err=True)
+        sys.exit(2)
+
+    mode = "PLANO (dry-run, nada executado)" if dry_run else "EXECUÇÃO"
+    ai_txt = "IA" if outcome.ai_used else "determinístico"
+    click.secho(
+        f"\n{mode} · objetivo «{outcome.goal.kind.label}» "
+        f"[{outcome.goal.perspective.value}] · planner={outcome.planner_name} ({ai_txt})",
+        fg="cyan",
+        bold=True,
+    )
+    for d in outcome.decisions:
+        color = {
+            "selected": "green",
+            "executed": "green",
+            "suggested": "yellow",
+            "scaffold": "yellow",
+            "skipped": "yellow",
+            "failed": "red",
+            "stop": "blue",
+        }.get(d.action, None)
+        click.secho(f"  {d.render()}", fg=color)
+
+    if outcome.report is not None:
+        r = outcome.report
+        click.secho(
+            f"\nScan #{r.scan_id}: {len(r.findings)} findings · parada: {r.stop_reason.value}",
+            fg="green",
+        )
+    if outcome.suggestions:
+        tools = ", ".join(s.tool for s in outcome.suggestions)
+        click.secho(f"Sugeridas (não executadas): {tools}", fg="yellow")
+    if dry_run:
+        click.echo("\nPara executar de verdade: repita com --execute (exige autorização).")
 
 
 @cli.command()

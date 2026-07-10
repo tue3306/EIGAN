@@ -54,6 +54,15 @@ class PluginMetadata:
     enabled_by_default: bool = True
     roadmap: bool = False  # scaffolded honesto: declarado, ainda não operante
     install_hint: str = ""  # como instalar a ferramenta (usado por `doctor`)
+    # Sinais de seleção (ADR-0007) — heurísticas operacionais NOSSAS (não fatos
+    # externos): guiam o Tool Selection Engine a escolher entre ferramentas que
+    # provêem a mesma capability. Primitivos e imutáveis (sem dep. da camada
+    # cognitiva). Vêm do bloco ``selection:`` do metadata; defaults honestos.
+    sel_speed: str = "medium"  # low | medium | high
+    sel_accuracy: str = "medium"
+    sel_resource: str = "medium"
+    sel_preferred_when: tuple[str, ...] = ()  # tags de contexto que favorecem
+    sel_avoid_when: tuple[str, ...] = ()  # tags que desfavorecem/excluem
     # Grafo de cascata (ADR-0004): regras que, dado um finding, sugerem disparar
     # outras ferramentas. Declarativo — a decisão vive no metadata, não no Core.
     triggers_on: tuple[CascadeRule, ...] = ()
@@ -88,6 +97,14 @@ class PluginMetadata:
         except ValueError as exc:
             raise PluginMetadataError(f"{p}: valor inválido: {exc}") from exc
 
+        sel = data.get("selection") or {}
+        if not isinstance(sel, dict):
+            sel = {}
+
+        def _rating(key: str) -> str:
+            v = str(sel.get(key, "medium")).strip().lower()
+            return v if v in {"low", "medium", "high"} else "medium"
+
         triggers_raw = data.get("triggers_on") or []
         triggers: list[CascadeRule] = []
         if isinstance(triggers_raw, list):
@@ -112,6 +129,11 @@ class PluginMetadata:
             enabled_by_default=bool(data.get("enabled_by_default", True)),
             roadmap=bool(data.get("roadmap", False)),
             install_hint=str(data.get("install_hint", "")),
+            sel_speed=_rating("speed"),
+            sel_accuracy=_rating("accuracy"),
+            sel_resource=_rating("resource_usage"),
+            sel_preferred_when=tuple(_as_list(sel.get("preferred_when"))),
+            sel_avoid_when=tuple(_as_list(sel.get("avoid_when"))),
             triggers_on=tuple(triggers),
             path=p,
         )

@@ -16,6 +16,16 @@ chained_after: [dns_resolution]
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/naabu#installation"
 
+# Sinais de seleção (ADR-0007) — heurística de tuning NOSSA, não benchmark. Rápido
+# e leve: preferido para varredura ampla de portas; o nmap ganha quando o modo
+# pede precisão/serviço.
+selection:
+  speed: high
+  accuracy: medium
+  resource_usage: low
+  preferred_when: [external, http]
+  avoid_when: [low_bandwidth]
+
 # Cascata (ADR-0004): naabu só sabe que a porta está aberta; encaminha para o
 # nmap fazer service/version, que então dispara as cascatas específicas.
 triggers_on:

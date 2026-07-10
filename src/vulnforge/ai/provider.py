@@ -202,6 +202,12 @@ class _HTTPProvider(AIProvider):
             user = redact(user)
         return _parse_explanation(self._complete(system, user), finding)
 
+    def complete(self, system: str, user: str) -> str:
+        """Completamento de texto genérico — porta para o Planner cognitivo
+        (ADR-0007). Aplica a mesma redaction externa que ``explain`` (o prompt do
+        Planner pode conter títulos/ativos de findings)."""
+        return self._complete(system, redact(user) if self._redact_external else user)
+
     def _complete(self, system: str, user: str) -> str:  # pragma: no cover - abstrato
         raise NotImplementedError
 

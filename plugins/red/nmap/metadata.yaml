@@ -17,6 +17,15 @@ chained_after: [port_discovery]
 enabled_by_default: true
 install_hint: "sudo apt install nmap  ·  https://nmap.org/download.html"
 
+# Sinais de seleção (ADR-0007) — heurística de tuning NOSSA, não benchmark. Preciso
+# (service/version, NSE) mas mais lento: preferido inside-out e quando o modo pede
+# precisão ou detecção de serviço.
+selection:
+  speed: medium
+  accuracy: high
+  resource_usage: medium
+  preferred_when: [internal]
+
 # Grafo de cascata (ADR-0004): ao descobrir um serviço, sugere as próximas
 # ferramentas. Casamento determinístico por porta/serviço; cada disparo é logado
 # e justificado (sem mágica). Ferramentas ainda não construídas ficam como
