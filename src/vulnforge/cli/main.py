@@ -24,7 +24,6 @@ from ..security.scope import ScopeViolation
 from . import doctor as doctor_mod
 from .reporting import TOOL_VERSION, write_report
 from .session import SessionAborted, execute_scan, feeds_meta
-from .wizard import run_wizard
 
 
 @click.group(invoke_without_command=True)
@@ -33,11 +32,14 @@ from .wizard import run_wizard
 def cli(ctx: click.Context) -> None:
     """VulnForge — plataforma modular de operações de segurança (uso autorizado).
 
-    Sem argumentos, abre o assistente interativo. Veja `vulnforge doctor` para
-    checar o ambiente e `vulnforge scan ALVO` para um scan direto.
+    Sem argumentos, abre o **menu interativo** (Novo Scan, Dashboard, Histórico,
+    Configuração, Doctor, Atualizar Ferramentas). Veja `vulnforge doctor` para
+    checar o ambiente e `vulnforge scan ALVO` para um scan direto (headless/CI).
     """
     if ctx.invoked_subcommand is None:
-        sys.exit(run_wizard())
+        from .menu import run_frontend
+
+        sys.exit(run_frontend())
 
 
 @cli.command()
@@ -172,18 +174,28 @@ def report(scan_id, db, fmt, style, out, ai):
 @click.option("--host", default="127.0.0.1", show_default=True)
 @click.option("--port", default=8000, type=int, show_default=True)
 @click.option("--db", default="vulnforge.db", show_default=True)
-def serve(host, port, db):
-    """Sobe a API + dashboard e imprime a URL."""
-    import os
+@click.option(
+    "--open/--no-open",
+    "open_browser",
+    default=None,
+    help="Abrir o navegador no dashboard (padrão: sim em terminal interativo).",
+)
+def serve(host, port, db, open_browser):
+    """Sobe a API + dashboard, imprime a URL e (opcional) abre o navegador."""
+    from .menu import serve_app
 
-    import uvicorn
+    if open_browser is None:
+        open_browser = sys.stdout.isatty()
+    serve_app(host=host, port=port, db=db, open_browser=open_browser, echo=click.echo)
 
-    os.environ["VULNFORGE_DB"] = db
-    url = f"http://{host}:{port}"
-    click.secho(
-        f"VulnForge — dashboard em {url}  ·  API em {url}/api/v1  ·  docs em {url}/docs", fg="green"
-    )
-    uvicorn.run("vulnforge.api.app:app", host=host, port=port)
+
+@cli.command("menu")
+@click.option("--db", default="vulnforge.db", show_default=True)
+def menu_cmd(db):
+    """Abre o menu interativo (porta de entrada de produto: TUI ou menu numerado)."""
+    from .menu import run_frontend
+
+    sys.exit(run_frontend(db))
 
 
 @cli.command()

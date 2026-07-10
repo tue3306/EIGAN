@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Atalho ergonômico:  ./vulnforge   ==   python3 vulnforge.py
+# (Após `pip install -e .`, o comando `vulnforge` também fica disponível no PATH,
+#  igual a nmap/sqlmap/nuclei.) Uso autorizado apenas.
+exec python3 "$(dirname "$(readlink -f "$0")")/vulnforge.py" "$@"

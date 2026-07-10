@@ -7,7 +7,27 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-10
+
+Release **Interface & Experiência de Produto**: o VulnForge deixa de parecer uma
+biblioteca Python e passa a "baixar e rodar" com um único comando.
+
 ### Added
+- **Launcher único `vulnforge.py` na raiz** (Missão 0 / ADR-0005): só stdlib.
+  `git clone && python3 vulnforge.py` cria `.venv`, instala o pacote (extra
+  `[tui]`, com fallback para a base), gera `.env` a partir de `.env.example` e
+  abre o menu — sem o usuário conhecer a estrutura do projeto. Atalho `./vulnforge`.
+- **Menu de produto** (`cli/menu.py`): `vulnforge` sem argumentos abre um menu
+  numerado — Novo Scan, Dashboard, Histórico, Configuração, Doctor, Atualizar
+  Ferramentas. Camada fina sobre a CLI (nenhuma regra de negócio nova), com
+  ações testáveis (`input_fn`/`echo` injetáveis) e resiliente a erro (mensagem
+  acionável, nunca stack trace).
+- **TUI full-screen (Textual)** (`cli/tui.py`): experiência premium opcional
+  (extra `[tui]`) com **fallback determinístico** para o menu numerado quando não
+  há Textual ou TTY. Comando `vulnforge menu` explícito.
+- **`serve --open`**: sobe o dashboard e **abre o navegador** automaticamente
+  (thread que espera a porta responder); a opção Dashboard do menu usa o mesmo
+  caminho.
 - **Orquestração em cascata dirigida por descoberta** (ADR-0004): plugins
   declaram `triggers_on` no `metadata.yaml` (ex.: porta 445 → `enum4linux`,
   `cme_smb_recon`). `CascadeGraph` casa de forma determinística e o
@@ -23,6 +43,12 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   preservado — 403 sem autorização), `GET /jobs/{id}/progress`, `cascade-log`,
   `cancel`, `GET /findings`, `GET /assets` e WebSocket
   `/ws/scans/{id}/progress`. Streaming por `EventSink` (porta) + `ScanManager`.
+
+### Changed
+- `vulnforge` **sem argumentos** agora abre o **menu** (antes: o wizard direto).
+  O wizard segue inteiro como opção 1 (Novo Scan) e via os fluxos de scan.
+  Divergência declarada do CLAUDE.md §13/§18 — ver ADR-0005.
+- Novo extra opcional `[tui]` (Textual + Rich) no `pyproject.toml`.
 
 ## [0.2.0] - 2026-07-09
 

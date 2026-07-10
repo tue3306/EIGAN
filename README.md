@@ -25,23 +25,44 @@
 > escrita para testar. Testes de integração rodam somente contra alvos
 > vulneráveis **locais** (DVWA/Juice Shop), nunca contra terceiros.
 
-## ⚡ Quickstart (3 minutos)
+## ⚡ Quickstart (menos de 3 minutos)
+
+**Um único comando, sem instalar nada antes.** O launcher cria o ambiente,
+instala o VulnForge e abre o menu — você não precisa conhecer a estrutura do
+projeto:
 
 ```bash
-# 1. instalar (Python 3.11+)
-pip install -e ".[pdf,dev]"
+git clone https://github.com/tue3306/vulnerability-scanner.git
+cd vulnerability-scanner          # (a pasta local pode se chamar ScanVuln)
+python3 vulnforge.py              # cria .venv, instala e abre o menu — ou ./vulnforge
+```
 
-# 2. checar o ambiente (ferramentas, IA, Docker, feeds) — veredito claro
-vulnforge doctor
+```
+╔══════════════════════════════════════════════════════════╗
+║ VulnForge · Plataforma de Operações de Segurança         ║
+╚══════════════════════════════════════════════════════════╝
+  1) Novo Scan      2) Dashboard   3) Histórico   4) Configuração
+  5) Doctor         6) Atualizar Ferramentas      7) Sair
+```
 
-# 3. subir um alvo de teste LOCAL que você controla (exemplo)
-docker run --rm -d -p 3000:3000 bkimminich/juice-shop
+- **1) Novo Scan** → assistente guiado (alvo → perspectiva → **autorização
+  inline** → progresso → relatório).
+- **2) Dashboard** → sobe a API e **abre o navegador** em `http://127.0.0.1:8000`.
+- **5) Doctor** → diagnóstico do ambiente (ferramentas, IA, Docker, feeds).
 
-# 4. wizard: alvo → perspectiva → autorização inline → progresso → PDF
-vulnforge
+Requisitos: **Python 3.11+** (e `python3-venv` no Debian/Ubuntu/Kali — o launcher
+avisa se faltar). Com uma TTY e o extra `[tui]`, o menu vira uma **interface
+full-screen** (Textual); sem isso, cai no menu numerado — a diferença é conforto,
+não funcionalidade.
 
-# 5. dashboard web
-vulnforge serve            # http://127.0.0.1:8000
+### Prefere instalar como comando (igual nmap/sqlmap)?
+
+```bash
+pip install -e ".[tui]"           # + [pdf] p/ PDF, [dev] p/ desenvolver
+vulnforge                          # abre o mesmo menu
+vulnforge doctor                   # diagnóstico do ambiente
+vulnforge scan example.com         # scan direto (headless/CI)
+vulnforge serve                    # dashboard web em http://127.0.0.1:8000
 ```
 
 Sem nenhuma chave de API, **tudo acima funciona** — a IA só enriquece quando presente.
