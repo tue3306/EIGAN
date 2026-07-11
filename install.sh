@@ -32,7 +32,27 @@ case "${DISTRO}" in
 esac
 
 python3 -m pip install --upgrade pip
-python3 -m pip install -e ".[pdf]"
+python3 -m pip install -e ".[pdf,tui]"
 
-echo "OK. Rode:  eigan --help"
-echo "Lembre: copie scope.example.yaml para scope.yaml e declare apenas alvos autorizados."
+cat <<'DONE'
+
+────────────────────────────────────────────────────────────────────────────
+✔ EIGAN instalado.
+
+EIGAN é um AGENTE DE IA: nenhum scan roda sem um provedor de IA (§AI-native).
+Próximos passos (fácil):
+
+  1) eigan                       # abre o menu → Configuração → cole sua chave de IA
+                                 #   (Claude, GPT, Gemini, Groq, Together, Azure ou Ollama local)
+  2) eigan                       # menu → Novo Scan → informe o alvo → autorize → acompanhe
+  3) veja o resultado:           # eigan serve  (dashboard em http://127.0.0.1:8000)
+                                 #   ou gere o PDF/relatório ao final do scan
+
+Power-user (headless):
+  export EIGAN_AI_PROVIDER=anthropic ANTHROPIC_API_KEY=...   # ou outro provedor
+  eigan plan empresa.com --goal attack-surface --execute --yes
+
+Lembre: só escaneie o que você tem autorização para testar (scope.example.yaml → scope.yaml).
+Guia de provedores de IA: docs/ai-providers.md
+────────────────────────────────────────────────────────────────────────────
+DONE

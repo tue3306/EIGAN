@@ -8,6 +8,19 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 ## [1.0.0] — 2026-07-11
 
 ### Added
+- **Gate AI-native (ADR-0012, Fase 1)**: toda execução real de scan exige um
+  provedor de IA (`require_provider`/`AIProviderRequired`); sem ele, recusa
+  acionável — CLI (exit 3), API (HTTP 428), wizard (oferta de configurar). O
+  dry-run (`plan` preview) segue sem exigir provedor.
+- **Cascata adaptativa real entre ferramentas**: capacidades `smb_enumeration` e
+  `nse_vuln_scan` com agente `network` (real). Plugins **enum4linux** (SMB/Samba:
+  usuários, shares, null session) e **nmap-nse** (2ª onda do nmap com scripts NSE)
+  executam quando instalados. Cascata: nmap/naabu → 445/Samba → enum4linux +
+  nmap-nse; share gravável → volta ao nmap-nse; web → whatweb → wpscan; TLS →
+  testssl. É o "achou Samba → passo focado em Samba, e volta ao nmap".
+- **Catálogo de ferramentas ampliado** (scaffold honesto, cascata-wired, no
+  `doctor` com impact_class + install_hint): whatweb, wpscan, feroxbuster, katana,
+  testssl, sqlmap (gated), ldapsearch.
 - **AI Providers — camada de IA modular e independente de provedor
   (ADR-0010).** Registro extensível (`ProviderSpec` + `register`/`list_providers`)
   com **Anthropic, OpenAI, Gemini, OpenRouter, Groq, Together, Azure OpenAI e
