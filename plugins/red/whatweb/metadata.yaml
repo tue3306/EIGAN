@@ -1,0 +1,19 @@
+# SCAFFOLD HONESTO (roadmap) — catalogado e encadeado na cascata; ainda NÃO
+# executa até o runner/parser serem implementados (§3.6). Ver docs/ROADMAP.md.
+name: whatweb
+category: red
+subcategory: web
+capabilities: [cms_scan]
+supported_perspectives: [external, internal]
+tool: whatweb
+roadmap: true
+enabled_by_default: false
+description: >-
+  Fingerprint de tecnologias/CMS de aplicações web (WordPress, Joomla, Apache,
+  frameworks). Disparado após httpx confirmar um serviço web vivo.
+install_hint: "sudo apt install whatweb  ·  https://github.com/urbanadventurer/WhatWeb"
+impact_class: active_safe
+triggers_on:
+  - title_contains: ["wordpress"]
+    then_execute: [wpscan, nuclei]
+    reason: "WordPress detectado → wpscan + templates Nuclei WP (achou WP → scan WP)"

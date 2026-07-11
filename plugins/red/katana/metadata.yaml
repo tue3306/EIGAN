@@ -1,0 +1,14 @@
+# SCAFFOLD HONESTO (roadmap) — ver docs/ROADMAP.md.
+name: katana
+category: red
+subcategory: web
+capabilities: [web_crawl]
+supported_perspectives: [external, internal]
+tool: katana
+roadmap: true
+enabled_by_default: false
+description: >-
+  Crawler web moderno (ProjectDiscovery): coleta URLs/endpoints para alimentar
+  fuzzing e templates. Disparado após httpx.
+install_hint: "https://github.com/projectdiscovery/katana  # VERIFICAR versão"
+impact_class: active_safe

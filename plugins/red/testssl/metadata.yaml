@@ -1,0 +1,14 @@
+# SCAFFOLD HONESTO (roadmap) — ver docs/ROADMAP.md.
+name: testssl
+category: red
+subcategory: web
+capabilities: [tls_assessment]
+supported_perspectives: [external, internal]
+tool: testssl.sh
+roadmap: true
+enabled_by_default: false
+description: >-
+  Avaliação de TLS/SSL: protocolos e cifras fracas, certificados, vulnerabilidades
+  (Heartbleed, ROBOT, etc.). Disparado em endpoints TLS.
+install_hint: "sudo apt install testssl.sh  ·  https://testssl.sh/"
+impact_class: active_safe

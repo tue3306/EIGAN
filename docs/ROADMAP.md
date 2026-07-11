@@ -8,8 +8,13 @@ honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
 
 ## Entregue (MVP)
 
-- **Red:** Recon (subfinder, dnsx), Network (naabu, nmap), Web (httpx, nuclei) —
+- **Red:** Recon (subfinder, dnsx), Network (naabu, nmap, **enum4linux** para
+  SMB/Samba, **nmap-nse** para 2ª onda com scripts NSE), Web (httpx, nuclei) —
   Outside-In e Inside-Out por perspectiva.
+- **Cascata adaptativa entre ferramentas (ADR-0004):** descobertas encadeiam os
+  próximos passos automaticamente — ex.: nmap/naabu acham 445/Samba → **enum4linux**
+  (usuários/shares) + **nmap-nse** (scripts smb-vuln); share gravável → volta ao
+  nmap-nse; serviço web → whatweb/nuclei; WordPress → wpscan.
 - **Blue:** Inventário de ativos, Conformidade indicativa (CWE→OWASP/NIST),
   postura de risco (dashboard/relatório).
 - **Purple:** Mapa MITRE ATT&CK dos findings + gap analysis + relatório executivo.
@@ -34,6 +39,9 @@ honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
 | Categoria | Módulo | Capability |
 |---|---|---|
 | Cognitivo | Agentes Web/Cloud/AD/Exploitation | especialidade (`built=false`) |
+| Red/Web | whatweb, wpscan, feroxbuster, katana | `cms_scan` / `web_crawl` |
+| Red/Web | testssl (TLS), sqlmap (gated) | `tls_assessment` / `exploitation` |
+| Red/Net | ldapsearch (LDAP/AD) | `ad_enumeration` |
 | Red | Active Directory | `ad_enumeration` |
 | Red | Cloud (Azure/AWS/GCP) | `cloud_audit` |
 | Red | Wireless | `wireless_audit` |

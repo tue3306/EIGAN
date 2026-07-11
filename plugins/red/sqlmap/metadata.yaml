@@ -1,0 +1,14 @@
+# SCAFFOLD HONESTO (roadmap) — ver docs/ROADMAP.md. Uso GATED (autorização + HITL).
+name: sqlmap
+category: red
+subcategory: web
+capabilities: [exploitation]
+supported_perspectives: [external, internal]
+tool: sqlmap
+roadmap: true
+enabled_by_default: false
+description: >-
+  Detecção e exploração autorizada de injeção SQL. Intrusivo — só dentro do escopo
+  e sob aprovação humana (Policy Engine: exploit_validation).
+install_hint: "sudo apt install sqlmap  ·  https://sqlmap.org/"
+impact_class: exploit_validation
