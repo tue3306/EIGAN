@@ -89,7 +89,10 @@ class _AvailablePlugin(BaseToolPlugin):
         return []
 
 
-def test_doctor_gather_and_verdict():
+def test_doctor_gather_and_verdict(monkeypatch):
+    # AI-native: com provedor + ferramenta disponível → veredito "ok".
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    monkeypatch.delenv("EIGAN_AI_PROVIDER", raising=False)
     spec = PluginSpec(
         metadata=PluginMetadata(
             name="nmap",
@@ -107,7 +110,27 @@ def test_doctor_gather_and_verdict():
     assert level == "ok"
 
 
-def test_doctor_verdict_warns_without_tools():
+def test_doctor_verdict_warns_without_ai_provider(monkeypatch):
+    # AI-native (§3.4/ADR-0012): sem provedor, o doctor AVISA (o scan seria recusado).
+    for k in _AI_ENV:
+        monkeypatch.delenv(k, raising=False)
+    spec = PluginSpec(
+        metadata=PluginMetadata(
+            name="nmap",
+            category=Category.RED,
+            capabilities=(Capability.PORT_DISCOVERY,),
+            supported_perspectives=(Perspective.EXTERNAL,),
+            tool="nmap",
+        ),
+        runner=_AvailablePlugin(),
+    )
+    rep = doctor.gather(registry=PluginRegistry([spec]), feeds=FeedCache())
+    level, msg = rep.verdict()
+    assert level == "warn" and "provedor de IA" in msg
+
+
+def test_doctor_verdict_warns_without_tools(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")  # provedor OK; falta ferramenta
     reg = PluginRegistry([])
     rep = doctor.gather(registry=reg, feeds=FeedCache())
     assert rep.verdict()[0] == "warn"

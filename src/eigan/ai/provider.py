@@ -15,6 +15,7 @@ import os
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from ..findings.schema import Finding
@@ -531,19 +532,17 @@ for _spec in (
 
 def _config_default_provider() -> str | None:
     """Lê ``default:`` de ``config/ai.yaml`` (se existir) — seleção sem env."""
-    for base in (os.getcwd(),):
-        path = os.path.join(base, "config", "ai.yaml")
-        if not os.path.isfile(path):
-            continue
-        try:
-            import yaml
+    path = Path("config") / "ai.yaml"
+    if not path.is_file():
+        return None
+    try:
+        import yaml
 
-            data = yaml.safe_load(open(path, encoding="utf-8")) or {}
-        except Exception:  # noqa: BLE001 — config quebrada nunca derruba o produto
-            return None
-        val = data.get("default") or data.get("provider")
-        return str(val).strip().lower() if val else None
-    return None
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception:  # noqa: BLE001 — config quebrada nunca derruba o produto
+        return None
+    val = data.get("default") or data.get("provider")
+    return str(val).strip().lower() if val else None
 
 
 def default_provider(*, client: Any = None) -> AIProvider | None:

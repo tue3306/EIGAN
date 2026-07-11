@@ -88,6 +88,12 @@ class DoctorReport:
         """Retorna (nível, mensagem): nível ∈ {ok, warn, error}."""
         if not self.python_ok:
             return "error", f"Python 3.11+ é requerido (encontrado {self.python_version})."
+        if self.ai_provider is None:
+            # AI-native (§3.4/ADR-0012): sem provedor, nenhum scan roda.
+            return "warn", (
+                "Nenhum provedor de IA configurado — o EIGAN é um agente de IA e "
+                "recusará o scan. Configure um (menu → Configuração, ou Ollama local)."
+            )
         if self.tools_available == 0:
             return "warn", (
                 "Nenhuma ferramenta externa disponível. Instale ao menos uma "
@@ -172,12 +178,13 @@ def render(report: DoctorReport, echo, secho) -> None:
             echo(f"  [{mark}] {a.name:16} — {state}")
             echo(f"          {a.description}")
 
-    echo("\nIA (opcional) — provedor modular, ver docs/ai-providers.md:")
+    echo("\nIA (OBRIGATÓRIA — EIGAN é um agente de IA; ver docs/ai-providers.md):")
     if report.ai_provider:
         echo(f"  [{ok}] {report.ai_provider}")
     else:
-        echo("  [i] nenhum provedor configurado — o EIGAN funciona 100% sem IA (determinístico).")
-        echo("      configure com o menu (opção Configuração) ou EIGAN_AI_PROVIDER + chave.")
+        echo(f"  [{no}] nenhum provedor configurado — o scan será RECUSADO sem um.")
+        echo("      configure: menu → Configuração (cole a chave), ou EIGAN_AI_PROVIDER + chave;")
+        echo("      privacidade/offline sem custo: Ollama local.")
 
     echo("\nDocker (sandbox de ferramentas):")
     echo(

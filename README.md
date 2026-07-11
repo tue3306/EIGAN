@@ -15,7 +15,7 @@
   <a href="LICENSE"><img alt="Licença" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-blue"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
   <a href="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Testes" src="https://img.shields.io/badge/testes-216%20passed-brightgreen">
+  <img alt="Testes" src="https://img.shields.io/badge/testes-218%20passed-brightgreen">
   <img alt="AI-native" src="https://img.shields.io/badge/IA-native%20(obrigat%C3%B3ria)-6c5ce7">
 </p>
 
