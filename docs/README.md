@@ -4,7 +4,7 @@
 
 ## Arquitetura e decisões
 - [architecture.md](architecture.md) — camadas, schema de finding, perspectiva,
-  modo com/sem IA, pipeline.
+  núcleo cognitivo (AI-native), pipeline.
 - [adr/](adr/) — Architecture Decision Records (o *porquê* das decisões):
   - [0001](adr/0001-plugin-capability-architecture.md) — arquitetura de plugins/capabilities
   - [0002](adr/0002-risk-engine-feeds.md) — feeds do Risk Engine (EPSS/KEV, fonte oficial)

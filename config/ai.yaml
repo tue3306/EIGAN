@@ -1,6 +1,7 @@
-# Configuração da camada de IA (OPCIONAL).
-# A IA nunca é dependência de função básica (CLAUDE.md §3.3/§7). Sem chave, tudo
-# funciona via fallback determinístico (base de conhecimento).
+# Configuração da camada de IA.
+# EIGAN é AI-native (CLAUDE.md §3.4 / ADR-0012): a IA é a ferramenta — sem um
+# provedor configurado, NÃO há scan (o comando recusa com um erro acionável).
+# Para privacidade/offline sem custo por token, use Ollama local.
 # Chaves vêm SEMPRE de variáveis de ambiente, NUNCA deste arquivo.
 
 # Escolha explícita do provedor (opcional). Se vazio, o EIGAN auto-detecta na
@@ -9,7 +10,7 @@
 default: null
 
 ai:
-  enabled: false          # ativado automaticamente se houver chave/provedor
+  enabled: true           # a IA é obrigatória; ativa com o provedor configurado
 
   redaction:
     # remove segredos/PII antes de enviar a provedor EXTERNO (não local).

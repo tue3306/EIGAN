@@ -126,8 +126,8 @@
   <div class="wrap">
     <span class="chip"><b>Red</b> · <b>Blue</b> · <b>Purple</b> — uma plataforma</span>
     <h1>Do lado de fora e de dentro,<br><span class="grad">o que sua superfície de ataque revela</span></h1>
-    <p class="tag">EIGAN é uma plataforma modular de operações de segurança com <b>Core Engine próprio</b>,
-       arquitetura de plugins e IA <b>opcional</b>. Funciona 100% offline e sem chave de API — a IA só enriquece.</p>
+    <p class="tag">EIGAN é um <b>agente de segurança dirigido por IA</b>: a IA planeja, escolhe as ferramentas,
+       orquestra em cascata adaptativa e correlaciona. Independente de provedor (Claude · GPT · Gemini · Groq · … · <b>Ollama local</b>), com Core Engine próprio e arquitetura de plugins.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/tue3306/vulnerability-scanner">Começar no GitHub</a>
       <a class="btn" href="https://github.com/tue3306/vulnerability-scanner/tree/main/docs">Documentação</a>
@@ -159,8 +159,9 @@ python3 eigan.py             <span class="c"># cria venv, instala e abre o menu<
       integração. E ferramentas "com IA" muitas vezes <em>dependem</em> de uma chave paga para funcionar.</p>
     <p class="lead" style="margin-top:14px">O EIGAN resolve isso com um <b>Core Engine</b> que normaliza,
       correlaciona e prioriza (CVSS/EPSS/KEV) qualquer ferramenta plugada; uma <b>arquitetura de plugins</b> em
-      que somar uma ferramenta é criar uma pasta (o Core não muda); e uma camada de <b>IA opcional</b> que
-      <em>interpreta</em> os resultados — nunca escaneia por conta própria e sempre tem um caminho determinístico.</p>
+      que somar uma ferramenta é criar uma pasta (o Core não muda); e uma <b>IA que comanda</b> o scan de ponta a
+      ponta — <em>dentro</em> de um envelope de autorização/escopo/política. Sem lock-in: escolha o provedor
+      (ou rode <b>Ollama local</b>, sem custo por token); a IA nunca opera fora do escopo nem afirma fato fora das evidências.</p>
   </div>
 </section>
 
@@ -168,7 +169,7 @@ python3 eigan.py             <span class="c"># cria venv, instala e abre o menu<
 <section id="features">
   <div class="wrap">
     <h2 class="section">Funcionalidades</h2>
-    <p class="lead" style="margin-bottom:26px">Tudo o que o MVP entrega hoje, funcionando sem IA.</p>
+    <p class="lead" style="margin-bottom:26px">O que o EIGAN v1.0 entrega hoje — a IA comanda, o engine executa com segurança.</p>
     <div class="grid">
       <div class="card">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h7M17.5 14v7"/></svg>
@@ -197,8 +198,8 @@ python3 eigan.py             <span class="c"># cria venv, instala e abre o menu<
       </div>
       <div class="card">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4c0 1.5-.8 2.5-1.5 3.2M12 2a4 4 0 0 0-4 4c0 1.5.8 2.5 1.5 3.2M8 18h8M9 22h6M12 12v6"/><circle cx="12" cy="9" r="1"/></svg>
-        <h3>IA opcional (AI-native)</h3>
-        <p>Multi-provedor (Anthropic/OpenAI/Google/Ollama) com <b>fallback determinístico</b> e grounding. Explica e prioriza; jamais escaneia. Sem chave, tudo roda.</p>
+        <h3>IA que comanda (AI-native)</h3>
+        <p>A IA planeja, escolhe as ferramentas, reage e narra — com grounding e Policy Engine. Independente de provedor (Anthropic/OpenAI/Gemini/Groq/… /<b>Ollama local</b>); a IA nunca opera fora do escopo nem afirma fato fora das evidências.</p>
       </div>
       <div class="card">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"/></svg>
@@ -285,8 +286,9 @@ python3 eigan.py             <span class="c"># cria venv, instala e abre o menu<
         <tbody>
           <tr><td>Red + Blue + Purple unificados</td><td class="y">Sim</td><td class="n">Foco em gestão de vuln.</td><td class="n">Foco em app web/templates</td></tr>
           <tr><td>Extensível por plugins/módulos</td><td class="y">Sim (pasta = plugin)</td><td class="n">Feeds/NVTs (varia)</td><td class="y">Templates/add-ons</td></tr>
-          <tr><td>Funciona offline (sem nuvem obrigatória)</td><td class="y">Sim</td><td class="y">Varia por edição</td><td class="y">Sim</td></tr>
-          <tr><td>IA opcional integrada (explicação/priorização)</td><td class="y">Sim, com fallback</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>Funciona offline (via Ollama local, sem nuvem)</td><td class="y">Sim</td><td class="y">Varia por edição</td><td class="y">Sim</td></tr>
+          <tr><td>IA <b>comanda</b> o scan (planeja/escolhe/reage)</td><td class="y">Sim (agente)</td><td class="n">—</td><td class="n">—</td></tr>
+          <tr><td>Independente de provedor de IA (8, + local)</td><td class="y">Sim</td><td class="n">—</td><td class="n">—</td></tr>
           <tr><td>Saídas PDF/HTML/JSON/CSV/SARIF</td><td class="y">Os cinco</td><td class="n">Varia</td><td class="n">Varia (SARIF em alguns)</td></tr>
           <tr><td>Dashboard web + API versionada</td><td class="y">Sim</td><td class="y">Varia</td><td class="n">Varia</td></tr>
           <tr><td>Correlação + Risk (CVSS/EPSS/KEV)</td><td class="y">Sim</td><td class="y">Varia</td><td class="n">Parcial</td></tr>

@@ -45,8 +45,9 @@ Backend: `POST /api/v1/scans` → cria job em thread → `202` com `job_id`.
 
 - Relatórios Técnico e Executivo em HTML/PDF/JSON/CSV/SARIF via
   `eigan report --scan <id> --format pdf` (ou API de relatório).
-- **Todos funcionam sem IA** (texto determinístico da base de conhecimento);
-  com chave de IA, as narrativas são enriquecidas e marcadas `ai_generated`.
+- **Exportações (JSON/SARIF/CSV)** são determinísticas e reprodutíveis; as
+  **narrativas** (Técnico/Executivo) são geradas pela IA e marcadas `ai_generated`
+  (o EIGAN exige um provedor de IA para rodar — ADR-0012).
 
 ---
 

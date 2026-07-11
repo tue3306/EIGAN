@@ -83,10 +83,11 @@ O EIGAN é um **agente autônomo**: o subpacote `engine/cognitive/` transforma u
 Goal → Planner → [Agent → ToolSelector → SafeExecution] → Feedback → replan → Stop
 ```
 
-- **`AgenticPlanner`** (padrão com IA): a IA propõe o plano inicial (capacidades +
+- **`AgenticPlanner`** (padrão): a IA propõe o plano inicial (capacidades +
   ordem) e, a cada onda, a próxima — saída **estruturada validada (Pydantic v2)**,
-  **grounded** no `PluginRegistry` (ids inventados descartados). Fallback:
-  **`DeterministicPlanner`** (estratégia declarada + cascata), que roda sem IA.
+  **grounded** no `PluginRegistry` (ids inventados descartados). Sob ele, o
+  **`DeterministicPlanner`** (estratégia declarada + cascata) é o **substrato**
+  que a IA comanda — não um "modo sem IA" (o scan exige um provedor; ADR-0012).
 - **`ToolSelector`** (determinístico) escolhe a *ferramenta* de cada capacidade,
   com `reasons` auditáveis. A IA decide *capacidade*, nunca a ferramenta.
 - **`SafeExecution`** valida o escopo por alvo antes de spawnar o runner seguro
@@ -99,22 +100,23 @@ Goal → Planner → [Agent → ToolSelector → SafeExecution] → Feedback →
 `StopCondition` impõe teto de orçamento/tempo (anti-loop); a IA pode encerrar
 propondo nenhuma capacidade nova.
 
-## Modo com IA × sem IA
+## AI-native: a IA é obrigatória (ADR-0012)
 
-Cada função de enriquecimento passa pelo `Enricher`: se há provedor com chave,
-usa IA (grounded na skill relevante, saída marcada `ai_generated`); senão, cai
-para `DeterministicEnricher`, que monta explicação/remediação a partir da skill
-casada por CWE/OWASP. O relatório e o dashboard nunca dependem de IA — a
-diferença que a IA traz é **riqueza e autonomia**, não funcionalidade.
+O EIGAN é um agente de IA — **sem um provedor configurado, o scan é recusado**
+(erro acionável; `require_provider()`). A IA **comanda** o scan (planeja, seleciona
+capacidades, reage e narra); os mecanismos determinísticos (cascata, `ToolSelector`,
+`Enricher`/skills, Policy Engine, execução segura) são o **substrato que a IA
+comanda e que a política arbitra** — nunca um caminho que a substitui. Para
+privacidade/offline sem custo por token, o provedor pode ser **Ollama local**.
 
-## Roadmap por fases
+As **exportações** (JSON/SARIF/CSV) são serialização determinística dos findings
+(reprodutíveis para SIEM); as **narrativas** (Técnico/Executivo) são geradas pela
+IA e marcadas `ai_generated`.
 
-- **Fase 0–2 (implementado):** guardrail, schema, store, engine (nmap/nuclei),
-  dedup, base de conhecimento, relatório determinístico HTML/PDF.
-- **Fase 3:** dashboard React, WebSocket de progresso real, auth + RBAC.
-- **Fase 4:** provedores de IA concretos (Anthropic/OpenAI/Google/Ollama),
-  redaction de PII/segredos, cache de tokens.
-- **Fase 5:** mais adapters (ZAP/nikto/trivy/testssl), `.deb` + systemd,
-  atualização de feeds com verificação de integridade, testes de integração
-  contra DVWA/Juice Shop local.
-```
+## Roadmap
+
+O roadmap vive numa fonte única, para não divergir:
+
+- [docs/ROADMAP.md](ROADMAP.md) — o que está entregue × scaffold honesto por módulo.
+- [docs/roadmap/autonomous-platform.md](roadmap/autonomous-platform.md) — a visão
+  faseada da plataforma multiagente autônoma (real ✅ × roadmap ⬜).
