@@ -126,6 +126,8 @@ tbody tr.clickable:hover { background:var(--panel2); }
 .cascade-line { font-size:12px; padding:4px 0; border-bottom:1px dashed var(--border); }
 .cascade-line .tool { color:var(--accent); font-weight:600; }
 .cascade-line.sug { opacity:.7; }
+.cascade-line.ai .tool { color:var(--crit); }        /* onda/raciocínio da IA */
+.cascade-line.plan .tool { color:var(--high); }      /* plano inicial do agente */
 .spin { display:inline-block; width:14px; height:14px; border:2px solid var(--border);
         border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }

@@ -1,14 +1,18 @@
 """Planner — traduz um :class:`Goal` em capacidades e replaneja por feedback.
 
-Fronteira do CLAUDE.md (§3.3) explícita: o Planner decide **capacidades**, nunca
-ferramentas nem comandos. Duas implementações plugáveis (ADR-0007):
+Fronteira do CLAUDE.md (§3.3, modelo EIGAN): a IA **planeja, decide e comanda** o
+scan em capacidades; a execução real e a escolha da ferramenta passam por plumbing
+seguro e pelo gate de escopo. O Planner opera em **capacidades**, nunca em
+ferramentas nem comandos. Três implementações plugáveis (ADR-0007/ADR-0009):
 
 * :class:`DeterministicPlanner` — estratégia declarada por objetivo + replan pela
-  cascata determinística (:class:`CascadeGraph`). É o **fallback**: funciona sem
-  qualquer chave de IA.
-* :class:`AIPlanner` — usa a IA apenas para **reordenar** capacidades válidas
-  (grounding na lista do enum; ids inventados são descartados — anti-invenção).
-  Em qualquer erro/instabilidade, cai para o determinístico.
+  cascata determinística (:class:`CascadeGraph`). É o **fallback/piso**: funciona
+  sem qualquer chave de IA.
+* :class:`AIPlanner` — a IA apenas **reordena** capacidades válidas (legado).
+* :class:`AgenticPlanner` — a IA **comanda** o plano fim a fim (EIGAN v1.0):
+  propõe o plano inicial e a cada onda propõe a próxima a partir das descobertas.
+  Grounding (ids inventados descartados) + piso determinístico (cascata sempre
+  roda) + fallback em qualquer erro/JSON inválido.
 
 O `TYPE_CHECKING`/Protocols mantêm a dependência apontando para dentro (o Planner
 consome portas, não a infra concreta).

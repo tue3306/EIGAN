@@ -75,6 +75,12 @@ def test_scan_lifecycle_and_cascade_log(client):
     casc = client.get(f"/api/v1/jobs/{job_id}/cascade-log").json()
     assert "cascade_log" in casc  # existe mesmo que vazio (sem ferramentas)
 
+    # EIGAN: a timeline de raciocínio do agente é transmitida (eventos `log`);
+    # o passo "planned" registra o plano inicial — sem caixa-preta.
+    logs = [e for e in prog["events"] if e["type"] == "log"]
+    assert logs, "o agente deve transmitir o raciocínio (eventos log)"
+    assert any("[plano" in e.get("message", "") for e in logs)
+
 
 def test_invalid_perspective_is_rejected(client):
     r = client.post(

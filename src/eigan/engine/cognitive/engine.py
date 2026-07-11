@@ -273,6 +273,11 @@ class CognitiveEngine:
                 continue  # já coberta (evita re-execução após replan)
 
             step_no += 1
+            # Timeline de raciocínio: por que esta capacidade está no plano
+            # (estratégia | cascata determinística | onda adaptativa da IA).
+            emitter.emit(
+                ev.log(f"#{step_no} [plano:{step.origin}] {step.capability.value} ← {step.reason}")
+            )
             agent = self._agents.for_capability(step.capability)
             if agent is None or not agent.built:
                 d = DecisionEntry(
@@ -328,21 +333,27 @@ class CognitiveEngine:
                 tool_opts,
             )
             state.absorb(Feedback(step.capability, choice.tool, step_findings, duration))
-            decisions.append(
-                DecisionEntry(
-                    step=step_no,
-                    capability=step.capability.value,
-                    agent=agent.name,
-                    action="executed",
-                    tool=choice.tool,
-                    findings=len(step_findings),
-                    origin=step.origin,
-                )
+            done = DecisionEntry(
+                step=step_no,
+                capability=step.capability.value,
+                agent=agent.name,
+                action="executed",
+                tool=choice.tool,
+                findings=len(step_findings),
+                origin=step.origin,
             )
+            decisions.append(done)
+            emitter.emit(ev.log(done.render()))
 
-            # replan dirigido por descoberta (determinístico), depois consome as
-            # descobertas recentes.
+            # replan dirigido por descoberta: piso determinístico (cascata) +
+            # onda adaptativa da IA. Emite os passos acrescentados (timeline).
+            before = set(plan.capabilities())
             self._planner.replan(goal, state, plan)
+            for s in plan.steps:
+                if s.capability not in before and s.origin in ("cascade", "ai"):
+                    emitter.emit(
+                        ev.log(f"#{step_no} [replan:{s.origin}] +{s.capability.value} ← {s.reason}")
+                    )
             state.mark_replanned()
 
         return self._finalize(goal, scan_id, state, decisions, stop_reason, emitter)
@@ -365,7 +376,13 @@ class CognitiveEngine:
         for target in goal.targets:
             emitter.emit(ev.tool_execution(spec.name, target, "in_progress"))
             try:
-                findings.extend(exec_port.execute(spec, target, persp, **tool_opts))
+                produced = exec_port.execute(spec, target, persp, **tool_opts)
+                findings.extend(produced)
+                # streaming em tempo real: cada descoberta vai ao feed do dashboard,
+                # já anotada com as ferramentas que ela dispararia (intenção da cascata).
+                for f in produced:
+                    triggers = [t.tool for t in self._graph.triggered_by(f)]
+                    emitter.emit(ev.discovery(f, triggers))
             except ScopeViolation as exc:
                 decisions.append(
                     DecisionEntry(

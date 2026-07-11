@@ -332,7 +332,7 @@ const PHASE_LABELS = {
 
 async function viewProgress(root, jobId) {
   const job = await api('/jobs/' + jobId);
-  const state = { phases: {}, discoveries: [], cascade: [], tools: {}, status: job.status };
+  const state = { phases: {}, discoveries: [], reasoning: [], tools: {}, status: job.status };
   root.innerHTML = `
     <div class="between">
       <div><h1>Scan em andamento</h1><p class="sub mono">${esc(job.targets.join(', '))} · ${esc(job.perspective)}/${esc(job.profile)}</p></div>
@@ -347,12 +347,12 @@ async function viewProgress(root, jobId) {
       <div class="progressbar"><span id="pbar" style="width:4%"></span></div>
     </div>
     <div class="cols" style="margin-top:8px">
+      <div class="card"><h2 style="margin-top:0">Raciocínio do agente (timeline)</h2><div id="reasoning"><div class="muted">o agente ainda não decidiu nada…</div></div></div>
       <div class="card"><h2 style="margin-top:0">Fases</h2><div id="phases"><div class="muted">aguardando…</div></div></div>
-      <div class="card"><h2 style="margin-top:0">Cascata (disparos justificados)</h2><div id="cascade"><div class="muted">nenhum disparo ainda</div></div></div>
     </div>
     <h2>Descobertas em tempo real</h2>
     <div class="feed card" id="feed"><div class="empty">aguardando descobertas…</div></div>
-    <p class="muted" style="font-size:12px;margin-top:14px">Cada ferramenta é disparada por uma regra determinística (metadata.yaml) — sem mágica. Findings <span class="unv">UNVERIFIED</span> não foram confirmados contra fonte oficial.</p>`;
+    <p class="muted" style="font-size:12px;margin-top:14px">O agente decide capacidade a capacidade e justifica cada passo (plano · replan · seleção · execução) — sem caixa-preta. A execução passa pelo gate de escopo; findings <span class="unv">UNVERIFIED</span> não foram confirmados contra fonte oficial.</p>`;
 
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws/scans/${jobId}/progress`);
@@ -380,9 +380,9 @@ function handleEvent(e, state, jobId) {
     state.discoveries.push(e);
     renderFeed(state);
     el('pcount').textContent = state.discoveries.length + ' findings';
-  } else if (e.type === 'cascade_log') {
-    state.cascade.push(e);
-    renderCascade(state);
+  } else if (e.type === 'log') {
+    state.reasoning.push(e);
+    renderReasoning(state);
   } else if (e.type === 'tool_execution') {
     state.tools[e.tool] = e.status;
   } else if (e.type === 'scan_status') {
@@ -430,16 +430,24 @@ function bumpBar(state) {
   el('pbar').style.width = Math.min(96, Math.round((done / total) * 100)) + '%';
 }
 
-function renderCascade(state) {
-  el('cascade').innerHTML = state.cascade
-    .slice(-14)
+// Timeline de raciocínio do agente: renderiza os eventos `log` (plano · replan ·
+// seleção · execução · stop-hint) — cada passo justificado, sem caixa-preta.
+const _REASON_KIND = (msg) => {
+  const m = /\[([a-z-]+)(?::([a-z]+))?\]/.exec(msg || '');
+  if (!m) return { tag: 'log', cls: '' };
+  const tag = m[2] ? `${m[1]}:${m[2]}` : m[1];
+  const cls = m[2] === 'ai' || m[1] === 'stop-hint' ? 'ai' : m[1] === 'planned' ? 'plan' : '';
+  return { tag, cls };
+};
+function renderReasoning(state) {
+  el('reasoning').innerHTML = state.reasoning
+    .slice(-40)
     .reverse()
-    .map(
-      (c) =>
-        `<div class="cascade-line ${c.executed ? '' : 'sug'}"><span class="tool">${esc(c.tool)}</span>
-         ${c.executed ? '' : '<span class="badge">sugerido</span>'} — ${esc(c.reason)}
-         <span class="muted">(por ${esc(c.declared_by)})</span></div>`
-    )
+    .map((e) => {
+      const { tag, cls } = _REASON_KIND(e.message);
+      const text = esc((e.message || '').replace(/^#\d+\s*\[[^\]]+\]\s*/, ''));
+      return `<div class="cascade-line ${cls}"><span class="tool">${esc(tag)}</span> — ${text}</div>`;
+    })
     .join('');
 }
 

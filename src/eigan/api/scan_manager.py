@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from ..engine import events as ev
-from ..engine.cascade_orchestrator import CascadeOrchestrator
+from ..engine.cognitive import CognitiveEngine, Goal, GoalKind
 from ..engine.feeds import FeedCache
 from ..engine.risk import RiskScorer
 from ..findings.store import FindingStore
@@ -38,6 +38,25 @@ OBJECTIVE_PROFILE = {
     "deep": "deep",
     "ai": "standard",  # "deixe a IA decidir": IA orquestra sobre o pipeline padrão
 }
+
+# objetivo do EIGAN por perspectiva (foco v1.0: Web + Infra, Outside-In/Inside-Out).
+_GOAL_BY_PERSPECTIVE = {
+    Perspective.EXTERNAL: GoalKind.ATTACK_SURFACE,
+    Perspective.INTERNAL: GoalKind.NETWORK_ASSESSMENT,
+}
+
+
+def _ai_completion(use_ai: bool):
+    """Provedor de IA (se pedido e disponível) para o AgenticPlanner; senão None
+    → o engine cai no DeterministicPlanner (fallback §3.4)."""
+    if not use_ai:
+        return None
+    try:
+        from ..ai.provider import default_provider
+
+        return default_provider()
+    except Exception:  # noqa: BLE001 — IA indisponível nunca quebra o scan
+        return None
 
 
 class ScanCancelled(Exception):
@@ -194,17 +213,19 @@ class ScanManager:
             feeds = FeedCache.load()
             risk = RiskScorer(feeds, online=False)  # enriquecimento online é opt-in
             store = FindingStore(self._db_path)
-            orch = CascadeOrchestrator(store=store, registry=self._registry, risk=risk)
-            for t in job.targets:
-                scope.enforce(t, perspective=perspective, override=override)
-            orch.run(
+            # EIGAN: a IA comanda o scan (AgenticPlanner) quando disponível; senão
+            # o loop determinístico. A cascata declarativa é o piso de segurança.
+            completion = _ai_completion(job.use_ai)
+            engine = CognitiveEngine(self._registry, risk=risk, store=store, completion=completion)
+            goal = Goal.build(
+                _GOAL_BY_PERSPECTIVE.get(perspective, GoalKind.ATTACK_SURFACE),
                 job.targets,
-                scope=scope,
                 perspective=perspective,
                 profile=profile,
-                override_perspective=override,
-                sink=sink,
             )
+            for t in job.targets:  # falha rápida se um alvo é totalmente não autorizado
+                scope.enforce(t, perspective=perspective, override=override)
+            engine.run(goal, scope=scope, override_perspective=override, sink=sink)
             store.close()
             job.status = "completed"
         except ScanCancelled:
