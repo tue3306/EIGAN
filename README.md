@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>EIGAN — Enhanced Intelligent Guardian for Autonomous Networks.</strong><br>
+  <strong>EIGAN — Enhanced Intelligent Guardian for Autonomous Assessment.</strong><br>
   Agente de segurança <strong>autônomo dirigido por IA</strong> (Red · Blue · Purple): a IA
   planeja, escolhe as ferramentas, orquestra em <strong>cascata adaptativa</strong>, reage às
   descobertas e correlaciona tudo — Core Engine próprio, arquitetura de plugins e
