@@ -1,6 +1,6 @@
 # Política de Segurança
 
-O VulnForge é uma ferramenta de segurança; levamos a segurança **do próprio
+O EIGAN é uma ferramenta de segurança; levamos a segurança **do próprio
 produto** a sério (é o item nº 2 da nossa precedência de decisão, atrás apenas de
 legalidade).
 
@@ -21,7 +21,7 @@ aplicadas sobre a **última release** e o branch `main`.
 1. **Preferencial:** use o [GitHub Private Vulnerability Reporting][ghsa]
    (aba *Security* → *Report a vulnerability*) do repositório.
 2. **Alternativa:** e-mail para **hoffmann3701@gmail.com** com o assunto
-   `[VulnForge Security]`.
+   `[EIGAN Security]`.
 
 Inclua, se possível: descrição, versão afetada, passos de reprodução, impacto
 estimado e qualquer PoC. Pedimos que você **não divulgue publicamente** até
@@ -36,17 +36,17 @@ coordenarmos uma correção.
 
 ## Escopo
 
-Em escopo: código do VulnForge (Core Engine, plugins oficiais, API, CLI,
+Em escopo: código do EIGAN (Core Engine, plugins oficiais, API, CLI,
 dashboard) que possa levar a execução indevida, vazamento de dados, escape de
 sandbox, injeção de comando ou bypass do guardrail de escopo/consent.
 
-Fora de escopo: vulnerabilidades em ferramentas de terceiros que o VulnForge
+Fora de escopo: vulnerabilidades em ferramentas de terceiros que o EIGAN
 apenas orquestra (reporte-as ao projeto de origem) e resultados de scans que você
 executou nos **seus próprios** alvos.
 
 ## Uso responsável e legal
 
-O VulnForge só deve ser usado contra sistemas que você **possui ou tem
+O EIGAN só deve ser usado contra sistemas que você **possui ou tem
 autorização escrita** para testar. O produto bloqueia por padrão alvos fora do
 `scope.yaml` e exige confirmação de autorização — **não** contorne esses
 controles. Uso não autorizado é ilegal e de sua inteira responsabilidade.

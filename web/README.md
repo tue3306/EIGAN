@@ -1,6 +1,6 @@
 # web/ — Landing page e identidade visual
 
-Site estático (landing) e os **assets de marca / design tokens** do VulnForge.
+Site estático (landing) e os **assets de marca / design tokens** do EIGAN.
 Zero regra de negócio aqui (CLAUDE.md §10) — apenas apresentação.
 
 ## Conteúdo
@@ -23,5 +23,5 @@ python -m http.server -d web 5500   # http://127.0.0.1:5500
 ```
 
 > O **dashboard da aplicação** (diferente desta landing) sobe com
-> `vulnforge serve` e vive em `src/vulnforge/api/static/`. Ambos compartilham a
+> `eigan serve` e vive em `src/eigan/api/static/`. Ambos compartilham a
 > mesma identidade visual definida em `tokens.css`.

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="web/assets/logo.svg" alt="VulnForge" height="72">
+  <img src="web/assets/logo.svg" alt="EIGAN" height="72">
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 > ## ⚠️ AVISO LEGAL — USO AUTORIZADO APENAS
 >
 > Scanning ativo de vulnerabilidades **sem autorização documentada é ilegal** em
-> muitas jurisdições. O VulnForge **bloqueia por padrão** qualquer alvo fora de um
+> muitas jurisdições. O EIGAN **bloqueia por padrão** qualquer alvo fora de um
 > `scope.yaml` autorizado e exige confirmação de autorização. Você é o único
 > responsável por operar **apenas** contra sistemas que possui ou tem permissão
 > escrita para testar. Testes de integração rodam somente contra alvos
@@ -28,18 +28,18 @@
 ## ⚡ Quickstart (menos de 3 minutos)
 
 **Um único comando, sem instalar nada antes.** O launcher cria o ambiente,
-instala o VulnForge e abre o menu — você não precisa conhecer a estrutura do
+instala o EIGAN e abre o menu — você não precisa conhecer a estrutura do
 projeto:
 
 ```bash
 git clone https://github.com/tue3306/vulnerability-scanner.git
 cd vulnerability-scanner          # (a pasta local pode se chamar ScanVuln)
-python3 vulnforge.py              # cria .venv, instala e abre o menu — ou ./vulnforge
+python3 eigan.py              # cria .venv, instala e abre o menu — ou ./eigan
 ```
 
 ```
 ╔══════════════════════════════════════════════════════════╗
-║ VulnForge · Plataforma de Operações de Segurança         ║
+║ EIGAN · Plataforma de Operações de Segurança         ║
 ╚══════════════════════════════════════════════════════════╝
   1) Novo Scan      2) Dashboard   3) Histórico   4) Configuração
   5) Doctor         6) Atualizar Ferramentas      7) Sair
@@ -56,7 +56,7 @@ full-screen** (Textual); sem isso, cai no menu numerado — a diferença é conf
 não funcionalidade.
 
 > **Aceite medido (não estimado):** do projeto descompactado até o menu/wizard
-> rodando = **1 comando** (`python3 vulnforge.py`). Medido em **2026-07-10**, em
+> rodando = **1 comando** (`python3 eigan.py`). Medido em **2026-07-10**, em
 > **Kali Linux** (kernel 7.0.x, Python 3.13), a partir da working tree copiada
 > (202 arquivos) e de um Python **sem o pacote instalado**: o launcher criou o
 > `.venv`, instalou `.[pdf,tui]`, gerou o `.env` e abriu o menu — sem nenhum
@@ -65,15 +65,15 @@ não funcionalidade.
 ### Flags do launcher
 
 ```bash
-python3 vulnforge.py --with-tools   # provisiona ferramentas reais (doctor --install, com confirmação)
-python3 vulnforge.py --with-ai      # instala o extra de IA e mostra como configurar a chave
-python3 vulnforge.py --serve        # sobe o dashboard e abre o navegador
-python3 vulnforge.py --reinstall    # recria o .venv do zero
-python3 vulnforge.py --no-venv      # usa o interpretador atual (não cria .venv)
-python3 vulnforge.py --help         # ajuda do launcher (flags + comandos da CLI)
+python3 eigan.py --with-tools   # provisiona ferramentas reais (doctor --install, com confirmação)
+python3 eigan.py --with-ai      # instala o extra de IA e mostra como configurar a chave
+python3 eigan.py --serve        # sobe o dashboard e abre o navegador
+python3 eigan.py --reinstall    # recria o .venv do zero
+python3 eigan.py --no-venv      # usa o interpretador atual (não cria .venv)
+python3 eigan.py --help         # ajuda do launcher (flags + comandos da CLI)
 ```
 
-Provisão de ferramentas (ADR-0006): `--with-tools` (ou `vulnforge doctor
+Provisão de ferramentas (ADR-0006): `--with-tools` (ou `eigan doctor
 --install`) lista **exatamente** o que vai rodar e instala só após sua
 confirmação; o que não é verificável (ferramentas ProjectDiscovery) aponta a
 fonte oficial + Docker, sem fabricar comando. PDF opcional: se as libs do
@@ -84,13 +84,13 @@ habilitar.
 
 ```bash
 pip install -e ".[tui]"           # + [pdf] p/ PDF, [dev] p/ desenvolver
-vulnforge                          # abre o mesmo menu
-vulnforge doctor                   # diagnóstico do ambiente
-vulnforge scan example.com         # scan direto (headless/CI)
-vulnforge plan example.com --goal attack-surface   # planner por objetivo (dry-run seguro)
-vulnforge diff --scan 7            # o que mudou desde o scan anterior do alvo
-vulnforge remediate --scan 7       # playbooks Ansible revisáveis (sugestão)
-vulnforge serve                    # dashboard web em http://127.0.0.1:8000
+eigan                          # abre o mesmo menu
+eigan doctor                   # diagnóstico do ambiente
+eigan scan example.com         # scan direto (headless/CI)
+eigan plan example.com --goal attack-surface   # planner por objetivo (dry-run seguro)
+eigan diff --scan 7            # o que mudou desde o scan anterior do alvo
+eigan remediate --scan 7       # playbooks Ansible revisáveis (sugestão)
+eigan serve                    # dashboard web em http://127.0.0.1:8000
 ```
 
 Sem nenhuma chave de API, **tudo acima funciona** — a IA só enriquece quando presente.
@@ -98,7 +98,7 @@ Sem nenhuma chave de API, **tudo acima funciona** — a IA só enriquece quando 
 ## 🗺️ Mapa do projeto
 
 ```
-src/vulnforge/       Core: domínio, engine, análises, report, IA, API, CLI
+src/eigan/       Core: domínio, engine, análises, report, IA, API, CLI
 plugins/             Capabilities intercambiáveis (red/ blue/ purple/) — auto-discovery
 config/              profiles.yaml · tools.yaml · ai.yaml (zero-config por padrão)
 knowledge/           Base determinística: skills/ (SKILL.md), attack/, compliance/
@@ -113,7 +113,7 @@ Cada diretório tem seu próprio `README.md`.
 
 ## O que é (e o que não é)
 
-O VulnForge não é "só um scanner": é uma **plataforma** com **Core Engine
+O EIGAN não é "só um scanner": é uma **plataforma** com **Core Engine
 próprio** que orquestra ferramentas, **normaliza** os resultados em um schema
 único, **correlaciona** entre fontes, **prioriza risco** (CVSS/EPSS/KEV) e
 **gera relatórios** — extensível por **plugins** e pensada para crescer a 100+
@@ -173,7 +173,7 @@ pip install -e ".[pdf,dev]"        # extras: pdf, ai, dev
 ```
 
 Ferramentas externas (nmap, nuclei, subfinder, ...) são detectadas no PATH;
-adapters indisponíveis são **pulados com aviso** (não quebram o scan). `vulnforge
+adapters indisponíveis são **pulados com aviso** (não quebram o scan). `eigan
 doctor` diz exatamente o que falta e como instalar. Caminho recomendado com
 sandbox: [docker/](docker/) (`docker compose up`).
 
@@ -184,17 +184,17 @@ sandbox: [docker/](docker/) (`docker compose up`).
 cp scope.example.yaml scope.yaml
 
 # scan determinístico (sem IA) — escolha a perspectiva
-vulnforge scan app.local --perspective external --profile standard --scope scope.yaml
-vulnforge scan 10.0.0.5   --perspective internal --profile standard --scope scope.yaml
+eigan scan app.local --perspective external --profile standard --scope scope.yaml
+eigan scan 10.0.0.5   --perspective internal --profile standard --scope scope.yaml
 
 # relatório (sem nenhuma chave de API); estilos: technical | executive
-vulnforge report --scan 1 --format pdf --style executive
+eigan report --scan 1 --format pdf --style executive
 
 # API + dashboard
-vulnforge serve                    # http://127.0.0.1:8000  (/docs, /api/v1/...)
+eigan serve                    # http://127.0.0.1:8000  (/docs, /api/v1/...)
 
 # CI: falha o pipeline se houver finding alto
-vulnforge scan --target-list examples/targets.example.txt --profile web-only \
+eigan scan --target-list examples/targets.example.txt --profile web-only \
   --scope scope.yaml --yes --fail-on high
 ```
 
@@ -213,15 +213,15 @@ nem descobre vulnerabilidade: só interpreta findings já produzidos.
 ## Screenshots
 
 A landing page ([`web/index.html`](web/index.html)) traz uma prévia do dashboard
-com a identidade visual do produto. O dashboard real sobe com `vulnforge serve`.
+com a identidade visual do produto. O dashboard real sobe com `eigan serve`.
 
 > 📸 _GIFs/screenshots animados do wizard e do dashboard entram aqui em uma
-> próxima iteração (placeholder)._ Para vê-los agora, rode `vulnforge serve` ou
+> próxima iteração (placeholder)._ Para vê-los agora, rode `eigan serve` ou
 > abra a landing localmente (`python -m http.server -d web 5500`).
 
 ## FAQ
 
-**Preciso de uma chave de IA?** **Não.** O VulnForge funciona 100% sem IA —
+**Preciso de uma chave de IA?** **Não.** O EIGAN funciona 100% sem IA —
 scans, correlação, risco, dashboard e relatórios completos saem do caminho
 determinístico. A IA só adiciona riqueza quando há um provedor configurado.
 
@@ -251,4 +251,4 @@ Contribuições são bem-vindas! Veja [CONTRIBUTING.md](CONTRIBUTING.md) (inclui
 
 ## Licença
 
-[Apache-2.0](LICENSE) — © 2026 VulnForge contributors.
+[Apache-2.0](LICENSE) — © 2026 EIGAN contributors.

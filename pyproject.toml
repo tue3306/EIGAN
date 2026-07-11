@@ -3,13 +3,13 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vulnforge"
-version = "0.3.0"
-description = "Plataforma modular de operações de segurança (Red/Blue/Purple) — Core Engine próprio, plugins, IA opcional. Uso autorizado."
+name = "eigan"
+version = "1.0.0"
+description = "EIGAN — Enhanced Intelligent Guardian for Autonomous Networks: agente de segurança autônomo dirigido por IA (Web + Infra, Outside-In/Inside-Out). Uso autorizado."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
-authors = [{ name = "VulnForge contributors" }]
+authors = [{ name = "EIGAN contributors" }]
 keywords = ["security", "vulnerability", "scanner", "pentest", "devsecops"]
 
 dependencies = [
@@ -28,13 +28,15 @@ tui = ["textual>=0.60", "rich>=13.0"]
 dev = ["pytest>=8.0", "pytest-cov>=4.0", "ruff>=0.4", "mypy>=1.8"]
 
 [project.scripts]
-vulnforge = "vulnforge.cli.main:main"
+eigan = "eigan.cli.main:main"
+# Alias de transição VulnForge → EIGAN: avisa da depreciação e delega.
+vulnforge = "eigan.cli.main:deprecated_alias"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-vulnforge = ["report/templates/*.j2", "api/static/*"]
+eigan = ["report/templates/*.j2", "api/static/*"]
 
 [tool.pytest.ini_options]
 # "." habilita `import plugins.<cat>.<nome>...` nos testes de plugin (ADR-0003).

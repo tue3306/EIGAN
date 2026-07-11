@@ -1,4 +1,4 @@
-# Auditoria arquitetural — VulnForge (PASSO 0)
+# Auditoria arquitetural — EIGAN (PASSO 0)
 
 > Registro do estado do repositório **no início** da evolução para plataforma
 > modular Red/Blue/Purple. Base para os ADRs em `docs/adr/`.

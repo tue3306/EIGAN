@@ -46,11 +46,11 @@ diretas entre pilares — o que mantém cada um testável isolado e plugável.
 | # | Pilar | Status | Onde |
 |---|---|---|---|
 | 1 | **Agentes de IA (Planner)** | **REAL (fundação)** — AIPlanner + agentes; Recon real, demais scaffold | `engine/cognitive/` (ADR-0007) |
-| 2 | **Memória entre scans (diff)** | **REAL** — diff determinístico; IA narra (opcional) | `analysis/diff.py`, CLI `vulnforge diff` |
+| 2 | **Memória entre scans (diff)** | **REAL** — diff determinístico; IA narra (opcional) | `analysis/diff.py`, CLI `eigan diff` |
 | 3 | **Correlation Engine** | **REAL (base)** — correlação por ativo + dedup por fingerprint | `engine/correlation.py`, `findings/dedup.py` |
 | 4 | **Attack Planner** | **REAL** — política do Planner, decisão logada/justificada; ativo destrutivo exige opt-in | `engine/cognitive/planner.py` |
 | 5 | **Auto Explainer** | **REAL (base)** — Enricher com fallback determinístico + IA opcional | `ai/provider.py` (`Enricher`) |
-| 6 | **Auto Remediation (Blue)** | **REAL (1 formato: Ansible)** — sugestão revisável; demais formatos scaffold | `report/remediation.py`, CLI `vulnforge remediate` |
+| 6 | **Auto Remediation (Blue)** | **REAL (1 formato: Ansible)** — sugestão revisável; demais formatos scaffold | `report/remediation.py`, CLI `eigan remediate` |
 | 7 | **Purple Team (loop Red↔Blue)** | **SCAFFOLD** — plugins `attack-simulation`/`control-validation`/`detection-validation` declarados | `plugins/purple/*` |
 | 8 | **Dashboard executivo** | **REAL (base)** — relatório executivo (risco agregado, sem CVE cru) | `report/deterministic.py` (estilo executivo) |
 | 9 | **AI Workflow ponta a ponta** | **REAL (fundação)** — orquestrado pelo `CognitiveEngine`, gate por fase ativa | `engine/cognitive/engine.py` |
@@ -74,6 +74,6 @@ módulo + registro; **o Core não muda**.
 - Cada pilar real traz ADR/entrada no roadmap, código com fronteira IA/engine
   explícita, **fallback determinístico** e teste. Cada pilar scaffold é
   registrado honestamente (roadmap + `doctor`).
-- Comandos de verificação: `vulnforge diff --scan <B>` (memória/diff) e
-  `vulnforge remediate --scan <id>` (remediação) — ambos determinísticos, sem
+- Comandos de verificação: `eigan diff --scan <B>` (memória/diff) e
+  `eigan remediate --scan <id>` (remediação) — ambos determinísticos, sem
   depender de IA.

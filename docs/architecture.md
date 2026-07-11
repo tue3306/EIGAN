@@ -1,4 +1,4 @@
-# Arquitetura do VulnForge
+# Arquitetura do EIGAN
 
 ## Visão em camadas
 
@@ -43,7 +43,7 @@ ferramentas.
 
 ## Perspectiva (vantage point)
 
-`Perspective` (`src/vulnforge/perspective.py`) é um conceito de primeira classe
+`Perspective` (`src/eigan/perspective.py`) é um conceito de primeira classe
 do domínio que muda o comportamento de todo o pipeline, dirigido por
 **configuração** (o mapa `_PROFILES`), não por `if` espalhado:
 

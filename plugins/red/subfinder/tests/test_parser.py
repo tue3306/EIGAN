@@ -1,7 +1,7 @@
 """Teste do parser do subfinder (subdomínios, com dedup)."""
 
 from plugins.red.subfinder.parser import parse
-from vulnforge.engine.base import ToolResult
+from eigan.engine.base import ToolResult
 
 
 def test_subfinder_parse_and_dedup():

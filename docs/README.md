@@ -1,4 +1,4 @@
-# docs/ — Documentação do VulnForge
+# docs/ — Documentação do EIGAN
 
 Índice da documentação técnica e de produto.
 
@@ -25,4 +25,4 @@
 ## Para desenvolvedores
 - Como criar um plugin em ~5 min: [../CONTRIBUTING.md](../CONTRIBUTING.md).
 - Contrato de plugin e categorias: [../plugins/README.md](../plugins/README.md).
-- API: `vulnforge serve` expõe `/docs` (OpenAPI) e `/api/v1`.
+- API: `eigan serve` expõe `/docs` (OpenAPI) e `/api/v1`.

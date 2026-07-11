@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VulnForge — Plataforma modular de operações de segurança (Red · Blue · Purple)</title>
-<meta name="description" content="VulnForge: Core Engine próprio, arquitetura de plugins, funciona offline e sem chave de IA. Outside-In e Inside-Out, relatórios PDF/HTML/JSON/CSV/SARIF, dashboard e API. Open source, uso autorizado.">
+<title>EIGAN — Plataforma modular de operações de segurança (Red · Blue · Purple)</title>
+<meta name="description" content="EIGAN: Core Engine próprio, arquitetura de plugins, funciona offline e sem chave de IA. Outside-In e Inside-Out, relatórios PDF/HTML/JSON/CSV/SARIF, dashboard e API. Open source, uso autorizado.">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/tokens.css">
 <style>
@@ -109,7 +109,7 @@
 
 <header>
   <nav>
-    <img src="assets/logo.svg" alt="VulnForge">
+    <img src="assets/logo.svg" alt="EIGAN">
     <div class="links">
       <a href="#features">Funcionalidades</a>
       <a href="#arch">Arquitetura</a>
@@ -126,7 +126,7 @@
   <div class="wrap">
     <span class="chip"><b>Red</b> · <b>Blue</b> · <b>Purple</b> — uma plataforma</span>
     <h1>Do lado de fora e de dentro,<br><span class="grad">o que sua superfície de ataque revela</span></h1>
-    <p class="tag">VulnForge é uma plataforma modular de operações de segurança com <b>Core Engine próprio</b>,
+    <p class="tag">EIGAN é uma plataforma modular de operações de segurança com <b>Core Engine próprio</b>,
        arquitetura de plugins e IA <b>opcional</b>. Funciona 100% offline e sem chave de API — a IA só enriquece.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/tue3306/vulnerability-scanner">Começar no GitHub</a>
@@ -143,7 +143,7 @@
       <pre><span class="c"># Um comando, do zero ao menu</span>
 git clone https://github.com/tue3306/vulnerability-scanner.git
 cd vulnerability-scanner
-python3 vulnforge.py             <span class="c"># cria venv, instala e abre o menu</span>
+python3 eigan.py             <span class="c"># cria venv, instala e abre o menu</span>
 <span class="c"># Novo Scan · Dashboard · Histórico · Configuração · Doctor</span></pre>
     </div>
   </div>
@@ -157,7 +157,7 @@ python3 vulnforge.py             <span class="c"># cria venv, instala e abre o m
       uma tem um formato de saída, nenhuma prioriza risco de forma consistente, e juntar tudo em um relatório
       confiável é trabalho manual e repetitivo. Adicionar uma ferramenta nova costuma significar reescrever
       integração. E ferramentas "com IA" muitas vezes <em>dependem</em> de uma chave paga para funcionar.</p>
-    <p class="lead" style="margin-top:14px">O VulnForge resolve isso com um <b>Core Engine</b> que normaliza,
+    <p class="lead" style="margin-top:14px">O EIGAN resolve isso com um <b>Core Engine</b> que normaliza,
       correlaciona e prioriza (CVSS/EPSS/KEV) qualquer ferramenta plugada; uma <b>arquitetura de plugins</b> em
       que somar uma ferramenta é criar uma pasta (o Core não muda); e uma camada de <b>IA opcional</b> que
       <em>interpreta</em> os resultados — nunca escaneia por conta própria e sempre tem um caminho determinístico.</p>
@@ -203,7 +203,7 @@ python3 vulnforge.py             <span class="c"># cria venv, instala e abre o m
       <div class="card">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"/></svg>
         <h3>Baixa e roda</h3>
-        <p>Wizard interativo, <span class="mono">vulnforge doctor</span>, consent gate inline e padrões zero-config. Nada essencial exige editar YAML para começar.</p>
+        <p>Wizard interativo, <span class="mono">eigan doctor</span>, consent gate inline e padrões zero-config. Nada essencial exige editar YAML para começar.</p>
       </div>
       <div class="card">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -218,14 +218,14 @@ python3 vulnforge.py             <span class="c"># cria venv, instala e abre o m
 <section id="preview">
   <div class="wrap">
     <h2 class="section">Dashboard</h2>
-    <p class="lead" style="margin-bottom:22px">Sobe com <span class="mono">vulnforge serve</span> e consome a API
+    <p class="lead" style="margin-bottom:22px">Sobe com <span class="mono">eigan serve</span> e consome a API
       <span class="mono">/api/v1</span>. Prévia com <b>dados ilustrativos</b>:</p>
     <div class="preview">
       <div class="bar">
         <span class="dot" style="background:var(--sev-critical)"></span>
         <span class="dot" style="background:var(--sev-medium)"></span>
         <span class="dot" style="background:var(--sev-low)"></span>
-        <span class="muted mono" style="margin-left:8px">VulnForge · Dashboard</span>
+        <span class="muted mono" style="margin-left:8px">EIGAN · Dashboard</span>
       </div>
       <div class="body">
         <div class="kpi"><div class="n">7</div><small>scans</small></div>
@@ -280,7 +280,7 @@ python3 vulnforge.py             <span class="c"># cria venv, instala e abre o m
     <div class="tablewrap">
       <table>
         <thead>
-          <tr><th>Característica</th><th>VulnForge</th><th>Scanners de vulnerabilidade tradicionais</th><th>Scanners web / template</th></tr>
+          <tr><th>Característica</th><th>EIGAN</th><th>Scanners de vulnerabilidade tradicionais</th><th>Scanners web / template</th></tr>
         </thead>
         <tbody>
           <tr><td>Red + Blue + Purple unificados</td><td class="y">Sim</td><td class="n">Foco em gestão de vuln.</td><td class="n">Foco em app web/templates</td></tr>
@@ -295,7 +295,7 @@ python3 vulnforge.py             <span class="c"># cria venv, instala e abre o m
       </table>
     </div>
     <p class="muted" style="font-size:var(--fs-xs); margin-top:12px">"—" = fora do foco da ferramenta ·
-      "Varia" = depende da edição/versão. VulnForge é inspirado — sem cópia — em OpenVAS/Greenbone, ZAP e outros;
+      "Varia" = depende da edição/versão. EIGAN é inspirado — sem cópia — em OpenVAS/Greenbone, ZAP e outros;
       nomes de terceiros pertencem aos respectivos projetos.</p>
   </div>
 </section>
@@ -333,7 +333,7 @@ python3 vulnforge.py             <span class="c"># cria venv, instala e abre o m
     <h2 class="section">Perguntas frequentes</h2>
     <details open>
       <summary>Preciso de uma chave de IA?</summary>
-      <p><b>Não.</b> O VulnForge é AI-<em>native</em> por design, mas AI-<em>opcional</em> por requisito. Sem
+      <p><b>Não.</b> O EIGAN é AI-<em>native</em> por design, mas AI-<em>opcional</em> por requisito. Sem
         nenhuma chave, todo o produto funciona: scans, correlação, risco, dashboard e relatórios completos saem
         do caminho determinístico (base de conhecimento). Com uma chave (ou Ollama local), a IA apenas enriquece
         explicações e narrativa — a diferença é riqueza, não funcionalidade.</p>
@@ -341,7 +341,7 @@ python3 vulnforge.py             <span class="c"># cria venv, instala e abre o m
     <details>
       <summary>É legal usar?</summary>
       <p>Depende de <b>você</b> ter autorização. Scanning ativo sem permissão é ilegal em muitas jurisdições.
-        Só escaneie o que você <b>possui</b> ou tem <b>permissão escrita</b> para testar. O VulnForge bloqueia
+        Só escaneie o que você <b>possui</b> ou tem <b>permissão escrita</b> para testar. O EIGAN bloqueia
         por padrão alvos fora do <span class="mono">scope.yaml</span> e pede confirmação de autorização — trate
         isso como um recurso, não um obstáculo.</p>
     </details>
@@ -378,7 +378,7 @@ python3 vulnforge.py             <span class="c"># cria venv, instala e abre o m
     </div>
     <div class="legal" style="margin-top:26px">
       <b>⚠️ Aviso legal — uso autorizado apenas.</b>
-      <p class="foot" style="margin:6px 0 0">O VulnForge deve ser usado exclusivamente contra sistemas que você
+      <p class="foot" style="margin:6px 0 0">O EIGAN deve ser usado exclusivamente contra sistemas que você
         possui ou tem autorização escrita para testar. Testes de integração rodam apenas contra alvos vulneráveis
         locais (DVWA/Juice Shop), nunca contra terceiros. Você é o único responsável pelo uso.</p>
     </div>
@@ -387,9 +387,9 @@ python3 vulnforge.py             <span class="c"># cria venv, instala e abre o m
 
 <footer>
   <div class="wrap foot" style="display:flex; gap:14px; flex-wrap:wrap; align-items:center">
-    <img src="assets/logo.svg" alt="VulnForge" style="height:24px">
+    <img src="assets/logo.svg" alt="EIGAN" style="height:24px">
     <span>· Apache-2.0 · construído para uso autorizado</span>
-    <span style="margin-left:auto">© 2026 VulnForge contributors</span>
+    <span style="margin-left:auto">© 2026 EIGAN contributors</span>
   </div>
 </footer>
 

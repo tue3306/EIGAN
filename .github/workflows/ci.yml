@@ -21,7 +21,7 @@ jobs:
       - name: Type-check
         run: mypy src
       - name: Tests
-        run: pytest -q --cov=vulnforge --cov-report=term-missing
+        run: pytest -q --cov=eigan --cov-report=term-missing
 
   # Valida a INSTALAÇÃO em ambiente limpo (Missão 5 / §13): instala o pacote e
   # roda os pontos de entrada sem erro — o produto tem que "baixar e rodar".
@@ -35,13 +35,13 @@ jobs:
       - name: Instalar pacote (sem extras)
         run: pip install .
       - name: Versão
-        run: vulnforge --version
+        run: eigan --version
       - name: Doctor (diagnóstico do ambiente — deve sair 0)
-        run: vulnforge doctor
+        run: eigan doctor
       - name: Planner dry-run (núcleo cognitivo, não executa nada)
-        run: vulnforge plan example.com --goal attack-surface
+        run: eigan plan example.com --goal attack-surface
 
-  # Exemplo de gate de segurança em CI: o próprio VulnForge falha o pipeline se
+  # Exemplo de gate de segurança em CI: o próprio EIGAN falha o pipeline se
   # houver findings acima do limiar (contra um alvo de teste LOCAL autorizado).
   # Descomente e forneça um scope.yaml + alvo local vulnerável (DVWA/Juice Shop).
   #
@@ -50,4 +50,4 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v4
   #     - run: pip install -e .
-  #     - run: vulnforge scan --target 127.0.0.1 --scope scope.yaml --yes --fail-on high
+  #     - run: eigan scan --target 127.0.0.1 --scope scope.yaml --yes --fail-on high

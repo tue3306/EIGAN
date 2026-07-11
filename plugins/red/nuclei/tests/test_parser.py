@@ -1,8 +1,8 @@
 """Testes do parser do nuclei (saída de amostra, sem executar a ferramenta)."""
 
 from plugins.red.nuclei.parser import parse
-from vulnforge.engine.base import ToolResult
-from vulnforge.findings.schema import Confidence, Severity
+from eigan.engine.base import ToolResult
+from eigan.findings.schema import Confidence, Severity
 
 
 def test_nuclei_parse_jsonl():

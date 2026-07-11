@@ -1,7 +1,7 @@
-"""Testes do launcher raiz ``vulnforge.py`` (Missão 1 / ADR-0005+0006).
+"""Testes do launcher raiz ``eigan.py`` (Missão 1 / ADR-0005+0006).
 
 O launcher é carregado **por caminho**, sob um nome de módulo distinto, para não
-colidir com o pacote ``vulnforge`` (mesmo nome do arquivo). Exercitamos os
+colidir com o pacote ``eigan`` (mesmo nome do arquivo). Exercitamos os
 helpers puros e o roteamento de ``main`` — criar venv / instalar deps de verdade
 envolve rede e fica fora do teste unitário (é medido à parte, no README).
 """
@@ -10,7 +10,7 @@ import collections
 import importlib.util
 from pathlib import Path
 
-_LAUNCHER = Path(__file__).resolve().parents[1] / "vulnforge.py"
+_LAUNCHER = Path(__file__).resolve().parents[1] / "eigan.py"
 _VI = collections.namedtuple("_VI", "major minor micro releaselevel serial")
 
 
@@ -37,7 +37,7 @@ def _opts(**over):
 # Helpers puros
 # --------------------------------------------------------------------------- #
 def test_launcher_file_is_executable():
-    assert _LAUNCHER.stat().st_mode & 0o111, "vulnforge.py precisa ser executável (chmod +x)"
+    assert _LAUNCHER.stat().st_mode & 0o111, "eigan.py precisa ser executável (chmod +x)"
 
 
 def test_venv_python_posix(tmp_path, monkeypatch):

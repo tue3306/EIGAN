@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import pytest
 
-from vulnforge.capability import Capability, Category
-from vulnforge.engine.base import BaseToolPlugin
-from vulnforge.engine.cascade import CascadeGraph, CascadeRule
-from vulnforge.engine.cognitive import (
+from eigan.capability import Capability, Category
+from eigan.engine.base import BaseToolPlugin
+from eigan.engine.cascade import CascadeGraph, CascadeRule
+from eigan.engine.cognitive import (
     AIPlanner,
     Budget,
     CognitiveEngine,
@@ -29,11 +29,11 @@ from vulnforge.engine.cognitive import (
     StopReason,
     ToolSelector,
 )
-from vulnforge.engine.plugin import PluginMetadata, PluginSpec
-from vulnforge.engine.registry import PluginRegistry
-from vulnforge.findings.schema import Finding, Severity
-from vulnforge.perspective import Perspective
-from vulnforge.security.onboarding import build_scope
+from eigan.engine.plugin import PluginMetadata, PluginSpec
+from eigan.engine.registry import PluginRegistry
+from eigan.findings.schema import Finding, Severity
+from eigan.perspective import Perspective
+from eigan.security.onboarding import build_scope
 
 C = Capability
 P = Perspective

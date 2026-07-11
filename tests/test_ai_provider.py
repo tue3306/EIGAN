@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from vulnforge.ai.provider import (
+from eigan.ai.provider import (
     AIProvider,
     AnthropicProvider,
     Enricher,
@@ -20,8 +20,8 @@ from vulnforge.ai.provider import (
     default_provider,
     redact,
 )
-from vulnforge.findings.schema import Finding, Severity
-from vulnforge.knowledge.loader import KnowledgeBase
+from eigan.findings.schema import Finding, Severity
+from eigan.knowledge.loader import KnowledgeBase
 
 _AI_ENV = (
     "ANTHROPIC_API_KEY",

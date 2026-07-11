@@ -8,15 +8,15 @@ Usa plugins fake (sem binário externo) para provar, de forma determinística:
 
 from __future__ import annotations
 
-from vulnforge.capability import Capability, Category
-from vulnforge.engine.base import BaseToolPlugin, ToolResult
-from vulnforge.engine.cascade import CascadeRule
-from vulnforge.engine.cascade_orchestrator import CascadeOrchestrator
-from vulnforge.engine.plugin import PluginMetadata, PluginSpec
-from vulnforge.engine.registry import PluginRegistry
-from vulnforge.findings.schema import Confidence, Finding, Severity
-from vulnforge.perspective import Perspective
-from vulnforge.security.scope import Scope
+from eigan.capability import Capability, Category
+from eigan.engine.base import BaseToolPlugin, ToolResult
+from eigan.engine.cascade import CascadeRule
+from eigan.engine.cascade_orchestrator import CascadeOrchestrator
+from eigan.engine.plugin import PluginMetadata, PluginSpec
+from eigan.engine.registry import PluginRegistry
+from eigan.findings.schema import Confidence, Finding, Severity
+from eigan.perspective import Perspective
+from eigan.security.scope import Scope
 
 
 class _FakePortScanner(BaseToolPlugin):

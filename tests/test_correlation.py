@@ -1,8 +1,8 @@
 """Testes do Correlation Engine — visão por ativo + cadeia de ataque."""
 
-from vulnforge.engine.correlation import correlate_assets
-from vulnforge.findings.schema import CVSS, Finding, Severity
-from vulnforge.perspective import Perspective
+from eigan.engine.correlation import correlate_assets
+from eigan.findings.schema import CVSS, Finding, Severity
+from eigan.perspective import Perspective
 
 
 def _f(tool, asset, sev=Severity.INFO, **kw):

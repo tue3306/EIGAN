@@ -9,8 +9,8 @@ import importlib.util
 
 import pytest
 
-from vulnforge.cli import menu, tui
-from vulnforge.findings.store import FindingStore
+from eigan.cli import menu, tui
+from eigan.findings.store import FindingStore
 
 
 def _feeder(answers):
@@ -31,7 +31,7 @@ def _feeder(answers):
 # --------------------------------------------------------------------------- #
 def test_banner_has_box_and_name():
     b = menu.banner()
-    assert "VulnForge" in b
+    assert "EIGAN" in b
     assert b.startswith("╔") and "╚" in b
 
 
@@ -121,7 +121,7 @@ def test_action_history_rejects_unknown_id(tmp_path):
 # Configuração
 # --------------------------------------------------------------------------- #
 def test_action_config_reports_state(tmp_path, monkeypatch):
-    monkeypatch.setenv("VULNFORGE_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("EIGAN_CONFIG_DIR", str(tmp_path))
     out: list[str] = []
     menu.action_config(db="x.db", input_fn=_feeder([]), echo=out.append)
     text = "\n".join(out)

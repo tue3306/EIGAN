@@ -1,10 +1,10 @@
 # Roadmap
 
-O VulnForge cresce por **plugins/capabilities** (ADR-0001): adicionar um módulo é
+O EIGAN cresce por **plugins/capabilities** (ADR-0001): adicionar um módulo é
 criar uma pasta em `plugins/<categoria>/<nome>/` — o Core não muda. Os módulos
 abaixo já têm o **contrato declarado** (metadata + capability) como *scaffold
 honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
-`vulnforge doctor`, mas **não executam** até serem implementados.
+`eigan doctor`, mas **não executam** até serem implementados.
 
 ## Entregue (MVP)
 
@@ -17,11 +17,11 @@ honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
 - **Núcleo Cognitivo (ADR-0007):** Planner goal-driven + Tool Selection Engine +
   loop `Goal→Plano→Seleção→Execução→Feedback→replan→Stop`, com **Agente Recon
   real** e IA opcional (só ordena capacidades; fallback determinístico). CLI
-  `vulnforge plan`.
+  `eigan plan`.
 - **Memória entre scans (Pilar 2 / ADR-0008):** diff determinístico
-  (novos/corrigidos/persistentes + novos ativos/serviços). CLI `vulnforge diff`.
+  (novos/corrigidos/persistentes + novos ativos/serviços). CLI `eigan diff`.
 - **Auto Remediation (Pilar 6 / ADR-0008):** playbooks Ansible revisáveis a partir
-  do finding (nunca auto-aplicados). CLI `vulnforge remediate`.
+  do finding (nunca auto-aplicados). CLI `eigan remediate`.
 - **Saídas:** HTML/PDF/JSON/CSV/SARIF, técnico e executivo.
 
 > Visão dos **10 pilares** da plataforma autônoma (status real × scaffold de cada

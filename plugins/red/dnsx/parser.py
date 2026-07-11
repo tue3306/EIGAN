@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 
-from vulnforge.engine.base import ToolResult
-from vulnforge.findings.schema import Confidence, Finding, Severity
+from eigan.engine.base import ToolResult
+from eigan.findings.schema import Confidence, Finding, Severity
 
 TOOL = "dnsx"
 

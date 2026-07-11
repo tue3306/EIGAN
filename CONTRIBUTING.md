@@ -1,6 +1,6 @@
-# Contribuindo com o VulnForge
+# Contribuindo com o EIGAN
 
-Obrigado por querer contribuir! O VulnForge é uma plataforma modular de operações
+Obrigado por querer contribuir! O EIGAN é uma plataforma modular de operações
 de segurança (Red/Blue/Purple). Este guia mostra como preparar o ambiente,
 manter o padrão de qualidade e — o mais importante — **adicionar um plugin em
 ~5 minutos** sem tocar no Core.
@@ -18,7 +18,7 @@ git clone https://github.com/tue3306/vulnerability-scanner.git
 cd vulnerability-scanner
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[pdf,ai,dev]"
-vulnforge doctor          # confere ambiente, ferramentas, IA e feeds
+eigan doctor          # confere ambiente, ferramentas, IA e feeds
 ```
 
 ## Definition of Done (obrigatório antes do PR)
@@ -52,7 +52,7 @@ edita o Core** para somar uma ferramenta — cria uma pasta.
 3. Implemente `runner.py` (subprocess seguro — **lista de argumentos, nunca
    `shell=True`**) e `parser.py` (normaliza a saída para o schema de `Finding`).
 4. Adicione `tests/test_parser.py` com **fixture de saída real** da ferramenta.
-5. Rode `vulnforge doctor` — o plugin aparece descoberto; `pytest -q` deve passar.
+5. Rode `eigan doctor` — o plugin aparece descoberto; `pytest -q` deve passar.
 
 Detalhes e contrato completo: `plugins/README.md` e `docs/architecture.md`.
 
@@ -85,7 +85,7 @@ Herdadas do [CLAUDE.md](CLAUDE.md) §3:
 ## Reportar bugs e vulnerabilidades
 
 - Bug funcional → abra uma Issue pelo template.
-- **Vulnerabilidade de segurança no próprio VulnForge** → **não** abra Issue
+- **Vulnerabilidade de segurança no próprio EIGAN** → **não** abra Issue
   pública; siga o [SECURITY.md](SECURITY.md).
 
 Dúvidas de arquitetura? Veja `docs/architecture.md` e os ADRs em `docs/adr/`.

@@ -10,12 +10,12 @@ privilégio.
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-Isso sobe a API + dashboard (`vulnforge serve`) e imprime a URL. Sem chave de IA,
+Isso sobe a API + dashboard (`eigan serve`) e imprime a URL. Sem chave de IA,
 tudo funciona pelo caminho determinístico.
 
 ## Arquivos
 
-- `Dockerfile` — imagem do VulnForge (Python 3.11+, instala o pacote e extras).
+- `Dockerfile` — imagem do EIGAN (Python 3.11+, instala o pacote e extras).
 - `docker-compose.yml` — serviço da aplicação; ponto de extensão para adicionar
   um **alvo de teste local** (DVWA / Juice Shop) e um Postgres opcional.
 

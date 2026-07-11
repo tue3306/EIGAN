@@ -1,4 +1,4 @@
-# Alvos de exemplo (um por linha) para: vulnforge scan --target-list examples/targets.example.txt
+# Alvos de exemplo (um por linha) para: eigan scan --target-list examples/targets.example.txt
 # ⚠️ Só alvos LOCAIS que você controla. Linhas com # são ignoradas.
 # Copie para o seu próprio arquivo e ajuste. O guardrail de escopo bloqueia
 # qualquer alvo que não esteja no seu scope.yaml.

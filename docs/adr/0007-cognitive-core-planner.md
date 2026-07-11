@@ -8,7 +8,7 @@
 
 ## Contexto
 
-O VulnForge já executa um pipeline determinístico por *capability/perspectiva*
+O EIGAN já executa um pipeline determinístico por *capability/perspectiva*
 (`engine/pipeline.py` + `Orchestrator`) e uma cascata dirigida por descoberta
 (`engine/cascade.py`). Falta a camada **orientada por objetivo** (goal-driven):
 o usuário informa um objetivo ("avaliar a superfície de ataque deste domínio") e
@@ -113,6 +113,6 @@ selection:
   naabu/nmap → httpx → nuclei, com seleção justificada entre `naabu` e `nmap`
   para `port_discovery`). Web/Network/Cloud/AD/Container/Exploitation ficam como
   agentes **scaffold** (`built=False`), visíveis no `doctor`, ainda não operantes.
-- Comando de verificação: `vulnforge plan <alvo> --goal attack-surface --dry-run`
+- Comando de verificação: `eigan plan <alvo> --goal attack-surface --dry-run`
   mostra o plano e a seleção justificada **sem executar** (sem consent). Sem
   `--dry-run`, o consent gate precede a execução real.

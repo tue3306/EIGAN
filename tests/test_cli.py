@@ -1,17 +1,17 @@
 """Testes de onboarding (termo/escopo) e do diagnóstico `doctor`."""
 
-from vulnforge.capability import Capability, Category
-from vulnforge.cli import doctor
-from vulnforge.engine.base import BaseToolPlugin
-from vulnforge.engine.feeds import FeedCache
-from vulnforge.engine.plugin import PluginMetadata, PluginSpec
-from vulnforge.engine.registry import PluginRegistry
-from vulnforge.perspective import Perspective
-from vulnforge.security.onboarding import accept_terms, build_scope, terms_accepted
+from eigan.capability import Capability, Category
+from eigan.cli import doctor
+from eigan.engine.base import BaseToolPlugin
+from eigan.engine.feeds import FeedCache
+from eigan.engine.plugin import PluginMetadata, PluginSpec
+from eigan.engine.registry import PluginRegistry
+from eigan.perspective import Perspective
+from eigan.security.onboarding import accept_terms, build_scope, terms_accepted
 
 
 def test_accept_terms_writes_outside_repo_and_is_idempotent(tmp_path, monkeypatch):
-    monkeypatch.setenv("VULNFORGE_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("EIGAN_CONFIG_DIR", str(tmp_path))
     assert not terms_accepted()
     assert accept_terms(assume_yes=True) is True
     assert terms_accepted() is True
@@ -20,7 +20,7 @@ def test_accept_terms_writes_outside_repo_and_is_idempotent(tmp_path, monkeypatc
 
 
 def test_accept_terms_refused_returns_false(tmp_path, monkeypatch):
-    monkeypatch.setenv("VULNFORGE_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("EIGAN_CONFIG_DIR", str(tmp_path))
     ok = accept_terms(assume_yes=False, input_fn=lambda _p: "no", echo=lambda *_: None)
     assert ok is False and not terms_accepted()
 
@@ -158,7 +158,7 @@ def test_run_install_manual_only_executes_nothing():
 
 
 def test_pdf_status_returns_bool_and_detail():
-    from vulnforge.report.pdf_support import pdf_status
+    from eigan.report.pdf_support import pdf_status
 
     ok, detail = pdf_status()
     assert isinstance(ok, bool)

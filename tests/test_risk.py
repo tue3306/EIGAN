@@ -5,9 +5,9 @@ Nenhum teste toca a rede: os feeds são injetados em memória ou via *getter* fa
 
 import json
 
-from vulnforge.engine.feeds import FeedCache
-from vulnforge.engine.risk import RiskScorer, cve_ids
-from vulnforge.findings.schema import CVSS, Finding, Severity
+from eigan.engine.feeds import FeedCache
+from eigan.engine.risk import RiskScorer, cve_ids
+from eigan.findings.schema import CVSS, Finding, Severity
 
 
 def _finding(**kw) -> Finding:

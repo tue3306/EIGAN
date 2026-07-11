@@ -3,9 +3,9 @@
 import tempfile
 from pathlib import Path
 
-from vulnforge.findings.dedup import deduplicate
-from vulnforge.findings.schema import CVSS, Finding, Severity
-from vulnforge.findings.store import FindingStore
+from eigan.findings.dedup import deduplicate
+from eigan.findings.schema import CVSS, Finding, Severity
+from eigan.findings.store import FindingStore
 
 
 def _f(**kw):

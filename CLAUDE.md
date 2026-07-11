@@ -1,7 +1,7 @@
-# CLAUDE.md — Instruções de Desenvolvimento (VulnForge)
+# CLAUDE.md — Instruções de Desenvolvimento (EIGAN)
 
 > Este arquivo é lido a cada sessão. Ele é a **fonte de verdade** sobre *como*
-> construir o VulnForge. Em caso de conflito entre uma instrução minha no chat e
+> construir o EIGAN. Em caso de conflito entre uma instrução minha no chat e
 > este arquivo, **siga a instrução do chat e avise** que ela diverge do
 > CLAUDE.md, em uma linha.
 
@@ -9,7 +9,7 @@
 
 ## 1. Identidade e missão
 
-Você é o **Arquiteto Principal** do **VulnForge**: uma **plataforma modular de
+Você é o **Arquiteto Principal** do **EIGAN**: uma **plataforma modular de
 operações de segurança** (Red / Blue / Purple), **AI-native por design e
 AI-opcional por requisito**. Não é "só um scanner": tem **Core Engine próprio**
 que orquestra ferramentas, normaliza, correlaciona, prioriza risco e gera
@@ -155,7 +155,7 @@ Interfaces (CLI/wizard, API REST+WS, Dashboard, Landing)
 Estrutura real de referência:
 
 ```
-src/vulnforge/
+src/eigan/
   capability.py  perspective.py          # conceitos de 1ª classe do domínio
   findings/      # schema, store (SQLite), dedup/correlação
   engine/        # orchestrator, pipeline, registry, plugin, risk, correlation, feeds, base
@@ -277,13 +277,13 @@ Instalação e primeiro uso **extremamente simples**:
 
 - **Instalador único / Docker** para zero-setup; **autoconfig** na 1ª execução
   (`.env` a partir de `.env.example`, diretórios, config padrão).
-- **`vulnforge doctor`:** Python, ferramentas instaladas/faltando (com comando
+- **`eigan doctor`:** Python, ferramentas instaladas/faltando (com comando
   exato de instalação), IA configurada e qual modelo usaria, Docker, feeds;
   veredito claro.
-- **Wizard:** `vulnforge` sem argumentos guia alvo → perspectiva → perfil → IA?
+- **Wizard:** `eigan` sem argumentos guia alvo → perspectiva → perfil → IA?
   → **autorização inline** → executa com progresso → oferece PDF. `python -m
-  vulnforge` idêntico.
-- **Padrões sensatos:** `vulnforge scan <alvo>` funciona (external+standard),
+  eigan` idêntico.
+- **Padrões sensatos:** `eigan scan <alvo>` funciona (external+standard),
   pedindo só a confirmação de autorização. Sem ferramentas, roda o que dá e o
   `doctor` explica o resto.
 - **Erros acionáveis:** dizer o que falta e como resolver, nunca stack trace cru.
@@ -306,7 +306,7 @@ um comando que forneci. Ferramentas: `ruff` (lint/format), `mypy` (types),
 Docker é o caminho preferido: cada ferramenta externa roda em container efêmero
 (sandbox), evitando dependências no host. `docker compose up` funcional; também
 CLI e serviço systemd para servidor Linux. Atualização de feeds (templates
-Nuclei, CVE/OSV, EPSS/KEV) como comando dedicado (`vulnforge feeds update`) com
+Nuclei, CVE/OSV, EPSS/KEV) como comando dedicado (`eigan feeds update`) com
 verificação de integridade.
 
 ---

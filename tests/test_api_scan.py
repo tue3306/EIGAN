@@ -15,13 +15,13 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
-    monkeypatch.setenv("VULNFORGE_DB", str(tmp_path / "api.db"))
+    monkeypatch.setenv("EIGAN_DB", str(tmp_path / "api.db"))
     # reimporta o app com o DB temporário e manager limpo.
     import importlib
 
-    from vulnforge.api import app as app_mod
-    from vulnforge.api.scan_manager import ScanManager
-    from vulnforge.engine.registry import PluginRegistry
+    from eigan.api import app as app_mod
+    from eigan.api.scan_manager import ScanManager
+    from eigan.engine.registry import PluginRegistry
 
     importlib.reload(app_mod)
     # Registry vazio: os testes de API exercem o plumbing (consent, lifecycle,

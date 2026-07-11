@@ -1,7 +1,7 @@
 """Teste do parser do httpx (serviços web vivos)."""
 
 from plugins.red.httpx.parser import parse
-from vulnforge.engine.base import ToolResult
+from eigan.engine.base import ToolResult
 
 
 def test_httpx_parse_web_alive():

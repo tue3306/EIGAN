@@ -1,4 +1,4 @@
-# Imagem da aplicação VulnForge (API/CLI). As ferramentas externas de scan
+# Imagem da aplicação EIGAN (API/CLI). As ferramentas externas de scan
 # rodam idealmente em containers efêmeros próprios (sandbox); esta imagem traz
 # o núcleo Python + WeasyPrint. Ver docker-compose.yml.
 FROM python:3.11-slim
@@ -18,9 +18,9 @@ COPY knowledge/ ./knowledge/
 RUN pip install --no-cache-dir ".[pdf]"
 
 # Menor privilégio: não roda como root.
-RUN useradd -m vulnforge
-USER vulnforge
+RUN useradd -m eigan
+USER eigan
 
 EXPOSE 8000
-ENTRYPOINT ["vulnforge"]
+ENTRYPOINT ["eigan"]
 CMD ["serve", "--host", "0.0.0.0"]

@@ -38,14 +38,14 @@ runner, executor diferente".
   **precisa de teste de integração contra as imagens** — não fabricar tags. Não
   dá para **verificar offline** aqui e agora (DoD exige pytest/verify verdes).
 
-### (b) Publicação no PyPI (`vulnforge`, nome livre)
-Trusted publishing no CI → `pipx install vulnforge` sem `git clone`.
+### (b) Publicação no PyPI (`eigan`, nome livre)
+Trusted publishing no CI → `pipx install eigan` sem `git clone`.
 - **Prós:** remove o atrito do **núcleo** (instala o pacote, não as ferramentas).
 - **Contras:** **não instala as ferramentas externas**; exige que o **dono**
   registre o projeto no PyPI e configure o *trusted publisher* (OIDC) — não é
   executável de dentro do build autônomo.
 
-### (c) `vulnforge doctor --install` (+ launcher `--with-tools`)
+### (c) `eigan doctor --install` (+ launcher `--with-tools`)
 Subcomando que, **mediante confirmação explícita** (mesma filosofia do consent
 gate, §3.2), provisiona **só as 6 ferramentas com runner real** que estão
 ausentes, **listando exatamente o que vai rodar antes**.
@@ -63,7 +63,7 @@ As três **não são exclusivas**. Ordem escolhida, com dados do repo:
 1. **(c) entra agora — implementado.** É o único caminho 100% entregável e
    verificável nesta iteração, e respeita anti-invenção e menor privilégio.
    Vive em `cli/doctor.py` (`plan_install` / `run_install`) e é acionável por
-   `vulnforge doctor --install [--yes]` e por `python3 vulnforge.py --with-tools`.
+   `eigan doctor --install [--yes]` e por `python3 eigan.py --with-tools`.
 2. **(a) é o alvo arquitetural (§15) — isolado em BLOCKERS.** Fica desenhado
    abaixo, mas depende de refatorar o executor + **revalidar tags** + testes de
    integração com Docker, que não dá para verificar offline. Ver

@@ -1,6 +1,6 @@
 # Personas da interface
 
-Público-alvo da interface web do VulnForge (§1 do prompt de interface). A UI é
+Público-alvo da interface web do EIGAN (§1 do prompt de interface). A UI é
 calibrada para que **cada persona chegue ao que precisa sem tocar a CLI**.
 
 | Persona | O que quer | Onde a UI atende |

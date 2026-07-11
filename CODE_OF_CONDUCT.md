@@ -33,7 +33,7 @@ Exemplos de comportamento inaceitável:
 - Assédio público ou privado;
 - Publicar informações privadas de terceiros, como endereço físico ou de
   e-mail, sem permissão explícita;
-- **Incentivar ou instruir o uso do VulnForge contra sistemas sem autorização**;
+- **Incentivar ou instruir o uso do EIGAN contra sistemas sem autorização**;
 - Qualquer outra conduta que possa ser razoavelmente considerada inadequada em
   um ambiente profissional.
 

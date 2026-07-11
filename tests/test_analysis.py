@@ -1,10 +1,10 @@
 """Testes das análises pós-scan: inventário (Blue), ATT&CK (Purple), conformidade."""
 
-from vulnforge.analysis.attack import ENTERPRISE_TACTICS, map_attack
-from vulnforge.analysis.compliance import assess_compliance
-from vulnforge.analysis.inventory import build_inventory, summarize
-from vulnforge.findings.schema import Finding, Severity
-from vulnforge.perspective import Perspective
+from eigan.analysis.attack import ENTERPRISE_TACTICS, map_attack
+from eigan.analysis.compliance import assess_compliance
+from eigan.analysis.inventory import build_inventory, summarize
+from eigan.findings.schema import Finding, Severity
+from eigan.perspective import Perspective
 
 
 def _f(tool, asset, **kw):

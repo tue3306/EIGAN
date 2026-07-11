@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from vulnforge.engine.base import BaseToolPlugin, ToolResult
-from vulnforge.findings.schema import Finding
+from eigan.engine.base import BaseToolPlugin, ToolResult
+from eigan.findings.schema import Finding
 
 from .parser import parse
 

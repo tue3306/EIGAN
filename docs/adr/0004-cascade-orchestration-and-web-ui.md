@@ -83,7 +83,7 @@ API; o frontend só renderiza.
 - ✅ Core inalterado; cascata e UI são camadas externas.
 - ✅ Cada disparo é auditável (log justificado) — requisito "sem mágica".
 - ✅ Consent gate preservado na API (POST recusa sem `authorized`).
-- ✅ Sem toolchain de frontend; `vulnforge serve` já entrega a UI completa.
+- ✅ Sem toolchain de frontend; `eigan serve` já entrega a UI completa.
 - ⚠️ Segunda onda é profundidade 1 por enquanto (evita recursão não-limitada);
   cascatas multi-nível são trabalho futuro com guarda de profundidade/orçamento.
 - ⚠️ Muitas ferramentas de cascata (`enum4linux`, `cme`, ...) ainda são roadmap:

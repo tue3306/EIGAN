@@ -11,7 +11,7 @@ conforme a visão do produto. Cada plugin é uma pasta autocontida (ver ADR-0001
 
 **Carregamento:** o `PluginRegistry` (`engine/registry.py`):
 
-1. resolve as raízes de plugins nesta ordem: `$VULNFORGE_PLUGINS_DIR` (se
+1. resolve as raízes de plugins nesta ordem: `$EIGAN_PLUGINS_DIR` (se
    definido) → `<raiz-do-repo>/plugins` → `<pacote>/plugins` (fallback
    empacotado). Raízes inexistentes são ignoradas;
 2. adiciona o **pai** da raiz ao `sys.path` e importa cada plugin como pacote
@@ -23,7 +23,7 @@ conforme a visão do produto. Cada plugin é uma pasta autocontida (ver ADR-0001
 
 ## Alternativas consideradas
 
-- **Plugins dentro do pacote** (`src/vulnforge/plugins/`): imports triviais, mas
+- **Plugins dentro do pacote** (`src/eigan/plugins/`): imports triviais, mas
   menos visível como "catálogo de módulos" e menos convidativo a contribuições.
   Mantido como *fallback empacotado* para instalação via wheel.
 - **Entry points (`importlib.metadata`)**: ótimo para plugins de terceiros

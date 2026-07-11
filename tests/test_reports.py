@@ -3,11 +3,11 @@
 import json
 from pathlib import Path
 
-from vulnforge.ai.provider import Enricher
-from vulnforge.findings.schema import CVSS, Finding, RiskScore, Severity
-from vulnforge.knowledge.loader import KnowledgeBase
-from vulnforge.report import exporters
-from vulnforge.report.deterministic import ReportGenerator
+from eigan.ai.provider import Enricher
+from eigan.findings.schema import CVSS, Finding, RiskScore, Severity
+from eigan.knowledge.loader import KnowledgeBase
+from eigan.report import exporters
+from eigan.report.deterministic import ReportGenerator
 
 _KB = Path(__file__).resolve().parents[1] / "knowledge" / "skills"
 
@@ -63,7 +63,7 @@ def test_sarif_is_valid_2_1_0():
     log = json.loads(out)
     assert log["version"] == "2.1.0"
     run = log["runs"][0]
-    assert run["tool"]["driver"]["name"] == "VulnForge"
+    assert run["tool"]["driver"]["name"] == "EIGAN"
     levels = {r["level"] for r in run["results"]}
     assert levels <= {"error", "warning", "note"}
     # finding HIGH -> error; INFO -> note

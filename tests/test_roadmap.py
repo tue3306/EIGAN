@@ -5,7 +5,7 @@ documenta a implementação futura — nunca um stub que finge passar.
 
 import pytest
 
-from vulnforge.engine.registry import PluginRegistry
+from eigan.engine.registry import PluginRegistry
 
 _REG = PluginRegistry.discover()
 _ROADMAP = sorted(s.name for s in _REG.all() if s.metadata.roadmap)

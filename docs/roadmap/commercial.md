@@ -1,14 +1,14 @@
 # Roadmap comercial — apenas documentado
 
 > **Status: não implementado (por decisão).** Este documento descreve
-> funcionalidades comerciais que o VulnForge **poderá** ter no futuro. Nenhuma
+> funcionalidades comerciais que o EIGAN **poderá** ter no futuro. Nenhuma
 > delas tem código nesta fase — o produto é e continua **open source (Apache-2.0)
 > e funcional por completo sem qualquer camada paga**. Documentar aqui evita
 > "vazamento" de escopo comercial para dentro do Core.
 
 ## Princípio
 
-O núcleo do VulnForge (Core Engine, plugins do MVP, CLI, API, dashboard,
+O núcleo do EIGAN (Core Engine, plugins do MVP, CLI, API, dashboard,
 relatórios) **nunca** fica atrás de paywall. Qualquer oferta comercial seria uma
 **camada por cima**, opcional, que não remove capacidade do open source.
 

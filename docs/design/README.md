@@ -1,13 +1,13 @@
-# VulnForge — Design System
+# EIGAN — Design System
 
-Identidade visual e biblioteca de componentes do VulnForge. Objetivo: transmitir
+Identidade visual e biblioteca de componentes do EIGAN. Objetivo: transmitir
 **profissionalismo e confiança** e manter dashboard, landing page e relatórios
 coerentes. A fonte única dos valores é [`web/assets/tokens.css`](../../web/assets/tokens.css);
 a lógica de negócio **nunca** vive no componente (CLAUDE.md §10).
 
 ## Marca
 
-- **Nome:** VulnForge (uma palavra, "V" e "F" maiúsculos). No wordmark, `Vuln`
+- **Nome:** EIGAN (uma palavra, "V" e "F" maiúsculos). No wordmark, `Vuln`
   usa a cor de texto e `Forge` usa o gradiente da marca.
 - **Símbolo:** hexágono (modularidade/plugins + metal *forjado*) com um "V" que
   também é um *chevron* de análise (drill-down nos findings).
@@ -64,7 +64,7 @@ fonte de ícones no Core: são referenciados/inlined onde usados.
 
 ## Componentes
 
-Biblioteca mínima e reutilizável (implementada no dashboard `src/vulnforge/api/static/`
+Biblioteca mínima e reutilizável (implementada no dashboard `src/eigan/api/static/`
 e na landing `web/`):
 
 - **Card** — `--panel`, borda `--border`, `--radius`, padding `--sp-4`.

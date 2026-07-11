@@ -6,9 +6,9 @@ criar uma pasta; um plugin quebrado NÃO derruba o registry.
 
 from pathlib import Path
 
-from vulnforge.capability import Capability
-from vulnforge.engine.registry import PluginRegistry
-from vulnforge.perspective import Perspective
+from eigan.capability import Capability
+from eigan.engine.registry import PluginRegistry
+from eigan.perspective import Perspective
 
 
 def test_discovers_first_party_plugins():

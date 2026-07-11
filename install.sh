@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Instalador idempotente do VulnForge. Detecta a distro e instala dependências
+# Instalador idempotente do EIGAN. Detecta a distro e instala dependências
 # de sistema do WeasyPrint + o pacote Python. NÃO instala as ferramentas de scan
 # externas automaticamente (nmap/nuclei/...) — use Docker (recomendado) ou
 # instale-as conforme config/tools.yaml (versões marcadas VERIFICAR).
 set -euo pipefail
 
-echo "VulnForge installer — uso autorizado apenas."
+echo "EIGAN installer — uso autorizado apenas."
 
 detect_distro() {
   if [ -f /etc/os-release ]; then . /etc/os-release; echo "${ID:-unknown}"; else echo "unknown"; fi
@@ -34,5 +34,5 @@ esac
 python3 -m pip install --upgrade pip
 python3 -m pip install -e ".[pdf]"
 
-echo "OK. Rode:  vulnforge --help"
+echo "OK. Rode:  eigan --help"
 echo "Lembre: copie scope.example.yaml para scope.yaml e declare apenas alvos autorizados."

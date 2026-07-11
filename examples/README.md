@@ -6,7 +6,7 @@ você controla — o guardrail de escopo bloqueia o resto por padrão.
 ## Arquivos
 
 - **`targets.example.txt`** — lista de alvos (um por linha) para o fluxo
-  `vulnforge scan --target-list`. Contém apenas alvos **locais/ilustrativos**.
+  `eigan scan --target-list`. Contém apenas alvos **locais/ilustrativos**.
 - **`../scope.example.yaml`** (na raiz) — modelo de escopo autorizado. Copie para
   `scope.yaml` e edite com **apenas** os seus alvos:
   ```bash
@@ -21,10 +21,10 @@ Suba um alvo vulnerável local e escaneie com perspectiva `internal`:
 # OWASP Juice Shop (exemplo) — alvo que você controla, na sua máquina
 docker run --rm -d -p 3000:3000 bkimminich/juice-shop
 
-vulnforge scan 127.0.0.1:3000 --perspective internal \
+eigan scan 127.0.0.1:3000 --perspective internal \
   --profile web-only --scope scope.yaml
-vulnforge report --scan 1 --format pdf
+eigan report --scan 1 --format pdf
 ```
 
 DVWA e Juice Shop são alvos de treino conhecidos; use-os no **seu** ambiente.
-Nunca aponte o VulnForge para sistemas de terceiros sem autorização escrita.
+Nunca aponte o EIGAN para sistemas de terceiros sem autorização escrita.

@@ -5,8 +5,8 @@ import pytest
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
-from vulnforge.findings.schema import CVSS, Finding, RiskScore, Severity  # noqa: E402
-from vulnforge.findings.store import FindingStore  # noqa: E402
+from eigan.findings.schema import CVSS, Finding, RiskScore, Severity  # noqa: E402
+from eigan.findings.store import FindingStore  # noqa: E402
 
 
 @pytest.fixture()
@@ -35,8 +35,8 @@ def client(tmp_path, monkeypatch):
     )
     store.finish_scan(sid)
     store.close()
-    monkeypatch.setenv("VULNFORGE_DB", str(db))
-    from vulnforge.api.app import app
+    monkeypatch.setenv("EIGAN_DB", str(db))
+    from eigan.api.app import app
 
     return TestClient(app), sid
 
@@ -119,7 +119,7 @@ def test_inventory_attack_compliance(client):
 def test_dashboard_html(client):
     c, _ = client
     r = c.get("/")
-    assert r.status_code == 200 and "VulnForge" in r.text
+    assert r.status_code == 200 and "EIGAN" in r.text
 
 
 def test_scan_404(client):

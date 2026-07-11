@@ -1,4 +1,4 @@
-# tests/ — Testes do VulnForge
+# tests/ — Testes do EIGAN
 
 Testes unitários e de integração. Rode a suíte completa com:
 

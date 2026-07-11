@@ -4,8 +4,8 @@ Cobre a interação escopo × perspectiva (público×privado)."""
 
 import pytest
 
-from vulnforge.perspective import Perspective
-from vulnforge.security.scope import PerspectiveViolation, Scope, ScopeViolation
+from eigan.perspective import Perspective
+from eigan.security.scope import PerspectiveViolation, Scope, ScopeViolation
 
 INTERNAL = Perspective.INTERNAL
 EXTERNAL = Perspective.EXTERNAL

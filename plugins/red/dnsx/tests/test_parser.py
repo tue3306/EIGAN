@@ -1,7 +1,7 @@
 """Teste do parser do dnsx (hosts que resolvem)."""
 
 from plugins.red.dnsx.parser import parse
-from vulnforge.engine.base import ToolResult
+from eigan.engine.base import ToolResult
 
 
 def test_dnsx_parse_live_host():

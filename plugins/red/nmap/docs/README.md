@@ -14,4 +14,4 @@ Descoberta de host/porta + detecção de serviço/versão (XML nativo -oX -).
 
 ## Como é executado
 O runner monta a lista de argumentos (nunca `shell=True`) e o engine roda em
-subprocess com timeout. Rode `vulnforge doctor` para ver disponibilidade.
+subprocess com timeout. Rode `eigan doctor` para ver disponibilidade.

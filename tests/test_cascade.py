@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from vulnforge.engine.cascade import CascadeGraph, CascadeRule, FindingFeatures
-from vulnforge.findings.schema import Finding, Severity
+from eigan.engine.cascade import CascadeGraph, CascadeRule, FindingFeatures
+from eigan.findings.schema import Finding, Severity
 
 
 def _f(
@@ -87,7 +87,7 @@ def test_graph_dedupes_and_never_triggers_source_tool():
 
 
 def test_graph_from_registry_loads_declared_triggers():
-    from vulnforge.engine.registry import PluginRegistry
+    from eigan.engine.registry import PluginRegistry
 
     graph = CascadeGraph.from_registry(PluginRegistry.discover())
     # os plugins reais declaram triggers_on (nmap, naabu, httpx, ...).

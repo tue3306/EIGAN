@@ -1,6 +1,6 @@
 # knowledge/ — Base de conhecimento (determinística)
 
-O que permite ao VulnForge **explicar, remediar e mapear** findings **sem
+O que permite ao EIGAN **explicar, remediar e mapear** findings **sem
 nenhuma IA**. É a fonte do fallback determinístico e também o *grounding* quando
 há IA (a IA recebe só isto + findings, e é proibida de afirmar fora daqui).
 

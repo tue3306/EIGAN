@@ -1,6 +1,6 @@
 """Testes da abstração de perspectiva (classificação de host + política)."""
 
-from vulnforge.perspective import (
+from eigan.perspective import (
     HostClass,
     Perspective,
     classify_host,

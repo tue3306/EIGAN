@@ -2,10 +2,10 @@
 
 from pathlib import Path
 
-from vulnforge.ai.provider import Enricher
-from vulnforge.findings.schema import Finding, Severity
-from vulnforge.knowledge.loader import KnowledgeBase
-from vulnforge.report.deterministic import ReportGenerator
+from eigan.ai.provider import Enricher
+from eigan.findings.schema import Finding, Severity
+from eigan.knowledge.loader import KnowledgeBase
+from eigan.report.deterministic import ReportGenerator
 
 _KB = Path(__file__).resolve().parents[1] / "knowledge" / "skills"
 

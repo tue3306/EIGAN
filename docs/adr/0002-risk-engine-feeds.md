@@ -13,8 +13,8 @@ CVSS (v3.1/v4), **EPSS** (probabilidade de exploração — FIRST.org), **CISA K
 Regra de ouro — **feeds vêm de fonte oficial, com cache; nunca de memória:**
 
 - `engine/feeds.py` busca EPSS (FIRST.org) e KEV (CISA) e **cacheia** em
-  `~/.cache/vulnforge/feeds/` (fora do repo). Comando dedicado:
-  `vulnforge feeds update` (com verificação de integridade/hash e data do feed).
+  `~/.cache/eigan/feeds/` (fora do repo). Comando dedicado:
+  `eigan feeds update` (com verificação de integridade/hash e data do feed).
 - Se um feed **não** foi obtido (offline, primeira execução), os campos EPSS/KEV
   saem **`UNVERIFIED`** e o `RiskScore` usa só o que é verificável (CVSS local).
   **Nunca** se inventa um número.

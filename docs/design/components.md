@@ -1,6 +1,6 @@
 # Componentes da interface web
 
-A SPA (`src/vulnforge/api/static/`) é JavaScript vanilla sem build step
+A SPA (`src/eigan/api/static/`) é JavaScript vanilla sem build step
 (ver [ADR-0004](../adr/0004-cascade-orchestration-and-web-ui.md)). Componentes são
 funções puras que recebem dados e retornam HTML; **zero regra de negócio** — tudo
 vem de `/api/v1`.

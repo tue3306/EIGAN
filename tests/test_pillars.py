@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import yaml
 
-from vulnforge.analysis.diff import diff_findings
-from vulnforge.findings.schema import Finding, Severity
-from vulnforge.findings.store import FindingStore
-from vulnforge.report.remediation import generate, generate_all
+from eigan.analysis.diff import diff_findings
+from eigan.findings.schema import Finding, Severity
+from eigan.findings.store import FindingStore
+from eigan.report.remediation import generate, generate_all
 
 
 def _f(title: str, asset: str, tool: str = "nmap", sev: Severity = Severity.MEDIUM) -> Finding:

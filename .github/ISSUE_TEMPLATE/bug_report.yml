@@ -1,18 +1,18 @@
 name: "🐛 Bug report"
-description: Reportar um comportamento incorreto do VulnForge (não use para vulnerabilidades de segurança).
+description: Reportar um comportamento incorreto do EIGAN (não use para vulnerabilidades de segurança).
 labels: ["bug", "triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Obrigado por reportar! ⚠️ **Vulnerabilidade de segurança no VulnForge?**
+        Obrigado por reportar! ⚠️ **Vulnerabilidade de segurança no EIGAN?**
         Não abra Issue pública — siga o [SECURITY.md](../security/policy).
   - type: checkboxes
     id: preflight
     attributes:
       label: Pré-checagem
       options:
-        - label: Rodei `vulnforge doctor` e li a saída.
+        - label: Rodei `eigan doctor` e li a saída.
           required: true
         - label: Procurei Issues existentes e não encontrei duplicata.
           required: true
@@ -23,7 +23,7 @@ body:
     attributes:
       label: O que aconteceu?
       description: Descreva o bug e o que você esperava que acontecesse.
-      placeholder: Ao rodar `vulnforge scan ...`, esperava X mas obtive Y.
+      placeholder: Ao rodar `eigan scan ...`, esperava X mas obtive Y.
     validations:
       required: true
   - type: textarea
@@ -32,7 +32,7 @@ body:
       label: Passos para reproduzir
       description: Comando exato e contexto. **Não inclua alvos de terceiros nem segredos.**
       placeholder: |
-        1. vulnforge scan --target localhost --perspective internal ...
+        1. eigan scan --target localhost --perspective internal ...
         2. ...
       render: shell
     validations:
@@ -40,14 +40,14 @@ body:
   - type: textarea
     id: doctor
     attributes:
-      label: Saída do `vulnforge doctor`
+      label: Saída do `eigan doctor`
       render: shell
     validations:
       required: false
   - type: input
     id: version
     attributes:
-      label: Versão do VulnForge
+      label: Versão do EIGAN
       placeholder: "0.2.0 (ou commit)"
     validations:
       required: true

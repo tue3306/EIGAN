@@ -1,7 +1,7 @@
 # Jornadas do usuário (user flows)
 
 As cinco jornadas principais da interface web. Todas começam em
-`vulnforge serve` → abrir `http://127.0.0.1:8000`. **Nenhuma exige a CLI.**
+`eigan serve` → abrir `http://127.0.0.1:8000`. **Nenhuma exige a CLI.**
 
 ## 1. Novo scan (a "magia")
 
@@ -44,7 +44,7 @@ Backend: `POST /api/v1/scans` → cria job em thread → `202` com `job_id`.
 ## 5. Gerar relatório / remediar
 
 - Relatórios Técnico e Executivo em HTML/PDF/JSON/CSV/SARIF via
-  `vulnforge report --scan <id> --format pdf` (ou API de relatório).
+  `eigan report --scan <id> --format pdf` (ou API de relatório).
 - **Todos funcionam sem IA** (texto determinístico da base de conhecimento);
   com chave de IA, as narrativas são enriquecidas e marcadas `ai_generated`.
 

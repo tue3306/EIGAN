@@ -2,15 +2,15 @@
 
 import pytest
 
-from vulnforge.capability import Capability, Category
-from vulnforge.engine.base import BaseToolPlugin, ToolResult
-from vulnforge.engine.orchestrator import Orchestrator
-from vulnforge.engine.pipeline import stages_for
-from vulnforge.engine.plugin import PluginMetadata, PluginSpec
-from vulnforge.engine.registry import PluginRegistry
-from vulnforge.findings.schema import Finding, Severity
-from vulnforge.perspective import Perspective
-from vulnforge.security.scope import PerspectiveViolation, Scope
+from eigan.capability import Capability, Category
+from eigan.engine.base import BaseToolPlugin, ToolResult
+from eigan.engine.orchestrator import Orchestrator
+from eigan.engine.pipeline import stages_for
+from eigan.engine.plugin import PluginMetadata, PluginSpec
+from eigan.engine.registry import PluginRegistry
+from eigan.findings.schema import Finding, Severity
+from eigan.perspective import Perspective
+from eigan.security.scope import PerspectiveViolation, Scope
 
 EXTERNAL = Perspective.EXTERNAL
 INTERNAL = Perspective.INTERNAL

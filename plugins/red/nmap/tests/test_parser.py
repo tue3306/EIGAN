@@ -2,8 +2,8 @@
 
 from plugins.red.nmap.parser import parse
 from plugins.red.nmap.runner import NmapRunner
-from vulnforge.engine.base import ToolResult
-from vulnforge.findings.schema import Severity
+from eigan.engine.base import ToolResult
+from eigan.findings.schema import Severity
 
 _NMAP_XML = """<?xml version="1.0"?>
 <nmaprun>

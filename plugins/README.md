@@ -1,6 +1,6 @@
 # plugins/ — Capabilities intercambiáveis
 
-Aqui moram os **plugins** do VulnForge, organizados por domínio
+Aqui moram os **plugins** do EIGAN, organizados por domínio
 (`red/`, `blue/`, `purple/`). O Core Engine faz **auto-discovery** por
 `metadata.yaml` — **adicionar um plugin não toca o Core** (ADR-0001/0003).
 
@@ -35,7 +35,7 @@ plugins/<red|blue|purple>/<nome>/
   `detection-validation`, `control-validation` são **scaffold**.
 
 **Scaffold honesto ≠ stub falso:** o módulo é descoberto e listado em
-`vulnforge doctor`, mas **não finge executar** até ser implementado.
+`eigan doctor`, mas **não finge executar** até ser implementado.
 
 ## Adicionar um plugin
 

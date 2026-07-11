@@ -1,10 +1,10 @@
 name: publish
 
-# Publica o VulnForge no PyPI via TRUSTED PUBLISHING (OIDC) quando um GitHub
+# Publica o EIGAN no PyPI via TRUSTED PUBLISHING (OIDC) quando um GitHub
 # Release é publicado — NÃO usa token/segredo: a identidade vem do OIDC do
 # próprio Actions (§5: nunca segredo no repo).
 #
-# INERTE até o dono (1) registrar o projeto `vulnforge` no PyPI e (2) configurar
+# INERTE até o dono (1) registrar o projeto `eigan` no PyPI e (2) configurar
 # o *trusted publisher* apontando para este repositório + workflow `publish.yml`
 # + environment `pypi`. Enquanto não configurado, o passo de publish falha de
 # propósito (sem credencial) e não vaza nada. Ver docs/BLOCKERS.md #5 e ADR-0006.
