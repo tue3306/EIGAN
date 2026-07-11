@@ -425,7 +425,11 @@ class ProviderSpec:
         }
         if self.base_url_env is not None:
             kwargs["base_url"] = os.getenv(self.base_url_env) or self.default_base_url
-        return self.provider_cls(**kwargs)
+        provider = self.provider_cls(**kwargs)
+        # Só devolve um provedor **utilizável**: alguns exigem mais que credencial+
+        # modelo (ex.: Azure precisa de api_version). Assim o gate AI-native
+        # (require_provider) nunca aprova um provedor meio-configurado.
+        return provider if provider.available() else None
 
 
 PROVIDERS: dict[str, ProviderSpec] = {}

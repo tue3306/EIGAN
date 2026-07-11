@@ -171,6 +171,19 @@ def test_groq_uses_confirmed_openai_compatible_base_url():
     assert captured["url"] == "https://api.groq.com/openai/v1/chat/completions"
 
 
+def test_azure_half_configured_is_not_usable(monkeypatch):
+    # Azure sem api_version não é utilizável → o gate não deve aprová-lo
+    # (build() só devolve provedores available()).
+    monkeypatch.setenv("EIGAN_AI_PROVIDER", "azure")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "az-key")
+    monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT", "meu-deploy")
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://x.openai.azure.com")
+    monkeypatch.delenv("AZURE_OPENAI_API_VERSION", raising=False)
+    assert default_provider() is None  # falta api_version → inutilizável
+    monkeypatch.setenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
+    assert default_provider() is not None  # agora completo
+
+
 def test_register_new_provider_without_touching_core():
     # adicionar provedor = registrar um ProviderSpec (interface padrão), sem
     # alterar o resto do código — exatamente o requisito de modularidade.

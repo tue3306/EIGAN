@@ -5,6 +5,10 @@ Todas as mudanças notáveis do EIGAN são documentadas aqui.
 O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o
 projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [Unreleased]
+
+Nada ainda — as próximas mudanças entram aqui.
+
 ## [1.0.0] — 2026-07-11
 
 ### Added
@@ -68,9 +72,6 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   determinístico independente da IA, engine E2E com IA, recusa de alvo fora de
   escopo, e a timeline transmitida na API.
 
-## [Unreleased]
-
-### Added
 - **Plataforma autônoma — 10 pilares (Missão 4 / ADR-0008)**: contratos entre
   planner ↔ agentes ↔ memória ↔ correlação ↔ reporting ↔ remediação, com o status
   **real × scaffold** de cada pilar declarado no ADR e no `ROADMAP`.
