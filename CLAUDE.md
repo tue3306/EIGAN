@@ -219,12 +219,20 @@ Projete assumindo IA presente para **comandar** o scan, mas **funcione sem ela**
   do escopo — o *plumbing* seguro (lista de args, nunca `shell=True`) faz isso.
 - **Sem chave:** tudo roda pelo `DeterministicPlanner` + cascata; explicações/
   remediações vêm de `knowledge/skills/`; relatórios saem completos.
-- Abstração **multi-provedor** (Anthropic/OpenAI/Google + **local via Ollama**),
-  chave por env, **degrada graciosamente**. Toda saída marcada `ai_generated:
+- Abstração **multi-provedor por registro modular** (ADR-0010): Anthropic, OpenAI,
+  Gemini, OpenRouter, Groq, Together, Azure OpenAI + **local via Ollama**. Adicionar
+  provedor = registrar um `ProviderSpec` (interface padrão), sem tocar no núcleo.
+  Chave por env, **degrada graciosamente**. Toda saída marcada `ai_generated:
   true`. **Grounding** obrigatório (só findings normalizados + skills como
   contexto; proibido afirmar CVE/versão fora das evidências). **Redaction** de
   secrets/PII antes de enviar a provedor externo. Erro/timeout/JSON inválido do
-  provedor → caminho determinístico, logado.
+  provedor → caminho determinístico, logado. Ver `docs/ai-providers.md`.
+
+**Policy / Guardrail Engine (ADR-0011).** A autonomia da IA opera **dentro** de um
+envelope determinístico: toda ação ativa proposta passa por `policy/` (`ImpactClass`
++ `PolicyEngine.vet()` → executar / aprovação humana (HITL) / recusar) **antes** de
+tocar a rede. A IA propõe; a política dispõe. É o freio inviolável que torna a
+autonomia responsável — precede e cerca o poder de execução da IA (§4).
 
 ---
 

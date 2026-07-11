@@ -64,6 +64,55 @@ não funcionalidade.
 > `.venv`, instalou `.[pdf,tui]`, gerou o `.env` e abriu o menu — sem nenhum
 > outro passo manual. Sem `python3-venv`, o launcher diz exatamente o que instalar.
 
+## 🧠 Como funciona — passo a passo (do zip ao relatório)
+
+O EIGAN é um **agente de segurança dirigido por IA**: você dá o alvo e a IA
+**planeja, orquestra em ondas adaptativas e correlaciona** — e cada ação passa por
+um **motor de política determinístico** (autorização, escopo, destrutividade)
+antes de tocar a rede. Fluxo completo:
+
+**1. Baixe e rode (Ubuntu / Kali / qualquer Linux):**
+```bash
+git clone https://github.com/tue3306/vulnerability-scanner.git   # ou baixe o .zip e descompacte
+cd vulnerability-scanner
+python3 eigan.py                     # cria .venv, instala tudo e abre o menu
+```
+
+**2. (Opcional) Insira sua API de IA** — menu → **Configuração** → escolha o
+provedor (Claude, GPT, Gemini, OpenRouter, Groq, Together, Azure ou Ollama local)
+→ cole a chave → informe o modelo. A chave é gravada no `.env` (fora do git,
+`chmod 600`) e **nunca é exibida**. *Sem chave, o EIGAN roda 100% no modo
+determinístico* — a IA só acrescenta riqueza e autonomia. Ver
+[docs/ai-providers.md](docs/ai-providers.md) (quais APIs usar).
+
+**3. Informe o alvo** — menu → **Novo Scan** → digite o **site, IP ou URL** →
+escolha a perspectiva (external = visão de atacante; internal = dentro da rede) →
+**confirme a autorização** (obrigatório: só escaneie o que você tem permissão para
+testar).
+
+**4. O que a IA faz (visível, sem caixa-preta):**
+- **Planeja** a estratégia: traduz seu objetivo em *capacidades* e a ordem delas.
+- **Seleciona** a melhor ferramenta disponível para cada capacidade (justificado).
+- **Executa** em ondas e **reage** às descobertas: achou porta 445 → enumera SMB;
+  detectou WordPress → roda scan WP (replanejamento adaptativo).
+- **Correlaciona** os achados e **redige** as narrativas Técnica e Executiva.
+- Cada passo é **registrado e justificado**; ações intrusivas/de exploração pedem
+  **aprovação humana**; alvo fora do escopo é **recusado** pelo Policy Engine.
+
+**5. Veja o resultado — dashboard OU PDF:**
+```bash
+python3 eigan.py --serve             # dashboard web + timeline de raciocínio ao vivo
+#   → abre http://127.0.0.1:8000 (Novo Scan, progresso em tempo real, findings)
+```
+- **Dashboard:** menu → **Dashboard** (ou `--serve`) — acompanha o raciocínio do
+  agente em tempo real, os findings e o risco priorizado.
+- **PDF / relatório:** ao fim do wizard ele **oferece gerar o relatório**; ou pelo
+  menu → **Histórico** → escolha o scan → gerar relatório
+  (**PDF/HTML/JSON/CSV/SARIF**, Técnico ou Executivo). Todos funcionam **sem IA**.
+
+> Tudo isto é **open-source** e roda offline. A IA é opcional; a segurança
+> (autorização, escopo, política) é **sempre** aplicada.
+
 ### Flags do launcher
 
 ```bash
@@ -203,14 +252,24 @@ eigan scan --target-list examples/targets.example.txt --profile web-only \
 Perfis: `quick`, `standard`, `deep`, `network-only`, `web-only`. Mais exemplos e
 laboratório local em [examples/](examples/).
 
-## Camada de IA (opcional)
+## Camada de IA (opcional, multi-provedor)
 
-Sem chave, tudo funciona via fallback determinístico (base de conhecimento em
-`knowledge/skills/`). Com uma chave (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
-`GOOGLE_API_KEY`) ou Ollama local (`OLLAMA_HOST`), o sumário executivo e as
-explicações são enriquecidos e marcados `ai_generated`. Configure em
-`config/ai.yaml` (chaves só por env — nunca no arquivo). A IA **nunca** escaneia
-nem descobre vulnerabilidade: só interpreta findings já produzidos.
+O EIGAN é **independente de provedor de IA**: **Anthropic (Claude), OpenAI (GPT),
+Google Gemini, OpenRouter, Groq, Together AI, Azure OpenAI** e **Ollama (local)** —
+escolha por env (`EIGAN_AI_PROVIDER`) ou `config/ai.yaml`, ou pelo menu
+(*Configuração*). Adicionar um provedor novo é modular: implementar a interface
+padrão e registrar um `ProviderSpec` — nada mais no código muda
+([ADR-0010](docs/adr/0010-ai-provider-registry.md),
+[docs/ai-providers.md](docs/ai-providers.md): quais APIs usar).
+
+Sem chave, tudo funciona via **fallback determinístico** (base de conhecimento em
+`knowledge/skills/`). Com um provedor, o planejamento, a orquestração e as
+narrativas são enriquecidos e marcados `ai_generated`. Chaves só por env / `.env`
+(nunca no arquivo versionado); *redaction* de segredos/PII antes de provedor
+externo. No modelo EIGAN (ADR-0009), a IA **comanda** o scan, mas a execução real
+passa pelo **Policy Engine** determinístico (autorização/escopo/destrutividade,
+[ADR-0011](docs/adr/0011-policy-guardrail-engine.md)) — a IA nunca opera fora do
+escopo nem afirma fato fora das evidências.
 
 ## Screenshots
 

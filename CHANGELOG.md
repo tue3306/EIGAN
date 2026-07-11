@@ -7,6 +7,22 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [1.0.0] — 2026-07-11
 
+### Added
+- **AI Providers — camada de IA modular e independente de provedor
+  (ADR-0010).** Registro extensível (`ProviderSpec` + `register`/`list_providers`)
+  com **Anthropic, OpenAI, Gemini, OpenRouter, Groq, Together, Azure OpenAI e
+  Ollama**. Seleção por `EIGAN_AI_PROVIDER`/`config/ai.yaml`; base OpenAI-compat
+  confirmada na doc e sobrescritível por env; model id nunca fabricado (§3.1).
+  Adicionar provedor = registrar um spec (nada mais muda). `docs/ai-providers.md`.
+- **Onboarding interativo**: menu *Configuração* e wizard configuram provedor →
+  chave → modelo, gravando em `.env` (chmod 600, fora do git) sem ecoar a chave.
+- **Policy / Guardrail Engine — Fase 0 (ADR-0011)**: `ImpactClass`
+  (passive→…→state_changing) + `PolicyEngine.vet()` determinístico
+  (execute/HITL/reject), o freio da autonomia. `impact_class` no `metadata.yaml`
+  e no `doctor`. `docs/roadmap/autonomous-platform.md` (visão faseada honesta).
+- **README** ganha "Como funciona — passo a passo" (baixar → inserir API → alvo →
+  o que a IA faz → ver dashboard/PDF).
+
 ### Changed
 - **Virada para EIGAN — agente de segurança autônomo dirigido por IA
   (ADR-0009).** A IA deixa de ser enriquecedora de relatório e passa a
