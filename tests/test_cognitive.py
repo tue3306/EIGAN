@@ -14,6 +14,7 @@ from eigan.capability import Capability, Category
 from eigan.engine.base import BaseToolPlugin
 from eigan.engine.cascade import CascadeGraph, CascadeRule
 from eigan.engine.cognitive import (
+    AgenticPlanner,
     AIPlanner,
     Budget,
     CognitiveEngine,
@@ -272,6 +273,100 @@ def test_ai_planner_falls_back_when_unavailable():
 
 
 # --------------------------------------------------------------------------- #
+# AgenticPlanner — a IA comanda o plano fim a fim (EIGAN v1.0, ADR-0009)
+# --------------------------------------------------------------------------- #
+def _agentic_registry() -> PluginRegistry:
+    return PluginRegistry(
+        [
+            _spec("subfinder", (C.SUBDOMAIN_ENUMERATION,), perspectives=(P.EXTERNAL,)),
+            _spec("naabu", (C.PORT_DISCOVERY,), speed="high", preferred=("external",)),
+            _spec("webx", (C.WEB_PROBE,)),
+            _spec("nucleix", (C.VULN_TEMPLATE_SCAN,)),
+        ]
+    )
+
+
+def _agentic_base() -> DeterministicPlanner:
+    reg = _agentic_registry()
+    return DeterministicPlanner(reg, CascadeGraph.from_registry(reg))
+
+
+def test_agentic_planner_plans_initial_from_ai():
+    # IA propõe ordem (JSON estruturado) e uma condição de parada.
+    comp = _FakeCompletion(
+        '{"plan": ["port_discovery", "subdomain_enumeration"], '
+        '"stop_when": "quando não houver nova evidência"}'
+    )
+    planner = AgenticPlanner(_agentic_base(), comp)
+    plan = planner.initial_plan(Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"]))
+    caps = plan.capabilities()
+    assert caps[0] == C.PORT_DISCOVERY  # a IA planejou a ordem
+    assert C.SUBDOMAIN_ENUMERATION in caps
+    assert planner.ai_generated is True
+    assert planner.stop_hint  # a IA sugeriu quando parar (registrado na timeline)
+    assert all(s.origin == "ai" for s in plan.steps if s.capability in caps[:2])
+
+
+def test_agentic_planner_grounds_invented_ids():
+    # id inventado pela IA é descartado; a cobertura da estratégia é preservada.
+    comp = _FakeCompletion('{"plan": ["port_discovery", "capacidade_inventada_zzz"]}')
+    planner = AgenticPlanner(_agentic_base(), comp)
+    plan = planner.initial_plan(Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"]))
+    ids = [c.value for c in plan.capabilities()]
+    assert "capacidade_inventada_zzz" not in ids  # grounding: fora do registry → fora
+    assert "port_discovery" in ids
+
+
+def test_agentic_planner_falls_back_on_non_json():
+    planner = AgenticPlanner(_agentic_base(), _FakeCompletion("desculpe, não sei responder"))
+    plan = planner.initial_plan(Goal.build(GoalKind.ATTACK_SURFACE, ["h"]))
+    assert plan.capabilities()  # plano determinístico intacto
+    assert planner.ai_generated is False
+
+
+def test_agentic_planner_falls_back_on_error():
+    planner = AgenticPlanner(_agentic_base(), _FakeCompletion(raises=True))
+    plan = planner.initial_plan(Goal.build(GoalKind.ATTACK_SURFACE, ["h"]))
+    assert plan.capabilities()
+    assert planner.ai_generated is False
+
+
+def test_agentic_replan_adds_capability_from_ai():
+    # a IA lê a descoberta (tag de contexto http) e propõe a próxima onda.
+    comp = _FakeCompletion(
+        '{"next": [{"capability": "web_probe", "reason": "porta http aberta"}, '
+        '{"capability": "id_inventado", "reason": "x"}]}'
+    )
+    planner = AgenticPlanner(_agentic_base(), comp)
+    goal = Goal.build(GoalKind.EXTERNAL_EXPOSURE, ["h"])
+    state = ScanState(new_findings=[_finding("Porta aberta 80/tcp (http)", "h:80", "naabu")])
+    state.context_tags |= {"http"}
+    plan = Plan([])
+    planner.replan(goal, state, plan)
+    caps = plan.capabilities()
+    assert C.WEB_PROBE in caps  # onda adaptativa proposta pela IA
+    assert C.VULN_TEMPLATE_SCAN not in caps  # a IA não pediu essa
+    assert not any(s.reason for s in plan.steps if "id_inventado" in s.reason)  # grounding
+    assert any(s.origin == "ai" for s in plan.steps)
+
+
+def test_agentic_replan_keeps_deterministic_floor():
+    # mesmo com a IA em silêncio, a cascata determinística (piso) roda.
+    rule = CascadeRule(execute=("webx",), port=(80,), reason="porta web")
+    reg = PluginRegistry(
+        [_spec("naabu", (C.PORT_DISCOVERY,), triggers=(rule,)), _spec("webx", (C.WEB_PROBE,))]
+    )
+    base = DeterministicPlanner(reg, CascadeGraph.from_registry(reg))
+    planner = AgenticPlanner(base, _FakeCompletion('{"next": []}'))
+    goal = Goal.build(GoalKind.EXTERNAL_EXPOSURE, ["h"])
+    state = ScanState(new_findings=[_finding("Porta aberta 80/tcp (http)", "h:80", "naabu")])
+    plan = Plan([])
+    planner.replan(goal, state, plan)
+    web = next(s for s in plan.steps if s.capability == C.WEB_PROBE)
+    assert web.origin == "cascade"  # piso determinístico, independente da IA
+
+
+# --------------------------------------------------------------------------- #
 # StopCondition
 # --------------------------------------------------------------------------- #
 def test_stop_condition_budget_capabilities():
@@ -348,3 +443,41 @@ def test_safe_execution_enforces_scope():
     # alvo fora do escopo autorizado deve ser bloqueado (trava dura §2).
     with pytest.raises(Exception):
         ex.execute(spec, "attacker-controlled.example.net", P.EXTERNAL)
+
+
+def test_engine_uses_agentic_planner_when_ai_available():
+    # com IA disponível, o engine usa o AgenticPlanner (a IA comanda o plano).
+    comp = _FakeCompletion(
+        '{"plan": ["port_discovery", "subdomain_enumeration"], "stop_when": "sem evidência nova"}'
+    )
+    engine = CognitiveEngine(_engine_registry(), completion=comp)
+    scope = build_scope(None, ["example.com"], P.EXTERNAL)
+    report = engine.run(Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"]), scope=scope)
+    assert report.planner_name == "agentic"
+    assert report.ai_used is True
+    assert len(report.findings) >= 2  # a IA comandou, o engine executou de verdade
+    # a timeline registra o raciocínio inicial da IA (sem caixa-preta).
+    assert any(d.action == "planned" for d in report.decisions)
+
+
+def test_engine_refuses_out_of_scope_target():
+    # DoD: recusa de alvo fora de escopo é um bloqueio real, registrado.
+    reg = _engine_registry()
+    engine = CognitiveEngine(reg)
+    scope = build_scope(None, ["example.com"], P.EXTERNAL)  # só example.com autorizado
+    # objetivo mira um alvo NÃO autorizado → cada execução é recusada pelo escopo.
+    goal = Goal.build(GoalKind.ATTACK_SURFACE, ["attacker-controlled.example.net"])
+    report = engine.run(goal, scope=scope)
+    skipped = [d for d in report.decisions if d.action == "skipped"]
+    assert skipped and all("fora de escopo" in d.detail for d in skipped)
+    assert not report.findings  # nada rodou contra o alvo não autorizado
+
+
+def test_engine_without_ai_still_delivers_scan():
+    # fallback: sem chave de IA, o loop determinístico entrega scan + findings.
+    engine = CognitiveEngine(_engine_registry())  # completion=None
+    scope = build_scope(None, ["example.com"], P.EXTERNAL)
+    report = engine.run(Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"]), scope=scope)
+    assert report.ai_used is False
+    assert report.planner_name == "deterministic"
+    assert report.findings

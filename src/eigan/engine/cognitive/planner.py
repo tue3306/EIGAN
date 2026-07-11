@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, TypeVar, runtime_checkable
+
+from pydantic import BaseModel, Field, ValidationError
 
 from ...capability import Capability
 from ...perspective import Perspective
@@ -26,9 +28,12 @@ from ..pipeline import stages_for
 from .goal import Goal
 
 if TYPE_CHECKING:
+    from ...findings.schema import Finding
     from ..cascade import CascadeGraph
     from ..plugin import PluginSpec
     from .feedback import ScanState
+
+_M = TypeVar("_M", bound=BaseModel)
 
 log = logging.getLogger("eigan.cognitive.planner")
 
@@ -230,3 +235,219 @@ class AIPlanner:
             if c not in seen:
                 picked.append(c)
         return picked or None
+
+
+# ── AgenticPlanner: a IA comanda o plano fim a fim (EIGAN v1.0, ADR-0009) ───────
+#
+# Diferença para o :class:`AIPlanner` (que só reordena): aqui a IA **propõe** o
+# plano inicial (quais capacidades e em que ordem) e, a cada onda, **propõe a
+# próxima onda** a partir das descobertas — replanejamento adaptativo dirigido
+# por IA. Dois invariantes de código continuam valendo (não limitam a IA):
+#
+# * **Grounding (§3.1/§5):** a IA só age sobre capacidades que EXISTEM de fato
+#   (registradas no `PluginRegistry` / na estratégia do objetivo). Ids inventados
+#   são descartados por validação — nunca viram execução.
+# * **Piso determinístico:** a cascata declarativa (`CascadeGraph`) roda SEMPRE
+#   como fundo de segurança + fallback; a IA **acrescenta e prioriza** sobre ela.
+#   Sem chave / erro / JSON inválido do provedor → só o piso determinístico, logado.
+#
+# A saída da IA é **estruturada e validada (Pydantic v2)**: pedimos JSON e o
+# validamos; qualquer desvio cai no caminho determinístico.
+
+
+class _InitialPlanOut(BaseModel):
+    """Contrato de saída da IA para o plano inicial (validado)."""
+
+    plan: list[str] = Field(default_factory=list)
+    stop_when: str = ""
+
+
+class _NextStepOut(BaseModel):
+    capability: str
+    reason: str = ""
+
+
+class _ReplanOut(BaseModel):
+    """Contrato de saída da IA para a próxima onda (validado)."""
+
+    next: list[_NextStepOut] = Field(default_factory=list)
+
+
+def _extract_json(raw: str) -> str | None:
+    """Extrai o primeiro objeto JSON de uma resposta (tolera fences/prosa)."""
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        return None
+    return raw[start : end + 1]
+
+
+def _parse(raw: str, model: type[_M]) -> _M | None:
+    blob = _extract_json(raw)
+    if blob is None:
+        return None
+    try:
+        return model.model_validate_json(blob)
+    except (ValidationError, ValueError):
+        return None
+
+
+_AGENTIC_SYSTEM = (
+    "Você é o cérebro de orquestração do EIGAN, um agente de segurança autônomo. "
+    "Dado um objetivo, você PLANEJA quais CAPACIDADES ativar e em que ordem, e a "
+    "cada onda decide a próxima com base nas descobertas. Regras rígidas e não "
+    "negociáveis: responda SOMENTE JSON válido no schema pedido; use APENAS os ids "
+    "de capacidade fornecidos (NUNCA invente ids, ferramentas, comandos, CVE, "
+    "versões ou scores); você não escolhe a ferramenta concreta nem executa nada — "
+    "o engine determinístico faz isso dentro do escopo autorizado. Justifique cada "
+    "escolha em uma frase curta."
+)
+
+
+@dataclass
+class AgenticPlanner:
+    """A IA comanda o plano fim a fim, com grounding e piso determinístico.
+
+    ``initial_plan`` pede à IA a ordem das capacidades da estratégia (grounded);
+    ``replan`` roda primeiro a cascata determinística (piso) e então pede à IA a
+    próxima onda a partir das descobertas recentes. Tudo com fallback: qualquer
+    falha da IA mantém o comportamento do :class:`DeterministicPlanner`.
+    """
+
+    base: DeterministicPlanner
+    completion: CompletionPort
+    name: str = "agentic"
+    ai_generated: bool = True
+    stop_hint: str = ""
+
+    @property
+    def registry(self) -> PlanRegistryPort:
+        return self.base.registry
+
+    # ── plano inicial (IA propõe a ordem das capacidades da estratégia) ─────────
+    def initial_plan(self, goal: Goal) -> Plan:
+        plan = self.base.initial_plan(goal)
+        if not self.completion.available() or not plan.steps:
+            self.ai_generated = False
+            return plan
+        by_cap = {s.capability: s for s in plan.steps}
+        out = self._ask_initial(goal, list(by_cap))
+        if out is None:
+            self.ai_generated = False
+            return plan
+        self.ai_generated = True
+        self.stop_hint = out.stop_when.strip()
+        ordered = self._ground(out.plan, {c.value: c for c in by_cap})
+        steps = [
+            PlanStep(
+                capability=c,
+                reason=f"IA planejou · {by_cap[c].reason}",
+                origin="ai",
+            )
+            for c in ordered
+        ]
+        # coverage: capacidades da estratégia não citadas mantêm a ordem base.
+        for s in plan.steps:
+            if s.capability not in {st.capability for st in steps}:
+                steps.append(s)
+        return Plan(steps=steps)
+
+    # ── replan adaptativo (piso determinístico + onda proposta pela IA) ─────────
+    def replan(self, goal: Goal, state: "ScanState", plan: Plan) -> Plan:
+        # 1) piso de segurança: cascata determinística (sempre roda).
+        self.base.replan(goal, state, plan)
+        # 2) IA propõe capacidades adicionais a partir das descobertas recentes.
+        if not self.completion.available() or not state.new_findings:
+            return plan
+        candidates = self._replan_candidates(state, plan)
+        if not candidates:
+            return plan
+        out = self._ask_next_wave(goal, state, list(candidates))
+        if out is None:
+            return plan
+        allowed = {c.value: c for c in candidates}
+        for item in out.next:
+            cap = allowed.get(item.capability.strip().lower())  # ids inventados: fora
+            if cap is None or cap in state.executed_capabilities or plan.has(cap):
+                continue
+            self.ai_generated = True
+            reason = item.reason.strip() or "onda adaptativa"
+            plan.add(PlanStep(capability=cap, reason=f"IA (adaptativo): {reason}", origin="ai"))
+        return plan
+
+    # ── auxiliares ──────────────────────────────────────────────────────────────
+    def _replan_candidates(self, state: "ScanState", plan: Plan) -> list[Capability]:
+        """Capacidades reais (com plugin) ainda não executadas nem planejadas."""
+        planned = set(plan.capabilities())
+        return sorted(
+            (
+                c
+                for c in self.registry.capabilities()
+                if c not in state.executed_capabilities and c not in planned
+            ),
+            key=lambda c: c.value,
+        )
+
+    @staticmethod
+    def _ground(ids: list[str], allowed: dict[str, Capability]) -> list[Capability]:
+        picked: list[Capability] = []
+        seen: set[Capability] = set()
+        for raw_id in ids:
+            cap = allowed.get(raw_id.strip().lower())  # grounding: fora da lista → descartado
+            if cap is not None and cap not in seen:
+                seen.add(cap)
+                picked.append(cap)
+        return picked
+
+    def _ask_initial(self, goal: Goal, caps: list[Capability]) -> _InitialPlanOut | None:
+        user = (
+            f"Objetivo: {goal.kind.label} (perspectiva {goal.perspective.value}).\n"
+            f"Capacidades candidatas (use SOMENTE estes ids):\n"
+            + "\n".join(f"- {c.value}" for c in caps)
+            + '\n\nResponda JSON: {"plan": [ids em ordem de prioridade], '
+            '"stop_when": "quando parar, em uma frase"}.'
+        )
+        return self._call(user, _InitialPlanOut)
+
+    def _ask_next_wave(
+        self, goal: Goal, state: "ScanState", caps: list[Capability]
+    ) -> _ReplanOut | None:
+        evidence = _summarize_findings(state.new_findings)
+        tags = ", ".join(sorted(state.context_tags)) or "—"
+        user = (
+            f"Objetivo: {goal.kind.label} (perspectiva {goal.perspective.value}).\n"
+            f"Contexto observado (tags): {tags}\n"
+            f"Descobertas recentes:\n{evidence}\n\n"
+            f"Capacidades ainda disponíveis (use SOMENTE estes ids):\n"
+            + "\n".join(f"- {c.value}" for c in caps)
+            + "\n\nProponha a PRÓXIMA onda. Responda JSON: "
+            '{"next": [{"capability": "id", "reason": "por quê"}]}. '
+            "Lista vazia se nada mais for útil (aí o scan encerra)."
+        )
+        return self._call(user, _ReplanOut)
+
+    def _call(self, user: str, model: type[_M]) -> _M | None:
+        try:
+            raw = self.completion.complete(_AGENTIC_SYSTEM, user)
+        except Exception as exc:  # noqa: BLE001 — IA instável nunca derruba o plano
+            log.warning("AgenticPlanner: fallback determinístico (%s)", exc)
+            return None
+        out = _parse(raw, model)
+        if out is None:
+            log.warning("AgenticPlanner: resposta não-JSON/ inválida — fallback determinístico")
+        return out
+
+
+def _summarize_findings(findings: list["Finding"], limit: int = 12) -> str:
+    """Resumo compacto e grounded das descobertas para dar contexto à IA.
+
+    Só título/ativo/severidade dos findings normalizados (o provedor externo
+    ainda aplica redaction). Nunca inclui evidência crua nem afirma CVE/versão."""
+    if not findings:
+        return "  (nenhuma)"
+    lines = []
+    for f in findings[:limit]:
+        lines.append(f"  - [{f.severity.value}] {f.title} @ {f.affected_asset}")
+    if len(findings) > limit:
+        lines.append(f"  … (+{len(findings) - limit})")
+    return "\n".join(lines)

@@ -35,7 +35,7 @@ from ..risk import RiskScorer
 from .agent import AgentRegistry
 from .feedback import Feedback, ScanState, StopCondition, StopReason, Suggestion
 from .goal import Goal
-from .planner import AIPlanner, CompletionPort, DeterministicPlanner, Planner
+from .planner import AgenticPlanner, CompletionPort, DeterministicPlanner, Planner
 from .selection import Prefer, SelectionContext, ToolSelector
 
 log = logging.getLogger("eigan.cognitive")
@@ -138,12 +138,13 @@ class CognitiveEngine:
         self._selector = selector if selector is not None else ToolSelector(self._registry)
         self._risk = risk
         self._store = store
-        # Planner: AIPlanner se houver IA disponível; senão determinístico (fallback).
+        # Planner: AgenticPlanner (IA comanda o plano fim a fim) se houver IA
+        # disponível; senão o determinístico (fallback — funciona sem chave).
         base = DeterministicPlanner(self._registry, self._graph)
         if planner is not None:
             self._planner: Planner = planner
         elif completion is not None and completion.available():
-            self._planner = AIPlanner(base, completion)
+            self._planner = AgenticPlanner(base, completion)
         else:
             self._planner = base
 
@@ -233,6 +234,24 @@ class CognitiveEngine:
         state = ScanState()
         stop = StopCondition(goal.budget)
         decisions: list[DecisionEntry] = []
+
+        # Timeline: registra o raciocínio inicial da IA (ou do determinístico).
+        driver = "IA" if getattr(self._planner, "ai_generated", False) else "determinístico"
+        plan_entry = DecisionEntry(
+            step=0,
+            capability="",
+            agent="",
+            action="planned",
+            origin=self._planner.name,
+            reasons=tuple(f"{s.capability.value}: {s.reason}" for s in plan.steps),
+            detail=f"plano por {driver}: {', '.join(c.value for c in plan.capabilities())}",
+        )
+        decisions.append(plan_entry)
+        emitter.emit(ev.log(plan_entry.render()))
+        stop_hint = getattr(self._planner, "stop_hint", "")
+        if stop_hint:
+            emitter.emit(ev.log(f"#0 [stop-hint] IA sugere encerrar quando: {stop_hint}"))
+
         base_ctx = self._base_context(goal)
         stop_reason = StopReason.PLAN_EXHAUSTED
         step_no = 0

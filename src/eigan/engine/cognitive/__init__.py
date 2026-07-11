@@ -20,6 +20,7 @@ from .engine import (
 from .feedback import Feedback, ScanState, StopCondition, StopReason, Suggestion
 from .goal import Budget, Goal, GoalKind
 from .planner import (
+    AgenticPlanner,
     AIPlanner,
     CompletionPort,
     DeterministicPlanner,
@@ -53,6 +54,7 @@ __all__ = [
     "Budget",
     "Goal",
     "GoalKind",
+    "AgenticPlanner",
     "AIPlanner",
     "CompletionPort",
     "DeterministicPlanner",
