@@ -473,6 +473,41 @@ def test_engine_refuses_out_of_scope_target():
     assert not report.findings  # nada rodou contra o alvo não autorizado
 
 
+def test_network_agent_owns_smb_and_nse_built():
+    # As capacidades de enumeração de rede (SMB/Samba, NSE) têm agente REAL —
+    # senão a cascata do "achou Samba" só sugeriria, nunca executaria.
+    from eigan.engine.cognitive import AgentRegistry
+
+    reg = AgentRegistry.default()
+    smb = reg.for_capability(C.SMB_ENUMERATION)
+    nse = reg.for_capability(C.NSE_VULN_SCAN)
+    assert smb is not None and smb.built and smb.name == "network"
+    assert nse is not None and nse.built
+
+
+def test_replan_smb_finding_chains_to_enumeration_and_nse():
+    # O exemplo do dono: nmap acha 445 (Samba) → a cascata encadeia enum4linux
+    # (enumeração SMB) e nmap-nse (volta ao nmap com scripts NSE de SMB).
+    smb_rule = CascadeRule(
+        execute=("enum4linux", "nmap-nse"), port=(445, 139), reason="SMB/Samba exposto"
+    )
+    nmap = _spec("nmap", (C.PORT_DISCOVERY,), triggers=(smb_rule,))
+    enum = _spec("enum4linux", (C.SMB_ENUMERATION,))
+    nse = _spec("nmap-nse", (C.NSE_VULN_SCAN,), tool="nmap")
+    reg = PluginRegistry([nmap, enum, nse])
+    planner = DeterministicPlanner(reg, CascadeGraph.from_registry(reg))
+    goal = Goal.build(GoalKind.NETWORK_ASSESSMENT, ["10.0.0.5"])
+    state = ScanState(
+        new_findings=[_finding("Porta aberta 445/tcp (microsoft-ds)", "10.0.0.5:445", "nmap")]
+    )
+    plan = Plan([])
+    planner.replan(goal, state, plan)
+    caps = plan.capabilities()
+    assert C.SMB_ENUMERATION in caps  # enumeração dedicada de Samba
+    assert C.NSE_VULN_SCAN in caps  # volta ao nmap com NSE
+    assert all(s.origin == "cascade" for s in plan.steps)
+
+
 def test_engine_without_ai_still_delivers_scan():
     # fallback: sem chave de IA, o loop determinístico entrega scan + findings.
     engine = CognitiveEngine(_engine_registry())  # completion=None

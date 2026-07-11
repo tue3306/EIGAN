@@ -58,6 +58,12 @@ def default_agents() -> list[Agent]:
             built=True,
         ),
         Agent(
+            name="network",
+            description="Enumeração profunda de rede/serviços (SMB/Samba, NSE por serviço).",
+            capabilities=frozenset({C.NSE_VULN_SCAN, C.SMB_ENUMERATION}),
+            built=True,
+        ),
+        Agent(
             name="web",
             description="Cadeia de aplicação web (crawl, parâmetros, CMS, screenshot).",
             capabilities=frozenset({C.WEB_CRAWL, C.PARAM_DISCOVERY, C.CMS_SCAN, C.SCREENSHOT}),

@@ -47,6 +47,8 @@ class Capability(str, Enum):
     HOST_DISCOVERY = "host_discovery"
     PORT_DISCOVERY = "port_discovery"
     SERVICE_DETECTION = "service_detection"
+    NSE_VULN_SCAN = "nse_vuln_scan"  # 2ª onda: nmap NSE por serviço (vuln scripts)
+    SMB_ENUMERATION = "smb_enumeration"  # SMB/Samba: usuários, shares, políticas
 
     # ── web ──────────────────────────────────────────────────────────────────
     WEB_PROBE = "web_probe"  # fingerprint HTTP/tecnologias/WAF

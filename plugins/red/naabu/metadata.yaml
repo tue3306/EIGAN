@@ -32,6 +32,9 @@ triggers_on:
   - port: [80, 443, 8080, 8443, 8000]
     then_execute: [httpx]
     reason: "porta web aberta → confirmar serviço HTTP vivo (httpx)"
+  - port: [445, 139]
+    then_execute: [enum4linux, nmap-nse]
+    reason: "SMB/Samba aberto → enumeração (enum4linux) + NSE smb-vuln (nmap-nse)"
   - then_execute: [nmap]
     reason: "porta aberta → detecção de serviço/versão (nmap -sV)"
 
