@@ -30,3 +30,6 @@ triggers_on:
   - source_tool: [subfinder]
     then_execute: [dnsx]
     reason: "subdomínio descoberto → resolução DNS antes de sondar portas/web"
+
+# Classe de destrutividade (ADR-0011) — usada pelo Policy Engine.
+impact_class: passive

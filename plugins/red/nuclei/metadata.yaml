@@ -34,3 +34,6 @@ triggers_on:
   - title_contains: ["cve-"]
     then_execute: [cve_enrich]
     reason: "CVE referenciado no template → enriquecimento EPSS/KEV (fonte oficial)"
+
+# Classe de destrutividade (ADR-0011) — usada pelo Policy Engine.
+impact_class: active_safe

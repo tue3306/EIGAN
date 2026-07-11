@@ -50,6 +50,7 @@ class ToolStatus:
     install_hint: str
     roadmap: bool = False
     tool: str = ""  # binário subjacente (usado por `doctor --install`)
+    impact_class: str = ""  # classe de destrutividade (Policy Engine, ADR-0011)
 
 
 @dataclass
@@ -110,6 +111,7 @@ def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = Non
             install_hint=s.metadata.install_hint or s.metadata.version_source,
             roadmap=s.metadata.roadmap,
             tool=s.metadata.tool,
+            impact_class=s.metadata.impact_class.value,
         )
         for s in sorted(reg.all(), key=lambda s: s.name)
     ]
@@ -149,10 +151,13 @@ def render(report: DoctorReport, echo, secho) -> None:
     py = ok if report.python_ok else no
     echo(f"[{py}] Python {report.python_version} (requer 3.11+)")
 
-    echo("\nFerramentas (plugins):")
+    echo("\nFerramentas (plugins) — [impacto: Policy Engine decide autônomo×HITL×recusa]:")
+    _gated = {"exploit_validation", "state_changing"}
     for t in report.tools:
         mark = ok if t.available else no
-        line = f"  [{mark}] {t.name:10} — {t.capabilities}"
+        impact = f" ⟨{t.impact_class}⟩" if t.impact_class else ""
+        gate = " ⚠ requer aprovação humana" if t.impact_class in _gated else ""
+        line = f"  [{mark}] {t.name:10}{impact} — {t.capabilities}{gate}"
         if t.degraded:
             line += "  (DEGRADADO)"
         echo(line)

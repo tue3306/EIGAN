@@ -27,3 +27,6 @@ triggers_on:
   - source_tool: [dnsx]
     then_execute: [naabu]
     reason: "host vivo resolvido → descoberta de portas (naabu)"
+
+# Classe de destrutividade (ADR-0011) — usada pelo Policy Engine.
+impact_class: passive

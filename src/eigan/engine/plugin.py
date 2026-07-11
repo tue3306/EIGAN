@@ -19,6 +19,7 @@ import yaml
 from ..capability import Capability, Category
 from ..findings.schema import Finding
 from ..perspective import Perspective
+from ..policy.impact import ImpactClass
 from .base import BaseToolPlugin
 from .cascade import CascadeRule
 
@@ -63,6 +64,9 @@ class PluginMetadata:
     sel_resource: str = "medium"
     sel_preferred_when: tuple[str, ...] = ()  # tags de contexto que favorecem
     sel_avoid_when: tuple[str, ...] = ()  # tags que desfavorecem/excluem
+    # Classe de destrutividade (ADR-0011): o Policy Engine usa isto para decidir
+    # executar / pedir aprovação humana / recusar. Default conservador: ativa-segura.
+    impact_class: ImpactClass = ImpactClass.ACTIVE_SAFE
     # Grafo de cascata (ADR-0004): regras que, dado um finding, sugerem disparar
     # outras ferramentas. Declarativo — a decisão vive no metadata, não no Core.
     triggers_on: tuple[CascadeRule, ...] = ()
@@ -134,6 +138,9 @@ class PluginMetadata:
             sel_resource=_rating("resource_usage"),
             sel_preferred_when=tuple(_as_list(sel.get("preferred_when"))),
             sel_avoid_when=tuple(_as_list(sel.get("avoid_when"))),
+            impact_class=ImpactClass.from_str(
+                data.get("impact_class"), default=ImpactClass.ACTIVE_SAFE
+            ),
             triggers_on=tuple(triggers),
             path=p,
         )

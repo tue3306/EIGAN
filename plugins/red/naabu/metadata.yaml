@@ -34,3 +34,6 @@ triggers_on:
     reason: "porta web aberta → confirmar serviço HTTP vivo (httpx)"
   - then_execute: [nmap]
     reason: "porta aberta → detecção de serviço/versão (nmap -sV)"
+
+# Classe de destrutividade (ADR-0011) — usada pelo Policy Engine.
+impact_class: active_safe

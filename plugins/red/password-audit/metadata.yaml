@@ -17,3 +17,6 @@ triggers_on:
   - port: [22, 21, 3389, 445, 3306, 5432]
     then_execute: [weak_credential_check]
     reason: "serviço de autenticação exposto → checagem de credenciais fracas (gated)"
+
+# Classe de destrutividade (ADR-0011) — usada pelo Policy Engine.
+impact_class: active_intrusive
