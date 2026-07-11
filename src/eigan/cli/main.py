@@ -504,7 +504,15 @@ def feeds_update():
 
 
 def main() -> None:
-    cli()
+    from ..ai.provider import AIProviderRequired
+
+    try:
+        cli()
+    except AIProviderRequired as exc:
+        # Gate AI-native (§3.4/ADR-0012): mensagem acionável, nunca stack trace.
+        click.secho("\n✗ IA obrigatória — scan recusado.\n", fg="red", bold=True, err=True)
+        click.secho(str(exc), fg="yellow", err=True)
+        sys.exit(3)
 
 
 def deprecated_alias() -> None:

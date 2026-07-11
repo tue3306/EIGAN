@@ -16,6 +16,11 @@ from fastapi.testclient import TestClient
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("EIGAN_DB", str(tmp_path / "api.db"))
+    # EIGAN é AI-native (§3.4/ADR-0012): um provedor precisa existir para o scan
+    # rodar. Uma chave de teste satisfaz o gate; como use_ai=False nestes testes,
+    # nenhuma chamada de rede acontece (execução determinística do substrato).
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.delenv("EIGAN_AI_PROVIDER", raising=False)
     # reimporta o app com o DB temporário e manager limpo.
     import importlib
 
@@ -47,6 +52,40 @@ def test_scan_requires_authorization(client):
         json={"targets": ["10.0.0.5"], "perspective": "internal", "objective": "quick"},
     )
     assert r.status_code == 403  # consent gate preservado
+
+
+def test_scan_requires_ai_provider(client, monkeypatch):
+    # AI-native (§3.4/ADR-0012): sem provedor, o scan é recusado com 428 acionável.
+    for k in (
+        "ANTHROPIC_API_KEY",
+        "OPENAI_API_KEY",
+        "OPENAI_MODEL",
+        "GOOGLE_API_KEY",
+        "GOOGLE_MODEL",
+        "OLLAMA_HOST",
+        "OLLAMA_MODEL",
+        "GROQ_API_KEY",
+        "GROQ_MODEL",
+        "OPENROUTER_API_KEY",
+        "OPENROUTER_MODEL",
+        "TOGETHER_API_KEY",
+        "TOGETHER_MODEL",
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_DEPLOYMENT",
+        "EIGAN_AI_PROVIDER",
+    ):
+        monkeypatch.delenv(k, raising=False)
+    r = client.post(
+        "/api/v1/scans",
+        json={
+            "targets": ["10.0.0.5"],
+            "perspective": "internal",
+            "objective": "quick",
+            "authorized": True,
+        },
+    )
+    assert r.status_code == 428  # Precondition Required: falta provedor de IA
+    assert "provedor de IA" in r.json()["detail"]
 
 
 def test_scan_lifecycle_and_cascade_log(client):

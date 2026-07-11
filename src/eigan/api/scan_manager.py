@@ -169,6 +169,11 @@ class ScanManager:
             raise PermissionError(
                 "Autorização ausente: confirme que você tem permissão para escanear os alvos."
             )
+        # Gate AI-native (§3.4/ADR-0012): EIGAN é um agente de IA — sem provedor,
+        # não há scan. Levanta AIProviderRequired (mapeado p/ HTTP 428 no endpoint).
+        from ..ai.provider import require_provider
+
+        require_provider()
         if not targets:
             raise ValueError("Informe ao menos um alvo.")
         try:

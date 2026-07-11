@@ -33,15 +33,29 @@ def run_wizard(db: str = "eigan.db") -> int:
         click.secho("Nenhum alvo informado.", fg="red")
         return 2
 
-    # Onboarding da IA: se nenhum provedor está pronto, oferece configurar aqui
-    # mesmo (inserir a API). É opcional — pular mantém o modo determinístico.
-    if not _ai_ready() and click.confirm(
-        "\nConfigurar um provedor de IA agora (Claude, GPT, Gemini, Groq, Ollama…)?",
-        default=False,
-    ):
-        from .menu import configure_ai_provider
+    # Gate AI-native (§3.4/ADR-0012): EIGAN é um agente de IA — sem provedor, não
+    # há scan. Oferece configurar aqui mesmo (inserir a API); sem isso, aborta com
+    # uma mensagem acionável (nunca stack trace).
+    if not _ai_ready():
+        click.secho(
+            "\nEIGAN é um agente de IA: você precisa de um provedor para escanear.",
+            fg="yellow",
+        )
+        if click.confirm(
+            "Configurar agora (Claude, GPT, Gemini, Groq, Together, Azure ou Ollama local)?",
+            default=True,
+        ):
+            from .menu import configure_ai_provider
 
-        configure_ai_provider(input_fn=lambda p: click.prompt(p, default="", show_default=False))
+            configure_ai_provider(
+                input_fn=lambda p: click.prompt(p, default="", show_default=False)
+            )
+        if not _ai_ready():
+            from ..ai.provider import _NO_PROVIDER_MSG
+
+            click.secho("\n✗ Sem provedor de IA — scan cancelado.", fg="red", bold=True)
+            click.echo(_NO_PROVIDER_MSG)
+            return 3
 
     click.echo("\nPerspectiva do scan:")
     click.echo("  external — visão de um atacante na internet (recusa alvos privados).")

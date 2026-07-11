@@ -1,5 +1,7 @@
 """Testes de onboarding (termo/escopo) e do diagnóstico `doctor`."""
 
+import pytest
+
 from eigan.capability import Capability, Category
 from eigan.cli import doctor
 from eigan.engine.base import BaseToolPlugin
@@ -8,6 +10,40 @@ from eigan.engine.plugin import PluginMetadata, PluginSpec
 from eigan.engine.registry import PluginRegistry
 from eigan.perspective import Perspective
 from eigan.security.onboarding import accept_terms, build_scope, terms_accepted
+
+_AI_ENV = (
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "OPENAI_MODEL",
+    "GOOGLE_API_KEY",
+    "GOOGLE_MODEL",
+    "OLLAMA_HOST",
+    "OLLAMA_MODEL",
+    "GROQ_API_KEY",
+    "GROQ_MODEL",
+    "EIGAN_AI_PROVIDER",
+)
+
+
+def test_execute_scan_refuses_without_ai_provider(tmp_path, monkeypatch):
+    # AI-native (§3.4/ADR-0012): o gate recusa ANTES de qualquer prompt/execução.
+    for k in _AI_ENV:
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("EIGAN_CONFIG_DIR", str(tmp_path))
+    from eigan.ai.provider import AIProviderRequired
+    from eigan.cli.session import execute_scan
+
+    with pytest.raises(AIProviderRequired):
+        execute_scan(
+            targets=["example.com"],
+            perspective=None,
+            profile="standard",
+            scope_path=None,
+            db=str(tmp_path / "x.db"),
+            assume_yes=True,
+            override_perspective=False,
+            online_enrich=False,
+        )
 
 
 def test_accept_terms_writes_outside_repo_and_is_idempotent(tmp_path, monkeypatch):

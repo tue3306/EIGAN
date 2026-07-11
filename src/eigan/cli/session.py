@@ -75,10 +75,10 @@ def plan_scan(
     """
     goal = Goal.build(goal_kind, targets, perspective=perspective, profile=profile)
     registry = PluginRegistry.discover()
-    completion = _completion(use_ai)
 
     if dry_run:
-        engine = CognitiveEngine(registry, completion=completion)
+        # Preview seguro (nada executa, nada toca a rede): não exige provedor.
+        engine = CognitiveEngine(registry, completion=_completion(use_ai))
         planner, decisions = engine.plan_only(goal)
         return PlanOutcome(
             goal=goal,
@@ -87,7 +87,9 @@ def plan_scan(
             decisions=decisions,
         )
 
-    # execução real: mesma trava de segurança do scan (termo → escopo → consent).
+    # Execução real: a IA é obrigatória (§3.4/ADR-0012). Sem provedor → recusa
+    # acionável antes de qualquer prompt. A IA comanda o scan (AgenticPlanner).
+    completion = _require_completion()
     if not accept_terms(assume_yes=assume_yes, input_fn=input_fn, echo=echo):
         raise SessionAborted("Termo de uso não aceito.")
     scope = build_scope(scope_path, targets, goal.perspective)
@@ -112,17 +114,24 @@ def plan_scan(
 
 
 def _completion(use_ai: bool) -> "CompletionPort | None":
-    """Provedor de IA (se pedido e disponível) para o AIPlanner; senão None
-    (Planner cai no determinístico — fallback §3.4). Os provedores concretos
-    (`_HTTPProvider`) implementam ``complete`` — a porta do Planner."""
+    """Provedor de IA para o preview (dry-run). None se não pedido/indisponível —
+    o dry-run é só uma prévia do plano, não uma execução."""
     if not use_ai:
         return None
-    try:
-        from ..ai.provider import default_provider
+    from ..ai.provider import default_provider
 
-        return cast("CompletionPort | None", default_provider())
-    except Exception:  # noqa: BLE001 — IA indisponível nunca quebra o plano
-        return None
+    return cast("CompletionPort | None", default_provider())
+
+
+def _require_completion() -> "CompletionPort":
+    """Gate AI-native (§3.4/ADR-0012): exige um provedor para executar de verdade.
+
+    Levanta ``AIProviderRequired`` (acionável) se nenhum provedor está configurado.
+    Os provedores concretos (`_HTTPProvider`) implementam ``complete`` — a porta
+    que a IA usa para comandar o scan."""
+    from ..ai.provider import require_provider
+
+    return cast("CompletionPort", require_provider())
 
 
 def execute_scan(
@@ -139,6 +148,9 @@ def execute_scan(
     input_fn=input,
     echo=print,
 ) -> ScanOutcome:
+    # Gate AI-native (§3.4/ADR-0012): sem provedor de IA, o scan é recusado com um
+    # erro acionável — antes de qualquer prompt de termo/consent.
+    _require_completion()
     if not accept_terms(assume_yes=assume_yes, input_fn=input_fn, echo=echo):
         raise SessionAborted("Termo de uso não aceito.")
 

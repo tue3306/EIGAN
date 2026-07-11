@@ -543,8 +543,8 @@ def _config_default_provider() -> str | None:
 
 
 def default_provider(*, client: Any = None) -> AIProvider | None:
-    """Resolve um provedor a partir de env/config. None (sem quebrar) se nada
-    estiver configurado — o produto segue 100% sem IA.
+    """Resolve um provedor a partir de env/config. None se nada estiver
+    configurado (use :func:`require_provider` quando a IA for obrigatória).
 
     Seleção: ``EIGAN_AI_PROVIDER`` (ou ``default:`` em ``config/ai.yaml``) escolhe
     explicitamente; senão auto-detecta na ordem de prioridade. Ollama é local (sem
@@ -558,3 +558,34 @@ def default_provider(*, client: Any = None) -> AIProvider | None:
         if provider is not None:
             return provider
     return None
+
+
+class AIProviderRequired(RuntimeError):
+    """EIGAN é AI-native: sem provedor de IA configurado, não há scan (ADR-0012).
+
+    Erro **acionável** (não é bug): diz exatamente como configurar um provedor.
+    """
+
+
+_NO_PROVIDER_MSG = (
+    "EIGAN é um agente de IA — nenhum scan roda sem um provedor de IA configurado.\n"
+    "Configure um (a chave vai para .env, fora do git, chmod 600):\n"
+    "  • Fácil:  python3 eigan.py  →  Configuração  →  escolher provedor + colar a chave\n"
+    "  • Manual: export EIGAN_AI_PROVIDER=<anthropic|openai|gemini|openrouter|groq|together|azure|ollama>\n"
+    "            export <PROVIDER>_API_KEY=...   (e <PROVIDER>_MODEL, exceto Anthropic)\n"
+    "  • Local:  Ollama (sem chave, sem custo, offline):\n"
+    "            export EIGAN_AI_PROVIDER=ollama OLLAMA_HOST=http://localhost:11434 OLLAMA_MODEL=<modelo>\n"
+    "Guia completo: docs/ai-providers.md"
+)
+
+
+def require_provider(*, client: Any = None) -> AIProvider:
+    """Retorna o provedor de IA ativo ou levanta :class:`AIProviderRequired`.
+
+    É o **gate AI-native** (§3.4/ADR-0012): os pontos de entrada de execução de
+    scan chamam isto antes de rodar qualquer coisa — sem provedor, recusa com um
+    erro acionável, nunca um stack trace."""
+    provider = default_provider(client=client)
+    if provider is None:
+        raise AIProviderRequired(_NO_PROVIDER_MSG)
+    return provider

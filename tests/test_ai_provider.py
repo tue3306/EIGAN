@@ -99,6 +99,23 @@ def test_default_provider_none_without_config():
     assert default_provider() is None
 
 
+def test_require_provider_raises_without_config():
+    # AI-native (§3.4/ADR-0012): sem provedor, recusa acionável (não None, não crash).
+    from eigan.ai.provider import AIProviderRequired, require_provider
+
+    with pytest.raises(AIProviderRequired) as exc:
+        require_provider()
+    assert "provedor de IA" in str(exc.value)
+    assert "ollama" in str(exc.value).lower()  # mensagem aponta a opção local
+
+
+def test_require_provider_returns_when_configured(monkeypatch):
+    from eigan.ai.provider import require_provider
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant")
+    assert isinstance(require_provider(), AnthropicProvider)
+
+
 def test_default_provider_anthropic_from_key(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-x")
     provider = default_provider()

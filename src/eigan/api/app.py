@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .. import __version__
-from ..ai.provider import default_provider
+from ..ai.provider import AIProviderRequired, default_provider
 from ..analysis.attack import map_attack
 from ..analysis.compliance import assess_compliance
 from ..analysis.inventory import build_inventory, summarize
@@ -308,6 +308,9 @@ def start_scan(req: ScanRequest) -> dict:
         )
     except PermissionError as exc:
         raise HTTPException(403, str(exc)) from exc
+    except AIProviderRequired as exc:
+        # 428 Precondition Required: falta um provedor de IA (§3.4/ADR-0012).
+        raise HTTPException(428, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return job.summary()
