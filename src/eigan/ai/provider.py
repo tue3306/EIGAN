@@ -1,12 +1,13 @@
-"""Camada de IA opcional com fallback determinístico.
+"""Camada de IA — provedor multi-fornecedor (AI-native, ADR-0012).
 
-Princípio (CLAUDE.md §3.3/§7): a IA NUNCA é dependência de função básica. Toda
-função de enriquecimento tem um caminho determinístico equivalente que roda sem
-nenhuma chave de API, alimentado pela base de conhecimento.
+EIGAN é um agente de IA: sem um provedor configurado, o scan é recusado
+(:func:`require_provider`). Registro modular (:class:`ProviderSpec`) para
+Anthropic/OpenAI/Gemini/OpenRouter/Groq/Together/Azure + **Ollama local**.
 
-A IA apenas *lê e explica* findings já produzidos pelo engine — nunca escaneia
-nem afirma CVE/versão fora das evidências (grounding). Toda saída de IA é
-marcada ``ai_generated=True``.
+Os mecanismos determinísticos (skills/`DeterministicEnricher`, cascata) são o
+**substrato** que a IA comanda — não um "modo sem IA". A IA nunca afirma
+CVE/versão fora das evidências (grounding); toda saída é marcada
+``ai_generated=True``; **redaction** de segredos/PII antes de provedor externo.
 """
 
 from __future__ import annotations

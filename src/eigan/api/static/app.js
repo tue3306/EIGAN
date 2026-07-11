@@ -98,7 +98,7 @@ async function boot() {
 function setupBanner(s) {
   if (!s) return '';
   const items = [];
-  if (!s.ai.enabled) items.push(`🤖 <b>IA desligada</b> — o produto funciona 100% sem ela. ${esc(s.ai.hint)}`);
+  if (!s.ai.enabled) items.push(`🤖 <b>Provedor de IA obrigatório</b> — o EIGAN é um agente de IA; sem provedor o scan é recusado. ${esc(s.ai.hint)}`);
   if (s.pdf && !s.pdf.available) items.push(`📄 <b>PDF indisponível</b> — relatórios saem em HTML. ${esc(s.pdf.detail)}`);
   const miss = (s.tools && s.tools.missing_real) || [];
   if (miss.length) items.push(`🛠️ <b>${miss.length} ferramenta(s) ausente(s)</b> (${miss.slice(0, 6).map(esc).join(', ')}) — <span class="mono">${esc(s.tools.hint)}</span>`);

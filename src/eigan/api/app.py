@@ -93,8 +93,8 @@ def meta() -> dict:
 
 @app.get("/api/v1/setup")
 def setup_status() -> dict:
-    """Estado do ambiente para o onboarding visual: o que está degradado e como
-    resolver (IA opcional, PDF opcional, ferramentas ausentes)."""
+    """Estado do ambiente para o onboarding visual: o que falta e como resolver.
+    A IA é **obrigatória** (AI-native); PDF/ferramentas degradam graciosamente."""
     from ..cli import doctor as doctor_mod
 
     report = doctor_mod.gather()
@@ -102,8 +102,10 @@ def setup_status() -> dict:
     return {
         "ai": {
             "enabled": default_provider() is not None,
+            "required": True,  # AI-native (ADR-0012): sem provedor, o scan é recusado
             "key_detected": any(os.getenv(k) for k in _AI_ENV),
-            "hint": "Defina ANTHROPIC_API_KEY (ou OPENAI/GOOGLE + _MODEL, ou Ollama) — opcional.",
+            "hint": "Configure um provedor: EIGAN_AI_PROVIDER + chave (ou Ollama local, offline). "
+            "Sem provedor o scan é recusado. Ver docs/ai-providers.md.",
         },
         "pdf": {
             "available": report.pdf_available,
