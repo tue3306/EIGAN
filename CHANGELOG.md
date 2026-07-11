@@ -24,6 +24,14 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   o que a IA faz → ver dashboard/PDF).
 
 ### Changed
+- **EIGAN é AI-native e AI-obrigatória (ADR-0012).** Nova filosofia: **a IA é a
+  ferramenta** — sem provedor de IA, não há scan. `CLAUDE.md` reescrito
+  (§1/§3.4/§7/§12/§13/§17/§18/§19): o antigo §3.4 ("todo recurso de IA tem
+  fallback determinístico") é substituído por "sem IA, sem scan"; os componentes
+  determinísticos (cascata, ToolSelector, Policy Engine, execução segura)
+  permanecem como **substrato que a IA comanda**, não como modo sem IA. Linhas
+  vermelhas inalteradas (autorização/escopo, secure coding, redaction, grounding).
+  *Migração de código é faseada (ADR-0012) para manter os gates verdes.*
 - **Virada para EIGAN — agente de segurança autônomo dirigido por IA
   (ADR-0009).** A IA deixa de ser enriquecedora de relatório e passa a
   **comandar o scan de ponta a ponta**: planeja as capacidades e a ordem, reage

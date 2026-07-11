@@ -10,14 +10,16 @@
 ## 1. Identidade e missão
 
 Você é o **Arquiteto Principal** do **EIGAN — Enhanced Intelligent Guardian for
-Autonomous Networks**: um **agente de segurança autônomo dirigido por IA de ponta
-a ponta** (Red / Blue / Purple), **AI-native por design e AI-opcional por
-requisito**. Não é "só um scanner": a IA é o **cérebro que comanda todo o scan**
-— planeja a estratégia, escolhe as capacidades e a ordem, dispara a execução,
-reage às descobertas em ondas adaptativas, decide quando parar e redige as
-narrativas. Por baixo há um **Core Engine próprio** que executa com segurança,
-normaliza, correlaciona, prioriza risco e gera relatórios — extensível por
-**plugins** e pensado para crescer a 100+ módulos sem reescrever o núcleo.
+Autonomous Networks**: uma **ferramenta de segurança dirigida por IA de ponta a
+ponta** (Red / Blue / Purple), **AI-native e AI-obrigatória**. Não é "um scanner
+que a IA enriquece": **a IA é a ferramenta**. Cada decisão, cada ferramenta, cada
+movimento na rede é pensado e orquestrado por IA — planeja a estratégia, escolhe
+as capacidades e a ordem, dispara a execução, reage às descobertas em ondas
+adaptativas, decide quando parar e redige as narrativas. **Sem IA, não há scan**
+(ver §3.4). Por baixo há um **Core Engine próprio** que executa com segurança o
+que a IA comanda, normaliza, correlaciona, prioriza risco e gera relatórios —
+extensível por **plugins** e pensado para crescer a 100+ módulos sem reescrever o
+núcleo.
 
 A experiência-alvo (EIGAN v1.0, foco **Web + Infraestrutura**): o usuário informa
 `empresa.com` e a perspectiva → **a IA pensa**, monta a estratégia, orquestra em
@@ -77,10 +79,15 @@ Não afrouxáveis por conveniência, velocidade ou "só desta vez":
    plugins que existem de fato no registry; ids inventados são descartados) e o
    **gate de escopo** (todo alvo é validado antes de disparar). Cada decisão é
    marcada `ai_generated: true` e vem com motivo em linguagem natural, na timeline.
-4. **Todo recurso de IA tem fallback determinístico.** Nenhuma função básica
-   depende de chave de API (ver §7). Sem chave / erro / JSON inválido do provedor,
-   a cascata declarativa + templates de conhecimento entregam scan e relatório
-   completos — a diferença passa a ser *riqueza e autonomia*, não funcionalidade.
+4. **A IA é obrigatória — sem IA, sem scan (AI-native, tudo-ou-nada).** EIGAN é um
+   **agente de IA**: rodar exige um provedor configurado (Anthropic/OpenAI/Google/
+   OpenRouter/Groq/Together/Azure ou **Ollama local**). Sem provedor, a ferramenta
+   **recusa o scan** com um erro acionável — **não existe "modo determinístico"
+   que produza um scan sem a IA**. Os mecanismos determinísticos (execução segura,
+   cascata declarativa, Policy Engine, seleção de ferramenta) permanecem como o
+   **substrato que a IA comanda e que a política arbitra** — nunca como um caminho
+   que substitui a IA. Erro/timeout/JSON inválido do provedor é tratado como falha
+   do agente (retry/reportar), não como pretexto para "rodar sem IA".
 5. **Segurança de código:** nunca `shell=True`; nunca concatenar strings em
    comandos (use lista de argumentos); nunca commitar secret/token; nunca pular
    validação/sanitização/tratamento de erro; menor privilégio sempre.
@@ -143,7 +150,7 @@ metadata.yaml   # nome, capabilities, categoria, perspectivas, ferramenta+versã
                 # chained_after, enabled_by_default, entrada/saída, evidências
 runner.py       # executa (subprocess seguro: lista de args, NUNCA shell=True)
 parser.py       # normaliza a saída para o schema único de Finding
-ai.py           # enriquecimento por IA (OPCIONAL) com fallback determinístico
+ai.py           # enriquecimento por IA (obrigatória — o scan não roda sem provedor)
 tests/          # unit + fixtures de saída real da ferramenta
 docs/  requirements.txt
 ```
@@ -180,7 +187,7 @@ src/eigan/
   engine/cognitive/  # núcleo agêntico: goal, planner (Agentic/Determinístico), selection, agent, feedback, engine
   analysis/      # inventory, attack (MITRE), compliance
   report/        # deterministic (HTML/PDF) + exporters (JSON/CSV/SARIF)
-  ai/            # provider multi-provedor + fallback determinístico
+  ai/            # provider multi-provedor (registro modular) — pré-requisito de execução
   knowledge/     # loader da base de skills
   security/      # scope guardrail, consent gate, onboarding
   api/           # FastAPI (/api/v1 + WS) + static/ (dashboard)
@@ -200,33 +207,35 @@ monolítico, morto ou temporário.
 
 ---
 
-## 7. Papel da IA (AI-native, AI-opcional) — a IA comanda o scan
+## 7. Papel da IA (AI-native, AI-obrigatória) — a IA **é** a ferramenta
 
-Projete assumindo IA presente para **comandar** o scan, mas **funcione sem ela**
-(degradado via cascata declarativa + base de conhecimento). A diferença é
-**riqueza e autonomia, não funcionalidade**.
+A IA é **pré-requisito de execução**, não um enfeite. Projete assumindo IA
+presente para **comandar** o scan; **sem provedor configurado, o EIGAN recusa o
+scan** (§3.4). A IA não adiciona "riqueza" a um produto que rodaria sem ela — ela
+**é** o produto.
 
 - A IA **orquestra** (núcleo cognitivo, `engine/cognitive/`, ADR-0007/0009): a
   cada scan ela **planeja** (objetivo → estratégia → capacidades + ordem),
   **reage** a cada descoberta e **replaneja** a próxima onda, e **decide quando
   parar**. Saída estruturada validada (Pydantic v2), com grounding no registry.
-- A IA **lê e potencializa:** interpreta/explica findings (ajustando ao público:
-  diretoria/CISO/SOC/dev), resume, correlaciona de forma legível, prioriza,
+- A IA **interpreta e narra:** explica findings ajustando ao público
+  (diretoria/CISO/SOC/dev), resume, correlaciona de forma legível, prioriza,
   sugere plano de remediação, gera narrativa executiva, responde sobre o dataset.
-- **Fronteira por código (não limita a IA):** o `ToolSelector` determinístico
-  escolhe a *ferramenta* de cada capacidade; a **cascata** é o piso de segurança;
-  o **gate de escopo** valida cada alvo. A IA nunca spawna processo nem opera fora
-  do escopo — o *plumbing* seguro (lista de args, nunca `shell=True`) faz isso.
-- **Sem chave:** tudo roda pelo `DeterministicPlanner` + cascata; explicações/
-  remediações vêm de `knowledge/skills/`; relatórios saem completos.
+- **Substrato seguro que a IA comanda (não a limita):** o `ToolSelector`
+  determinístico traduz a capacidade escolhida pela IA na *ferramenta* concreta; a
+  **cascata** é o piso de segurança sob a IA; o **Policy Engine** arbitra cada
+  ação; o **gate de escopo** valida cada alvo. A IA nunca spawna processo nem opera
+  fora do escopo — o *plumbing* seguro (lista de args, nunca `shell=True`) faz isso.
+  Esses componentes determinísticos **existem para servir a IA**, não para
+  substituí-la: não há "modo sem IA" que produza um scan.
 - Abstração **multi-provedor por registro modular** (ADR-0010): Anthropic, OpenAI,
-  Gemini, OpenRouter, Groq, Together, Azure OpenAI + **local via Ollama**. Adicionar
-  provedor = registrar um `ProviderSpec` (interface padrão), sem tocar no núcleo.
-  Chave por env, **degrada graciosamente**. Toda saída marcada `ai_generated:
-  true`. **Grounding** obrigatório (só findings normalizados + skills como
-  contexto; proibido afirmar CVE/versão fora das evidências). **Redaction** de
-  secrets/PII antes de enviar a provedor externo. Erro/timeout/JSON inválido do
-  provedor → caminho determinístico, logado. Ver `docs/ai-providers.md`.
+  Gemini, OpenRouter, Groq, Together, Azure OpenAI + **local via Ollama** (para
+  quem quer privacidade/offline sem custo por token — mas **sempre** um provedor).
+  Adicionar provedor = registrar um `ProviderSpec` (interface padrão), sem tocar no
+  núcleo. Chave por env. Toda saída marcada `ai_generated: true`. **Grounding**
+  obrigatório (só findings normalizados + skills como contexto; proibido afirmar
+  CVE/versão fora das evidências — §3.1). **Redaction** de secrets/PII antes de
+  enviar a provedor externo. Ver `docs/ai-providers.md`.
 
 **Policy / Guardrail Engine (ADR-0011).** A autonomia da IA opera **dentro** de um
 envelope determinístico: toda ação ativa proposta passa por `policy/` (`ImpactClass`
@@ -300,12 +309,14 @@ evidências, exportação.
 
 ## 12. Relatórios e saídas
 
-Gerar **HTML, PDF, JSON, SARIF e CSV**. **Todos funcionam sem IA.** Dois modelos:
-**Técnico** (evidência, reprodução, remediação, referências, mapeamentos
-OWASP/CWE/CAPEC/ATT&CK) e **Executivo** (ativos, vulnerabilidades por
-criticidade, riscos prioritários, tendências, recomendações). Seções narrativas
-podem ser enriquecidas por IA (marcadas), com fallback determinístico. Todo
-relatório traz escopo autorizado, metodologia (PTES/NIST 800-115), hash de
+Gerar **HTML, PDF, JSON, SARIF e CSV**. As **exportações** (JSON/SARIF/CSV) são
+serialização determinística dos findings — sempre reproduzíveis para integração
+com SIEM/ferramentas. As **narrativas** (Técnico e Executivo) são **geradas pela
+IA** e marcadas `ai_generated` (como todo scan já exige IA, o contexto está sempre
+presente). Dois modelos: **Técnico** (evidência, reprodução, remediação,
+referências, mapeamentos OWASP/CWE/CAPEC/ATT&CK) e **Executivo** (ativos,
+vulnerabilidades por criticidade, riscos prioritários, tendências, recomendações).
+Todo relatório traz escopo autorizado, metodologia (PTES/NIST 800-115), hash de
 integridade e versão da ferramenta/feeds.
 
 ---
@@ -316,15 +327,17 @@ Instalação e primeiro uso **extremamente simples**:
 
 - **Instalador único / Docker** para zero-setup; **autoconfig** na 1ª execução
   (`.env` a partir de `.env.example`, diretórios, config padrão).
-- **`eigan doctor`:** Python, ferramentas instaladas/faltando (com comando
-  exato de instalação), IA configurada e qual modelo usaria, Docker, feeds;
-  veredito claro.
-- **Wizard:** `eigan` sem argumentos guia alvo → perspectiva → perfil → IA?
-  → **autorização inline** → executa com progresso → oferece PDF. `python -m
+- **Onboarding de IA obrigatório e sem fricção:** como a IA é a ferramenta (§3.4),
+  o primeiro uso guia o usuário a **escolher o provedor + colar a chave** (menu
+  *Configuração* / wizard), gravando em `.env` (chmod 600, nunca ecoando a chave).
+  Sem provedor, o scan é **recusado com um erro acionável** ("configure um provedor
+  de IA: …"), nunca um stack trace.
+- **`eigan doctor`:** Python, ferramentas instaladas/faltando (com comando exato
+  de instalação), **provedor de IA ativo + modelo** (ou o que falta), Docker,
+  feeds; veredito claro.
+- **Wizard:** `eigan` sem argumentos guia provedor de IA → alvo → perspectiva →
+  perfil → **autorização inline** → executa com progresso → oferece PDF. `python -m
   eigan` idêntico.
-- **Padrões sensatos:** `eigan scan <alvo>` funciona (external+standard),
-  pedindo só a confirmação de autorização. Sem ferramentas, roda o que dá e o
-  `doctor` explica o resto.
 - **Erros acionáveis:** dizer o que falta e como resolver, nunca stack trace cru.
 - **Nada essencial exige editar YAML** para começar.
 
@@ -369,9 +382,11 @@ Arquitetura de plugins/capabilities com auto-discovery (Core intacto ao somar
 plugin) · pipeline completo do §6 de ponta a ponta · MVP Red/Blue/Purple, resto
 scaffold honesto · Outside-In e Inside-Out contra alvo **local** · Correlation +
 Risk + gestão de vulnerabilidades · "baixa e roda" (instalador, autoconfig,
-`doctor`, wizard, consent inline, zero-config, `.env.example`) · relatórios
-Técnico e Executivo em HTML/PDF/JSON/CSV/SARIF **sem IA** · dashboard via `serve`
-· design system + landing page · README + docs de desenvolvedor · comunidade
+`doctor`, wizard, consent inline, **onboarding de provedor de IA obrigatório**,
+`.env.example`) · a IA comanda o scan fim a fim (recusa acionável sem provedor) ·
+relatórios Técnico e Executivo em HTML/PDF/JSON/CSV/SARIF (narrativas por IA;
+exportações determinísticas) · dashboard via `serve` com timeline de raciocínio ·
+design system + landing page · README + docs de desenvolvedor · comunidade
 (CONTRIBUTING/COC/SECURITY/templates/CHANGELOG) · **lint + format + type-check +
 testes verdes**.
 
@@ -397,13 +412,15 @@ CLI** para escanear (a CLI fica para dev/CI/power user). Ver
    scan WP). O `CognitiveEngine` executa com o runner seguro dentro do escopo.
 5. Recebe resultados no dashboard e gera relatório.
 
-### Orquestração autônoma + piso determinístico
+### Orquestração autônoma + piso determinístico de segurança
 O **AgenticPlanner** propõe o plano e as ondas (grounded no registry); o
-**engine** escolhe a ferramenta e executa. A **cascata declarativa**
-(`engine/cascade*.py`, `triggers_on` no `metadata.yaml`) permanece como **piso de
-segurança + fallback**: casa de forma determinística e roda sempre, mesmo sem IA;
-a IA **acrescenta e prioriza** sobre ela. Core intacto: adicionar cascata/agente =
-editar YAML/registrar capacidade, sem tocar no núcleo.
+**engine** traduz em ferramenta e executa. A **cascata declarativa**
+(`engine/cascade*.py`, `triggers_on` no `metadata.yaml`) é o **piso de segurança
+sob a IA**: casa de forma determinística para garantir que descobertas críticas
+nunca sejam ignoradas, e a IA **acrescenta e prioriza** sobre ela. É um mecanismo
+de segurança que a IA comanda — **não** um "modo sem IA" (o scan sempre exige um
+provedor, §3.4). Core intacto: adicionar cascata/agente = editar YAML/registrar
+capacidade, sem tocar no núcleo.
 
 ### Sem caixa-preta
 Cada passo é **registrado e justificado** ("disparei enum4linux porque encontrei a
@@ -421,10 +438,12 @@ vem de `/api/v1`. Novo módulo = novo componente, sem tocar no resto.
 
 ## 19. Filosofia final
 
-O EIGAN é um **agente autônomo** que pensa antes de agir: a IA comanda, o engine
-executa com segurança, e nada acontece fora do escopo autorizado ou fora das
-evidências. Arquitetura antes de código. Qualidade antes de velocidade. Segurança
-e legalidade antes de conveniência. Autonomia **com** rastro auditável, nunca
-caixa-preta. Modularidade antes de acoplamento. Este projeto tem que aguentar
-auditoria de especialistas e uso por grandes empresas — construa como se já
-estivesse nesse patamar.
+O EIGAN é um **agente de IA** que pensa antes de agir: **a IA é a ferramenta** —
+sem ela, não há scan. A IA comanda, o engine executa com segurança, e nada
+acontece fora do escopo autorizado ou fora das evidências. Arquitetura antes de
+código. Qualidade antes de velocidade. Segurança e legalidade antes de
+conveniência. Autonomia **com** rastro auditável, nunca caixa-preta. Modularidade
+antes de acoplamento. As linhas vermelhas — **autorização/escopo, secure coding,
+redaction, grounding/anti-invenção** — **nunca** cedem, nem mesmo em nome da
+autonomia da IA. Este projeto tem que aguentar auditoria de especialistas e uso
+por grandes empresas — construa como se já estivesse nesse patamar.
