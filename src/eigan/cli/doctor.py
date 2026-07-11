@@ -21,12 +21,24 @@ from ..engine.feeds import FeedCache
 from ..engine.registry import PluginRegistry
 from ..report.pdf_support import pdf_status
 
-_AI_ENV = {
-    "ANTHROPIC_API_KEY": "Anthropic",
-    "OPENAI_API_KEY": "OpenAI",
-    "GOOGLE_API_KEY": "Google",
-    "OLLAMA_HOST": "Ollama (local)",
-}
+
+def _detect_ai() -> str | None:
+    """Provedor de IA ativo, via o registro modular (ai/provider.py).
+
+    Reflete a seleção real: provedor totalmente configurado (chave + modelo).
+    Um provedor com chave mas SEM modelo aparece como pendente — sem fabricar id."""
+    from ..ai.provider import list_providers
+
+    ready = [s for s in list_providers() if s.configured()]
+    if ready:
+        s = ready[0]
+        return f"{s.label} · modelo={s.model()}"
+    # chave presente mas modelo faltando? sinaliza o que falta (acionável).
+    partial = [s for s in list_providers() if s.credential() and not s.model()]
+    if partial:
+        s = partial[0]
+        return f"{s.label} — falta definir {s.model_env} (sem fabricar id de modelo)"
+    return None
 
 
 @dataclass
@@ -112,7 +124,7 @@ def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = Non
         )
         for a in AgentRegistry.default().agents
     ]
-    ai_provider = next((label for env, label in _AI_ENV.items() if os.getenv(env)), None)
+    ai_provider = _detect_ai()
     fc = feeds if feeds is not None else FeedCache.load()
     pdf_ok, pdf_detail = pdf_status()
     return DoctorReport(
@@ -155,14 +167,12 @@ def render(report: DoctorReport, echo, secho) -> None:
             echo(f"  [{mark}] {a.name:16} — {state}")
             echo(f"          {a.description}")
 
-    echo("\nIA (opcional):")
+    echo("\nIA (opcional) — provedor modular, ver docs/ai-providers.md:")
     if report.ai_provider:
-        echo(
-            f"  [{ok}] provedor detectado: {report.ai_provider} "
-            "(modelo em config/ai.yaml — marcado VERIFICAR até confirmar)."
-        )
+        echo(f"  [{ok}] {report.ai_provider}")
     else:
-        echo("  [i] nenhuma chave detectada — o EIGAN funciona 100% sem IA (modo determinístico).")
+        echo("  [i] nenhum provedor configurado — o EIGAN funciona 100% sem IA (determinístico).")
+        echo("      configure com o menu (opção Configuração) ou EIGAN_AI_PROVIDER + chave.")
 
     echo("\nDocker (sandbox de ferramentas):")
     echo(

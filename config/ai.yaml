@@ -3,33 +3,64 @@
 # funciona via fallback determinístico (base de conhecimento).
 # Chaves vêm SEMPRE de variáveis de ambiente, NUNCA deste arquivo.
 
+# Escolha explícita do provedor (opcional). Se vazio, o EIGAN auto-detecta na
+# ordem de prioridade abaixo. Também pode ser definido por env EIGAN_AI_PROVIDER.
+# Valores: anthropic | openai | gemini | openrouter | groq | together | azure | ollama
+default: null
+
 ai:
   enabled: false          # ativado automaticamente se houver chave/provedor
-  default_provider: null  # anthropic | openai | google | ollama
 
   redaction:
     # remove segredos/PII antes de enviar a provedor EXTERNO (não local).
     enabled: true
 
-  # Prioridade de seleção: anthropic → openai → google → ollama.
+  # Prioridade de auto-detecção:
+  #   anthropic → openai → gemini → openrouter → groq → together → azure → ollama
   # Só a Anthropic tem modelo padrão fixo (verificado); os demais exigem
   # <PROVIDER>_MODEL no ambiente — sem ele o provedor fica inativo (anti-invenção,
-  # não fabricamos um id de modelo não confirmado). O `model` abaixo é referência;
-  # a fonte de verdade em runtime é a variável de ambiente correspondente.
+  # §3.1: não fabricamos um id de modelo não confirmado). Os endpoints OpenAI-compat
+  # foram confirmados na doc oficial e são sobrescritíveis por <PROVIDER>_BASE_URL.
+  #
+  # Adicionar um provedor NOVO é modular: implemente um _HTTPProvider (ou reuse
+  # _OpenAICompatProvider) e registre um ProviderSpec em ai/provider.py — nada mais
+  # no código muda. Ver docs/ai-providers.md.
   providers:
     anthropic:
       api_key_env: ANTHROPIC_API_KEY
       model_env: ANTHROPIC_MODEL
-      model: "claude-opus-4-8"   # padrão quando ANTHROPIC_MODEL não é definido
+      model: "claude-opus-4-8"      # padrão quando ANTHROPIC_MODEL não é definido
     openai:
       api_key_env: OPENAI_API_KEY
       model_env: OPENAI_MODEL
-      model: null                # exige OPENAI_MODEL — sem padrão fabricado
-    google:
+      base_url_env: OPENAI_BASE_URL # default https://api.openai.com/v1
+      model: null                   # exige OPENAI_MODEL — sem padrão fabricado
+    gemini:
       api_key_env: GOOGLE_API_KEY
       model_env: GOOGLE_MODEL
-      model: null                # exige GOOGLE_MODEL
+      model: null                   # exige GOOGLE_MODEL
+    openrouter:
+      api_key_env: OPENROUTER_API_KEY
+      model_env: OPENROUTER_MODEL
+      base_url_env: OPENROUTER_BASE_URL   # default https://openrouter.ai/api/v1
+      model: null
+    groq:
+      api_key_env: GROQ_API_KEY
+      model_env: GROQ_MODEL
+      base_url_env: GROQ_BASE_URL         # default https://api.groq.com/openai/v1
+      model: null
+    together:
+      api_key_env: TOGETHER_API_KEY
+      model_env: TOGETHER_MODEL
+      base_url_env: TOGETHER_BASE_URL     # default https://api.together.xyz/v1
+      model: null
+    azure:
+      api_key_env: AZURE_OPENAI_API_KEY
+      model_env: AZURE_OPENAI_DEPLOYMENT  # o "modelo" é o nome do deployment
+      endpoint_env: AZURE_OPENAI_ENDPOINT # https://<resource>.openai.azure.com
+      api_version_env: AZURE_OPENAI_API_VERSION  # muda; venha por env (# VERIFICAR)
+      model: null
     ollama:
-      host_env: OLLAMA_HOST       # ex.: http://localhost:11434 — modelo local, sem redaction obrigatória
+      host_env: OLLAMA_HOST         # ex.: http://localhost:11434 — local, sem redaction
       model_env: OLLAMA_MODEL
-      model: null                # exige OLLAMA_MODEL
+      model: null                   # exige OLLAMA_MODEL

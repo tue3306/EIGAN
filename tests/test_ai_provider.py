@@ -14,11 +14,15 @@ from eigan.ai.provider import (
     AnthropicProvider,
     Enricher,
     Explanation,
+    GroqProvider,
     OpenAIProvider,
+    ProviderSpec,
     _build_prompts,
     _parse_explanation,
     default_provider,
+    list_providers,
     redact,
+    register,
 )
 from eigan.findings.schema import Finding, Severity
 from eigan.knowledge.loader import KnowledgeBase
@@ -32,6 +36,17 @@ _AI_ENV = (
     "OPENAI_MODEL",
     "GOOGLE_MODEL",
     "OLLAMA_MODEL",
+    "GROQ_API_KEY",
+    "GROQ_MODEL",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_MODEL",
+    "TOGETHER_API_KEY",
+    "TOGETHER_MODEL",
+    "AZURE_OPENAI_API_KEY",
+    "AZURE_OPENAI_DEPLOYMENT",
+    "AZURE_OPENAI_ENDPOINT",
+    "AZURE_OPENAI_API_VERSION",
+    "EIGAN_AI_PROVIDER",
 )
 
 
@@ -96,6 +111,64 @@ def test_default_provider_openai_requires_model(monkeypatch):
     assert default_provider() is None  # sem OPENAI_MODEL → não fabricamos um id
     monkeypatch.setenv("OPENAI_MODEL", "algum-modelo")
     assert isinstance(default_provider(), OpenAIProvider)
+
+
+# --------------------------------------------------------------------------- #
+# Registro modular de provedores (§ AI Providers)
+# --------------------------------------------------------------------------- #
+def test_registry_lists_all_expected_providers():
+    names = {s.name for s in list_providers()}
+    # o pedido: independência de provedor único, extensível.
+    assert {
+        "anthropic",
+        "openai",
+        "gemini",
+        "openrouter",
+        "groq",
+        "together",
+        "azure",
+        "ollama",
+    } <= names
+
+
+def test_explicit_provider_selection_via_env(monkeypatch):
+    # o usuário escolhe o provedor por env, mesmo com outra chave presente.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant")  # anthropic tem prioridade…
+    monkeypatch.setenv("GROQ_API_KEY", "gsk-x")
+    monkeypatch.setenv("GROQ_MODEL", "algum-modelo")
+    monkeypatch.setenv("EIGAN_AI_PROVIDER", "groq")  # …mas a escolha explícita vence
+    assert isinstance(default_provider(), GroqProvider)
+
+
+def test_groq_uses_confirmed_openai_compatible_base_url():
+    httpx = pytest.importorskip("httpx")
+    captured = {}
+
+    def handler(request):
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    provider = GroqProvider(model="algum-modelo", credential="gsk", client=client)
+    assert provider.complete("s", "u") == "ok"
+    assert captured["url"] == "https://api.groq.com/openai/v1/chat/completions"
+
+
+def test_register_new_provider_without_touching_core():
+    # adicionar provedor = registrar um ProviderSpec (interface padrão), sem
+    # alterar o resto do código — exatamente o requisito de modularidade.
+    register(
+        ProviderSpec(
+            "meu_provedor",
+            "Provedor Custom",
+            OpenAIProvider,
+            "MEUPROV_API_KEY",
+            "MEUPROV_MODEL",
+            base_url_env="MEUPROV_BASE_URL",
+            default_base_url="https://exemplo/v1",
+        )
+    )
+    assert any(s.name == "meu_provedor" for s in list_providers())
 
 
 # --------------------------------------------------------------------------- #

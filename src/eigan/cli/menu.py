@@ -30,7 +30,6 @@ from ..findings.store import FindingStore
 from ..security.onboarding import config_dir, terms_accepted
 from . import doctor as doctor_mod
 
-_AI_ENV = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "OLLAMA_HOST")
 _REPORT_FORMATS = ("html", "pdf", "json", "csv", "sarif")
 _REPORT_STYLES = ("technical", "executive")
 _YES = {"s", "sim", "y", "yes"}
@@ -174,14 +173,94 @@ def _generate_report(
     echo(f"Relatório gerado: {path}")
 
 
+def _upsert_env(values: dict[str, str], path: str = ".env") -> None:
+    """Grava/atualiza chaves KEY=VALUE em ``.env`` (fora do git), preservando o
+    resto. Nunca imprime o valor. Cria o arquivo se não existir."""
+    lines: list[str] = []
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    seen: set[str] = set()
+    for i, line in enumerate(lines):
+        key = line.split("=", 1)[0].strip().lstrip("#").strip()
+        if key in values:
+            lines[i] = f"{key}={values[key]}"
+            seen.add(key)
+    for key, val in values.items():
+        if key not in seen:
+            lines.append(f"{key}={val}")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+    os.chmod(path, 0o600)  # chaves são sensíveis: só o dono lê
+
+
+def configure_ai_provider(
+    *, input_fn: Callable[[str], str] = input, echo: Callable = print
+) -> None:
+    """Setup interativo do provedor de IA: escolher provedor → chave → modelo.
+
+    Grava em ``.env`` (nunca ecoa a chave) e define ``EIGAN_AI_PROVIDER``. A IA é
+    opcional: pular mantém o modo determinístico 100% funcional."""
+    from ..ai.provider import list_providers
+
+    specs = list_providers()
+    echo("\nProvedores de IA disponíveis (o EIGAN é independente de provedor):")
+    for i, s in enumerate(specs, start=1):
+        echo(f"  {i:>2}. {s.label}")
+        echo(f"      {s.scan_fit}")
+    echo("   0. Pular (seguir sem IA — modo determinístico)")
+    raw = input_fn("\nEscolha o provedor [0]: ").strip() or "0"
+    if not raw.isdigit() or int(raw) == 0 or int(raw) > len(specs):
+        echo("Mantido sem IA. O EIGAN segue 100% funcional (determinístico).")
+        return
+    spec = specs[int(raw) - 1]
+    values: dict[str, str] = {"EIGAN_AI_PROVIDER": spec.name}
+
+    key_label = (
+        "URL do host (ex.: http://localhost:11434)" if spec.name == "ollama" else "chave de API"
+    )
+    cred = input_fn(f"{spec.label} — {key_label}: ").strip()
+    if not cred:
+        echo("Sem credencial — nada foi alterado.")
+        return
+    values[spec.key_env] = cred
+
+    model_hint = "deployment" if spec.name == "azure" else "modelo"
+    default_note = f" (Enter usa o padrão {spec.default_model})" if spec.default_model else ""
+    model = input_fn(f"{model_hint}{default_note}: ").strip()
+    if model:
+        values[spec.model_env] = model
+    elif not spec.default_model:
+        echo(f"Aviso: sem {spec.model_env}, o provedor fica inativo (não fabricamos id).")
+    if spec.name == "azure":
+        endpoint = input_fn("AZURE_OPENAI_ENDPOINT (https://<resource>.openai.azure.com): ").strip()
+        api_ver = input_fn("AZURE_OPENAI_API_VERSION (confirme na doc): ").strip()
+        if endpoint:
+            values["AZURE_OPENAI_ENDPOINT"] = endpoint
+        if api_ver:
+            values["AZURE_OPENAI_API_VERSION"] = api_ver
+
+    _upsert_env(values)
+    for k, v in values.items():
+        os.environ[k] = v  # aplica na sessão atual também
+    echo(f"\n[✔] {spec.label} configurado e gravado em .env (fora do git, chmod 600).")
+    echo("    A chave nunca é exibida. Rode 'Doctor' para confirmar. Use IA com --ai.")
+
+
 def action_config(
     *, db: str, input_fn: Callable[[str], str] = input, echo: Callable = print
 ) -> None:
-    """Mostra o estado da configuração e aponta o que editar (sem exigir YAML)."""
+    """Mostra o estado da configuração e permite configurar a IA (sem editar YAML)."""
+    from ..ai.provider import list_providers
+
     fc = FeedCache.load()
-    ai = next((label for label in _AI_ENV if os.getenv(label)), None)
+    ready = [s for s in list_providers() if s.configured()]
     env_state = "presente" if os.path.exists(".env") else "ausente (copie de .env.example)"
-    ai_state = ai or "nenhuma chave — modo determinístico (100% funcional)"
+    ai_state = (
+        f"{ready[0].label} · modelo={ready[0].model()}"
+        if ready
+        else "nenhum provedor — modo determinístico (100% funcional)"
+    )
     terms_state = "aceito" if terms_accepted() else "pendente (pedido no 1º scan)"
     kev_state = fc.kev_date() if fc.kev_available else "UNVERIFIED (opção 6 atualiza)"
     echo("\nConfiguração atual:")
@@ -191,7 +270,10 @@ def action_config(
     echo(f"  Termo de uso   : {terms_state}")
     echo(f"  Feed KEV       : {kev_state}")
     echo(f"  Diretório conf : {config_dir()}")
-    echo("\nPara ajustar: edite .env (chaves de IA / DATABASE_URL) ou config/*.yaml.")
+    if input_fn("\nConfigurar um provedor de IA agora? [s/N]: ").strip().lower() in _YES:
+        configure_ai_provider(input_fn=input_fn, echo=echo)
+    else:
+        echo("Para ajustar manualmente: edite .env (chaves de IA / DATABASE_URL) ou config/*.yaml.")
 
 
 def action_doctor(

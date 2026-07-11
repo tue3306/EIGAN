@@ -6,6 +6,7 @@ tocar em rede, TTY ou nos fluxos bloqueantes (wizard/serve).
 """
 
 import importlib.util
+import os
 
 import pytest
 
@@ -123,11 +124,38 @@ def test_action_history_rejects_unknown_id(tmp_path):
 def test_action_config_reports_state(tmp_path, monkeypatch):
     monkeypatch.setenv("EIGAN_CONFIG_DIR", str(tmp_path))
     out: list[str] = []
-    menu.action_config(db="x.db", input_fn=_feeder([]), echo=out.append)
+    menu.action_config(db="x.db", input_fn=_feeder(["N"]), echo=out.append)
     text = "\n".join(out)
     assert "Configuração atual" in text
     assert "Banco de dados" in text
     assert "x.db" in text
+
+
+def test_configure_ai_provider_writes_env_without_leaking_key(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    for k in ("EIGAN_AI_PROVIDER", "GROQ_API_KEY", "GROQ_MODEL"):
+        monkeypatch.delenv(k, raising=False)
+    out: list[str] = []
+    # escolhe Groq (5 na ordem: anthropic,openai,gemini,openrouter,groq,...) → chave → modelo
+    from eigan.ai.provider import list_providers
+
+    idx = [s.name for s in list_providers()].index("groq") + 1
+    menu.configure_ai_provider(
+        input_fn=_feeder([str(idx), "gsk-secret-key", "algum-modelo"]), echo=out.append
+    )
+    env = (tmp_path / ".env").read_text()
+    assert "GROQ_API_KEY=gsk-secret-key" in env  # gravado no .env (fora do git)
+    assert "EIGAN_AI_PROVIDER=groq" in env
+    assert "gsk-secret-key" not in "\n".join(out)  # a chave NUNCA é ecoada
+    assert os.environ["GROQ_API_KEY"] == "gsk-secret-key"  # aplicado na sessão
+
+
+def test_configure_ai_provider_skip_keeps_deterministic(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    out: list[str] = []
+    menu.configure_ai_provider(input_fn=_feeder(["0"]), echo=out.append)
+    assert not (tmp_path / ".env").exists()
+    assert "sem ia" in "\n".join(out).lower()
 
 
 # --------------------------------------------------------------------------- #

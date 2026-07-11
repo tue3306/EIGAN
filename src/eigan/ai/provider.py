@@ -244,16 +244,87 @@ class AnthropicProvider(_HTTPProvider):
         return ""
 
 
-class OpenAIProvider(_HTTPProvider):
+class _OpenAICompatProvider(_HTTPProvider):
+    """Base para provedores que falam o schema **OpenAI Chat Completions**.
+
+    A maioria dos provedores modernos é compatível com a OpenAI: muda só a
+    ``base_url`` e o header de auth. Assim, adicionar OpenRouter/Groq/Together é
+    só declarar a URL — sem reescrever a lógica (o pedido de modularidade do
+    §AI Providers). A ``base_url`` é **sobrescritível por env** para não fixarmos
+    um endpoint que possa mudar (anti-invenção §3.1)."""
+
+    default_base_url = "https://api.openai.com/v1"
+
+    def __init__(self, *, base_url: str | None = None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._base_url = (base_url or self.default_base_url).rstrip("/")
+
+    def _auth_headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self._credential}",
+            "content-type": "application/json",
+        }
+
     def _complete(self, system: str, user: str) -> str:
         data = self._post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {self._credential}",
-                "content-type": "application/json",
-            },
+            f"{self._base_url}/chat/completions",
+            headers=self._auth_headers(),
             payload={
                 "model": self._model,
+                "max_tokens": _MAX_TOKENS,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            },
+        )
+        return str(data["choices"][0]["message"]["content"])
+
+
+class OpenAIProvider(_OpenAICompatProvider):
+    default_base_url = "https://api.openai.com/v1"
+
+
+class OpenRouterProvider(_OpenAICompatProvider):
+    # Confirmado na doc oficial (openrouter.ai/docs/quickstart): OpenAI-compat.
+    default_base_url = "https://openrouter.ai/api/v1"
+
+
+class GroqProvider(_OpenAICompatProvider):
+    # Confirmado (console.groq.com/docs/openai): base OpenAI-compat.
+    default_base_url = "https://api.groq.com/openai/v1"
+
+
+class TogetherProvider(_OpenAICompatProvider):
+    # Confirmado (docs.together.ai/docs/openai-api-compatibility).
+    default_base_url = "https://api.together.xyz/v1"
+
+
+class AzureOpenAIProvider(_HTTPProvider):
+    """Azure OpenAI: endpoint por *resource*/*deployment* + ``api-version``.
+
+    Difere do OpenAI padrão: auth por header ``api-key``, o "modelo" é o nome do
+    **deployment**, e a URL exige a ``api-version`` (que muda — vem por env, nunca
+    fixada; §3.1). Requer ``AZURE_OPENAI_ENDPOINT`` e ``AZURE_OPENAI_API_VERSION``.
+    """
+
+    def __init__(self, *, base_url: str, api_version: str | None = None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._endpoint = base_url.rstrip("/")
+        self._api_version = api_version or os.getenv("AZURE_OPENAI_API_VERSION", "")
+
+    def available(self) -> bool:
+        return bool(self._credential and self._model and self._endpoint and self._api_version)
+
+    def _complete(self, system: str, user: str) -> str:
+        url = (
+            f"{self._endpoint}/openai/deployments/{self._model}"
+            f"/chat/completions?api-version={self._api_version}"
+        )
+        data = self._post(
+            url,
+            headers={"api-key": self._credential, "content-type": "application/json"},
+            payload={
                 "max_tokens": _MAX_TOKENS,
                 "messages": [
                     {"role": "system", "content": system},
@@ -300,29 +371,190 @@ class OllamaProvider(_HTTPProvider):
         return str(data["message"]["content"])
 
 
-def default_provider() -> AIProvider | None:
-    """Descobre um provedor a partir do ambiente. Retorna None (sem quebrar) se
-    nenhuma chave/modelo estiver configurado — o produto segue 100% sem IA.
+# --------------------------------------------------------------------------- #
+# Registro de provedores (§ AI Providers) — modular e extensível.
+#
+# Adicionar um novo provedor é declarativo: implemente um ``_HTTPProvider`` (ou
+# reuse ``_OpenAICompatProvider``) e registre um :class:`ProviderSpec`. O resto do
+# sistema (CLI, onboarding, docs, seleção) descobre o provedor pelo registro —
+# nenhum outro código muda. Chaves só por variável de ambiente (§5); model id
+# nunca fabricado (§3.1): só a Anthropic tem default verificado, os demais exigem
+# ``<PROVIDER>_MODEL``.
+# --------------------------------------------------------------------------- #
 
-    Prioridade: Anthropic → OpenAI → Google → Ollama. A Anthropic funciona só com
-    a chave (modelo verificado por padrão); os demais exigem também
-    ``<PROVIDER>_MODEL`` (anti-invenção — não fixamos um id não confirmado)."""
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    if anthropic_key:
-        return AnthropicProvider(
-            model=os.getenv("ANTHROPIC_MODEL", _DEFAULT_ANTHROPIC_MODEL), credential=anthropic_key
-        )
 
-    openai_key, openai_model = os.getenv("OPENAI_API_KEY"), os.getenv("OPENAI_MODEL")
-    if openai_key and openai_model:
-        return OpenAIProvider(model=openai_model, credential=openai_key)
+@dataclass(frozen=True)
+class ProviderSpec:
+    """Descreve um provedor de IA: como construí-lo e onde ler as credenciais."""
 
-    google_key, google_model = os.getenv("GOOGLE_API_KEY"), os.getenv("GOOGLE_MODEL")
-    if google_key and google_model:
-        return GoogleProvider(model=google_model, credential=google_key)
+    name: str
+    label: str
+    provider_cls: type[_HTTPProvider]
+    key_env: str  # env com a credencial (ou host, no Ollama)
+    model_env: str  # env com o id do modelo/deployment
+    external: bool = True  # True → redaction antes de enviar
+    default_model: str | None = None  # só onde o id é verificado (Anthropic)
+    base_url_env: str | None = None  # env para sobrescrever o endpoint
+    default_base_url: str | None = None
+    scan_fit: str = ""  # nota de adequação ao projeto (docs/onboarding)
 
-    ollama_host, ollama_model = os.getenv("OLLAMA_HOST"), os.getenv("OLLAMA_MODEL")
-    if ollama_host and ollama_model:
-        return OllamaProvider(model=ollama_model, credential=ollama_host, redact_external=False)
+    def credential(self) -> str | None:
+        return os.getenv(self.key_env)
 
+    def model(self) -> str | None:
+        return os.getenv(self.model_env) or self.default_model
+
+    def configured(self) -> bool:
+        """True se dá para instanciar (credencial + modelo + endpoint, se exigido)."""
+        if not self.credential() or not self.model():
+            return False
+        if self.base_url_env is not None and not (
+            os.getenv(self.base_url_env) or self.default_base_url
+        ):
+            return False
+        return True
+
+    def build(self, *, client: Any = None) -> _HTTPProvider | None:
+        if not self.configured():
+            return None
+        kwargs: dict[str, Any] = {
+            "model": self.model(),
+            "credential": self.credential(),
+            "redact_external": self.external,
+            "client": client,
+        }
+        if self.base_url_env is not None:
+            kwargs["base_url"] = os.getenv(self.base_url_env) or self.default_base_url
+        return self.provider_cls(**kwargs)
+
+
+PROVIDERS: dict[str, ProviderSpec] = {}
+# Ordem de auto-detecção quando o usuário não escolhe explicitamente.
+_PRIORITY = ["anthropic", "openai", "gemini", "openrouter", "groq", "together", "azure", "ollama"]
+
+
+def register(spec: ProviderSpec) -> None:
+    """Registra (ou substitui) um provedor pelo nome. Ponto de extensão único."""
+    PROVIDERS[spec.name] = spec
+
+
+def list_providers() -> list[ProviderSpec]:
+    """Todos os provedores registrados, na ordem de prioridade conhecida."""
+    known = [PROVIDERS[n] for n in _PRIORITY if n in PROVIDERS]
+    extra = [s for n, s in PROVIDERS.items() if n not in _PRIORITY]
+    return known + extra
+
+
+for _spec in (
+    ProviderSpec(
+        "anthropic",
+        "Anthropic (Claude)",
+        AnthropicProvider,
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_MODEL",
+        default_model=_DEFAULT_ANTHROPIC_MODEL,
+        scan_fit="Recomendado: melhor raciocínio de planejamento/narrativa; funciona só com a chave.",
+    ),
+    ProviderSpec(
+        "openai",
+        "OpenAI (GPT)",
+        OpenAIProvider,
+        "OPENAI_API_KEY",
+        "OPENAI_MODEL",
+        base_url_env="OPENAI_BASE_URL",
+        default_base_url="https://api.openai.com/v1",
+        scan_fit="Forte em análise e tool-calling; exige OPENAI_MODEL.",
+    ),
+    ProviderSpec(
+        "gemini",
+        "Google Gemini",
+        GoogleProvider,
+        "GOOGLE_API_KEY",
+        "GOOGLE_MODEL",
+        scan_fit="Bom custo/contexto longo; exige GOOGLE_MODEL.",
+    ),
+    ProviderSpec(
+        "openrouter",
+        "OpenRouter (multi-modelo)",
+        OpenRouterProvider,
+        "OPENROUTER_API_KEY",
+        "OPENROUTER_MODEL",
+        base_url_env="OPENROUTER_BASE_URL",
+        default_base_url="https://openrouter.ai/api/v1",
+        scan_fit="Um gateway p/ 300+ modelos: troque de modelo sem trocar de conta.",
+    ),
+    ProviderSpec(
+        "groq",
+        "Groq (baixa latência)",
+        GroqProvider,
+        "GROQ_API_KEY",
+        "GROQ_MODEL",
+        base_url_env="GROQ_BASE_URL",
+        default_base_url="https://api.groq.com/openai/v1",
+        scan_fit="Inferência muito rápida/barata: ideal p/ triagem e classificação.",
+    ),
+    ProviderSpec(
+        "together",
+        "Together AI",
+        TogetherProvider,
+        "TOGETHER_API_KEY",
+        "TOGETHER_MODEL",
+        base_url_env="TOGETHER_BASE_URL",
+        default_base_url="https://api.together.xyz/v1",
+        scan_fit="Modelos open-weight hospedados; bom p/ custo previsível.",
+    ),
+    ProviderSpec(
+        "azure",
+        "Azure OpenAI",
+        AzureOpenAIProvider,
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_DEPLOYMENT",
+        base_url_env="AZURE_OPENAI_ENDPOINT",
+        scan_fit="Para empresas em Azure com governança/residência de dados.",
+    ),
+    ProviderSpec(
+        "ollama",
+        "Ollama (local, sem chave)",
+        OllamaProvider,
+        "OLLAMA_HOST",
+        "OLLAMA_MODEL",
+        external=False,
+        scan_fit="Roda 100% local: nada sai da máquina (sem redaction externa). Privacidade máxima.",
+    ),
+):
+    register(_spec)
+
+
+def _config_default_provider() -> str | None:
+    """Lê ``default:`` de ``config/ai.yaml`` (se existir) — seleção sem env."""
+    for base in (os.getcwd(),):
+        path = os.path.join(base, "config", "ai.yaml")
+        if not os.path.isfile(path):
+            continue
+        try:
+            import yaml
+
+            data = yaml.safe_load(open(path, encoding="utf-8")) or {}
+        except Exception:  # noqa: BLE001 — config quebrada nunca derruba o produto
+            return None
+        val = data.get("default") or data.get("provider")
+        return str(val).strip().lower() if val else None
+    return None
+
+
+def default_provider(*, client: Any = None) -> AIProvider | None:
+    """Resolve um provedor a partir de env/config. None (sem quebrar) se nada
+    estiver configurado — o produto segue 100% sem IA.
+
+    Seleção: ``EIGAN_AI_PROVIDER`` (ou ``default:`` em ``config/ai.yaml``) escolhe
+    explicitamente; senão auto-detecta na ordem de prioridade. Ollama é local (sem
+    redaction); os externos exigem ``<PROVIDER>_MODEL`` (não fixamos id — §3.1)."""
+    chosen = (os.getenv("EIGAN_AI_PROVIDER") or _config_default_provider() or "").strip().lower()
+    if chosen:
+        spec = PROVIDERS.get(chosen)
+        return spec.build(client=client) if spec else None
+    for spec in list_providers():
+        provider = spec.build(client=client)
+        if provider is not None:
+            return provider
     return None

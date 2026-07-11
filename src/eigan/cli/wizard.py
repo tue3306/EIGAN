@@ -7,17 +7,19 @@ IA? (mostrando se há chave) → confirmação de autorização inline (no
 
 from __future__ import annotations
 
-import os
-
 import click
 
+from ..ai.provider import list_providers
 from ..perspective import Perspective
 from ..findings.store import FindingStore
 from .reporting import write_report
 from .session import SessionAborted, execute_scan
 
-_AI_ENV = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "OLLAMA_HOST")
 _PROFILES = ["quick", "standard", "deep", "web-only", "network-only"]
+
+
+def _ai_ready() -> bool:
+    return any(s.configured() for s in list_providers())
 
 
 def run_wizard(db: str = "eigan.db") -> int:
@@ -31,6 +33,16 @@ def run_wizard(db: str = "eigan.db") -> int:
         click.secho("Nenhum alvo informado.", fg="red")
         return 2
 
+    # Onboarding da IA: se nenhum provedor está pronto, oferece configurar aqui
+    # mesmo (inserir a API). É opcional — pular mantém o modo determinístico.
+    if not _ai_ready() and click.confirm(
+        "\nConfigurar um provedor de IA agora (Claude, GPT, Gemini, Groq, Ollama…)?",
+        default=False,
+    ):
+        from .menu import configure_ai_provider
+
+        configure_ai_provider(input_fn=lambda p: click.prompt(p, default="", show_default=False))
+
     click.echo("\nPerspectiva do scan:")
     click.echo("  external — visão de um atacante na internet (recusa alvos privados).")
     click.echo("  internal — visão de dentro da rede (recusa IP público).")
@@ -42,9 +54,9 @@ def run_wizard(db: str = "eigan.db") -> int:
 
     profile = click.prompt("\nPerfil de scan", type=click.Choice(_PROFILES), default="standard")
 
-    ai_detected = any(os.getenv(k) for k in _AI_ENV)
+    ai_detected = _ai_ready()
     click.echo(
-        f"\nIA: {'chave detectada — explicações enriquecidas' if ai_detected else 'nenhuma chave — modo determinístico (100% funcional)'}."
+        f"\nIA: {'provedor configurado — explicações enriquecidas' if ai_detected else 'nenhum provedor — modo determinístico (100% funcional)'}."
     )
     online = click.confirm(
         "Enriquecer risco com EPSS online (FIRST.org) para os CVEs encontrados?", default=False
