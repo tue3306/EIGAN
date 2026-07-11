@@ -7,11 +7,14 @@ subprocess nem escopo. Cada decisão vira uma :class:`DecisionEntry` (capacidade
 ferramenta escolhida, motivos, alternativas) — o rastro auditável exigido pelo
 §3.4 do CLAUDE.md.
 
-Fronteiras garantidas por código:
-* A IA (se houver) só reordenou capacidades no Planner; aqui ela não entra.
-* O `ToolSelector` (determinístico) escolheu a ferramenta.
-* `SafeExecution` valida escopo por alvo antes de rodar o runner seguro.
+Modelo EIGAN (ADR-0009): a IA **comanda** o plano (AgenticPlanner) — planeja e
+replaneja por onda. Dois invariantes de código a cercam (não a limitam):
+* `SafeExecution` valida escopo por alvo antes de rodar o runner seguro — a IA
+  nunca opera fora do escopo autorizado.
+* Grounding: a IA só age sobre capacidades reais do registry; o `ToolSelector`
+  (determinístico) escolhe a ferramenta concreta e a cascata é o piso de segurança.
 * Agente scaffold / capacidade sem ferramenta ⇒ *sugerido, não executado*.
+Cada passo é emitido como evento `log` (timeline de raciocínio, sem caixa-preta).
 """
 
 from __future__ import annotations

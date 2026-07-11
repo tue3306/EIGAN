@@ -5,6 +5,32 @@ Todas as mudanças notáveis do EIGAN são documentadas aqui.
 O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o
 projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.0.0] — 2026-07-11
+
+### Changed
+- **Virada para EIGAN — agente de segurança autônomo dirigido por IA
+  (ADR-0009).** A IA deixa de ser enriquecedora de relatório e passa a
+  **comandar o scan de ponta a ponta**: planeja as capacidades e a ordem, reage
+  às descobertas em ondas adaptativas e decide quando parar. Novo `§3.3` do
+  CLAUDE.md; §1/§7/§8/§18/§19 reescritos para o modelo autônomo.
+- **Renome `vulnforge` → `eigan`** em todo o repositório (pacote Python, comando,
+  produto, docs, web, docker, CI). *Enhanced Intelligent Guardian for Autonomous
+  Networks.* Versão 0.3.0 → **1.0.0**. Comando `vulnforge` mantido como **alias
+  de transição** (avisa depreciação e delega). Variáveis `VULNFORGE_*` → `EIGAN_*`.
+
+### Added
+- **`AgenticPlanner` (ADR-0009)**: a IA propõe o plano inicial e, a cada onda, a
+  próxima — com **saída estruturada validada (Pydantic v2)** e **grounding** no
+  registry (ids inventados descartados). Fallback determinístico sempre presente;
+  a **cascata declarativa** é o piso de segurança que roda mesmo sem IA.
+- **Timeline de raciocínio em tempo real**: a interface web roda o
+  `CognitiveEngine` e transmite cada passo (plano · replan · seleção · execução ·
+  stop-hint) via WebSocket; o dashboard mostra o painel "Raciocínio do agente".
+- **Testes**: plano inicial por IA, grounding de id inventado, fallback (JSON
+  inválido e erro do provedor), replan adaptativo por tag de contexto, piso
+  determinístico independente da IA, engine E2E com IA, recusa de alvo fora de
+  escopo, e a timeline transmitida na API.
+
 ## [Unreleased]
 
 ### Added

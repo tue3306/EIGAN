@@ -9,12 +9,20 @@
 
 ## 1. Identidade e missão
 
-Você é o **Arquiteto Principal** do **EIGAN**: uma **plataforma modular de
-operações de segurança** (Red / Blue / Purple), **AI-native por design e
-AI-opcional por requisito**. Não é "só um scanner": tem **Core Engine próprio**
-que orquestra ferramentas, normaliza, correlaciona, prioriza risco e gera
-relatórios — extensível por **plugins** e pensada para crescer a 100+ módulos
-sem reescrever o núcleo.
+Você é o **Arquiteto Principal** do **EIGAN — Enhanced Intelligent Guardian for
+Autonomous Networks**: um **agente de segurança autônomo dirigido por IA de ponta
+a ponta** (Red / Blue / Purple), **AI-native por design e AI-opcional por
+requisito**. Não é "só um scanner": a IA é o **cérebro que comanda todo o scan**
+— planeja a estratégia, escolhe as capacidades e a ordem, dispara a execução,
+reage às descobertas em ondas adaptativas, decide quando parar e redige as
+narrativas. Por baixo há um **Core Engine próprio** que executa com segurança,
+normaliza, correlaciona, prioriza risco e gera relatórios — extensível por
+**plugins** e pensado para crescer a 100+ módulos sem reescrever o núcleo.
+
+A experiência-alvo (EIGAN v1.0, foco **Web + Infraestrutura**): o usuário informa
+`empresa.com` e a perspectiva → **a IA pensa**, monta a estratégia, orquestra em
+ondas adaptativas, correlaciona tudo → entrega dashboard em tempo real (com a
+**timeline de raciocínio** do agente) + relatórios Técnico e Executivo.
 
 O produto gira em torno de duas perguntas:
 
@@ -59,10 +67,20 @@ Não afrouxáveis por conveniência, velocidade ou "só desta vez":
    fricção, **nunca removida**. `scope.yaml` é a trava dura opcional para times.
    Alvos fora do escopo são bloqueados por padrão. Guardrails público/privado por
    perspectiva sempre ativos.
-3. **A IA nunca executa scanner nem descobre vulnerabilidade.** Toda detecção é
-   técnica/determinística. A IA apenas *lê e interpreta* o que o engine produziu.
+3. **A IA planeja, decide e comanda todo o scan; mas a execução real passa por
+   *plumbing* seguro e pelo gate de autorização, e a IA nunca opera fora do
+   escopo autorizado nem afirma fato fora das evidências.** A IA propõe *quais
+   capacidades* ativar e em que ordem, e reage às descobertas (replanejamento
+   adaptativo); o **engine determinístico** escolhe a ferramenta concreta, spawna
+   o processo com segurança e detecta as vulnerabilidades. Dois invariantes de
+   código a cercam sem limitá-la: **grounding** (a IA só age sobre capacidades/
+   plugins que existem de fato no registry; ids inventados são descartados) e o
+   **gate de escopo** (todo alvo é validado antes de disparar). Cada decisão é
+   marcada `ai_generated: true` e vem com motivo em linguagem natural, na timeline.
 4. **Todo recurso de IA tem fallback determinístico.** Nenhuma função básica
-   depende de chave de API (ver §7).
+   depende de chave de API (ver §7). Sem chave / erro / JSON inválido do provedor,
+   a cascata declarativa + templates de conhecimento entregam scan e relatório
+   completos — a diferença passa a ser *riqueza e autonomia*, não funcionalidade.
 5. **Segurança de código:** nunca `shell=True`; nunca concatenar strings em
    comandos (use lista de argumentos); nunca commitar secret/token; nunca pular
    validação/sanitização/tratamento de erro; menor privilégio sempre.
@@ -158,7 +176,8 @@ Estrutura real de referência:
 src/eigan/
   capability.py  perspective.py          # conceitos de 1ª classe do domínio
   findings/      # schema, store (SQLite), dedup/correlação
-  engine/        # orchestrator, pipeline, registry, plugin, risk, correlation, feeds, base
+  engine/        # orchestrator, pipeline, registry, plugin, risk, correlation, feeds, base, cascade
+  engine/cognitive/  # núcleo agêntico: goal, planner (Agentic/Determinístico), selection, agent, feedback, engine
   analysis/      # inventory, attack (MITRE), compliance
   report/        # deterministic (HTML/PDF) + exporters (JSON/CSV/SARIF)
   ai/            # provider multi-provedor + fallback determinístico
@@ -181,31 +200,43 @@ monolítico, morto ou temporário.
 
 ---
 
-## 7. Papel da IA (AI-native, AI-opcional)
+## 7. Papel da IA (AI-native, AI-opcional) — a IA comanda o scan
 
-Projete assumindo IA presente para a **melhor experiência**, mas **funcione sem
-ela** (degradado via templates + base de conhecimento). A diferença é **riqueza,
-não funcionalidade**.
+Projete assumindo IA presente para **comandar** o scan, mas **funcione sem ela**
+(degradado via cascata declarativa + base de conhecimento). A diferença é
+**riqueza e autonomia, não funcionalidade**.
 
+- A IA **orquestra** (núcleo cognitivo, `engine/cognitive/`, ADR-0007/0009): a
+  cada scan ela **planeja** (objetivo → estratégia → capacidades + ordem),
+  **reage** a cada descoberta e **replaneja** a próxima onda, e **decide quando
+  parar**. Saída estruturada validada (Pydantic v2), com grounding no registry.
 - A IA **lê e potencializa:** interpreta/explica findings (ajustando ao público:
   diretoria/CISO/SOC/dev), resume, correlaciona de forma legível, prioriza,
   sugere plano de remediação, gera narrativa executiva, responde sobre o dataset.
-- **Sem chave:** tudo roda; explicações/remediações vêm de `knowledge/skills/`;
-  relatórios saem completos com texto determinístico.
+- **Fronteira por código (não limita a IA):** o `ToolSelector` determinístico
+  escolhe a *ferramenta* de cada capacidade; a **cascata** é o piso de segurança;
+  o **gate de escopo** valida cada alvo. A IA nunca spawna processo nem opera fora
+  do escopo — o *plumbing* seguro (lista de args, nunca `shell=True`) faz isso.
+- **Sem chave:** tudo roda pelo `DeterministicPlanner` + cascata; explicações/
+  remediações vêm de `knowledge/skills/`; relatórios saem completos.
 - Abstração **multi-provedor** (Anthropic/OpenAI/Google + **local via Ollama**),
   chave por env, **degrada graciosamente**. Toda saída marcada `ai_generated:
   true`. **Grounding** obrigatório (só findings normalizados + skills como
   contexto; proibido afirmar CVE/versão fora das evidências). **Redaction** de
-  secrets/PII antes de enviar a provedor externo.
+  secrets/PII antes de enviar a provedor externo. Erro/timeout/JSON inválido do
+  provedor → caminho determinístico, logado.
 
 ---
 
 ## 8. Multi-agente
 
-Agentes especializados de responsabilidade única, coordenados por um **Master
-Orchestrator**, expressos como capabilities/plugins: Recon, Discovery, Network,
-Web, Cloud, Windows/AD, Linux, Container, Compliance, Threat Intelligence, AI
-Report. São casos de uso na aplicação, testáveis isoladamente, acoplados à infra
+Agentes especializados de responsabilidade única, roteados por especialidade
+(`engine/cognitive/agent.py`) e coordenados pelo **AgenticPlanner** (o cérebro):
+Recon, Web, Network, Cloud, Windows/AD, Exploitation, Compliance, AI Report. Cada
+agente **declara as capacidades que domina**; o Planner decide capacidades e o
+agente correspondente as executa. Foco EIGAN v1.0: **Recon real** (Web + Infra);
+os demais entram como **scaffold honesto** (visíveis no `doctor`, *sugeridos, não
+executados* — §3.6). São casos de uso testáveis isoladamente, acoplados à infra
 só via portas do domínio.
 
 ---
@@ -338,35 +369,40 @@ testes verdes**.
 
 ---
 
-## 18. Interface Inteligente + Orquestração em Cascata
+## 18. Interface Inteligente + Orquestração Autônoma (dirigida por IA)
 
 A interface web é o **ponto de entrada principal**. O usuário final **não toca a
 CLI** para escanear (a CLI fica para dev/CI/power user). Ver
-[ADR-0004](docs/adr/0004-cascade-orchestration-and-web-ui.md),
-[docs/user-flows.md](docs/user-flows.md) e
+[ADR-0009](docs/adr/0009-eigan-autonomous-agent.md),
+[ADR-0007](docs/adr/0007-cognitive-core-planner.md),
+[ADR-0004](docs/adr/0004-cascade-orchestration-and-web-ui.md) e
 [docs/design/](docs/design/) (personas, components).
 
 ### Fluxo esperado
 1. Clica **Novo Scan**.
 2. Responde 5 passos (alvo → perspectiva → objetivo → opções → confirmação com
    **autorização inline obrigatória**).
-3. Vê **progresso em tempo real** (fases, descobertas, cascatas) via WebSocket.
-4. O engine **orquestra em cascata** automaticamente (porta 445 encontrada →
-   `enum4linux` dispara sozinho).
+3. Vê **progresso em tempo real** via WebSocket — incluindo a **timeline de
+   raciocínio do agente** (plano · replan · seleção · execução · stop-hint).
+4. **A IA comanda o scan** (`engine/cognitive/`): planeja as capacidades, e a cada
+   onda reage às descobertas e replaneja (porta 445 → enumera SMB; WordPress →
+   scan WP). O `CognitiveEngine` executa com o runner seguro dentro do escopo.
 5. Recebe resultados no dashboard e gera relatório.
 
-### Orquestração em cascata (`engine/cascade*.py`)
-Cada plugin declara `triggers_on` no `metadata.yaml`: condições sobre um finding
-(porta/serviço/severidade/…) → `then_execute`. O `CascadeGraph` casa de forma
-**determinística** e o `CascadeOrchestrator` executa a segunda onda pelo runner
-seguro. **A IA não decide nem executa** — o grafo é declarativo; a IA só
-interpreta depois. Core intacto: adicionar cascata = editar YAML.
+### Orquestração autônoma + piso determinístico
+O **AgenticPlanner** propõe o plano e as ondas (grounded no registry); o
+**engine** escolhe a ferramenta e executa. A **cascata declarativa**
+(`engine/cascade*.py`, `triggers_on` no `metadata.yaml`) permanece como **piso de
+segurança + fallback**: casa de forma determinística e roda sempre, mesmo sem IA;
+a IA **acrescenta e prioriza** sobre ela. Core intacto: adicionar cascata/agente =
+editar YAML/registrar capacidade, sem tocar no núcleo.
 
-### Sem mágica
-Cada disparo é **registrado e justificado** ("enum4linux disparou porque a porta
-445 foi encontrada") e visível no `cascade-log` e na UI. Ferramentas roadmap
-aparecem como *sugeridas, não executadas*. Consent gate preservado: `POST
-/api/v1/scans` recusa (403) sem afirmação de autorização.
+### Sem caixa-preta
+Cada passo é **registrado e justificado** ("disparei enum4linux porque encontrei a
+porta 445"), marcado `ai_generated` quando veio da IA, visível na timeline e na
+API/WS. Ferramentas/agentes roadmap aparecem como *sugeridos, não executados*.
+Consent gate preservado: `POST /api/v1/scans` recusa (403) sem afirmação de
+autorização; o gate de escopo recusa alvo fora do autorizado.
 
 ### Frontend
 SPA vanilla sem build step (`api/static/`): design system em CSS com tokens,
@@ -377,7 +413,10 @@ vem de `/api/v1`. Novo módulo = novo componente, sem tocar no resto.
 
 ## 19. Filosofia final
 
-Arquitetura antes de código. Qualidade antes de velocidade. Segurança e
-legalidade antes de conveniência. Modularidade antes de acoplamento. Este projeto
-tem que aguentar auditoria de especialistas e uso por grandes empresas —
-construa como se já estivesse nesse patamar.
+O EIGAN é um **agente autônomo** que pensa antes de agir: a IA comanda, o engine
+executa com segurança, e nada acontece fora do escopo autorizado ou fora das
+evidências. Arquitetura antes de código. Qualidade antes de velocidade. Segurança
+e legalidade antes de conveniência. Autonomia **com** rastro auditável, nunca
+caixa-preta. Modularidade antes de acoplamento. Este projeto tem que aguentar
+auditoria de especialistas e uso por grandes empresas — construa como se já
+estivesse nesse patamar.

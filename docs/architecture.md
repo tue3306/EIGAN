@@ -74,12 +74,38 @@ Próximo incremento do pipeline: encaminhamento dinâmico de assets entre estág
 assets descobertos. Perspectivas reservadas (`ASSUMED_BREACH`, `AUTHENTICATED`)
 são extensões futuras do enum + `_PROFILES`.
 
+## Núcleo cognitivo — a IA comanda o scan (ADR-0007/0009)
+
+O EIGAN é um **agente autônomo**: o subpacote `engine/cognitive/` transforma um
+`Goal` (objetivo + perspectiva) num scan orquestrado pela IA.
+
+```
+Goal → Planner → [Agent → ToolSelector → SafeExecution] → Feedback → replan → Stop
+```
+
+- **`AgenticPlanner`** (padrão com IA): a IA propõe o plano inicial (capacidades +
+  ordem) e, a cada onda, a próxima — saída **estruturada validada (Pydantic v2)**,
+  **grounded** no `PluginRegistry` (ids inventados descartados). Fallback:
+  **`DeterministicPlanner`** (estratégia declarada + cascata), que roda sem IA.
+- **`ToolSelector`** (determinístico) escolhe a *ferramenta* de cada capacidade,
+  com `reasons` auditáveis. A IA decide *capacidade*, nunca a ferramenta.
+- **`SafeExecution`** valida o escopo por alvo antes de spawnar o runner seguro
+  (lista de args, nunca `shell=True`). Alvo fora do escopo → *skipped*, registrado.
+- **Cascata declarativa** (`CascadeGraph`) é o **piso de segurança**: roda sempre;
+  a IA acrescenta e prioriza sobre ela.
+- **Rastro auditável**: cada decisão vira `DecisionEntry` e um evento `log`
+  transmitido à UI (timeline de raciocínio) — sem caixa-preta.
+
+`StopCondition` impõe teto de orçamento/tempo (anti-loop); a IA pode encerrar
+propondo nenhuma capacidade nova.
+
 ## Modo com IA × sem IA
 
 Cada função de enriquecimento passa pelo `Enricher`: se há provedor com chave,
 usa IA (grounded na skill relevante, saída marcada `ai_generated`); senão, cai
 para `DeterministicEnricher`, que monta explicação/remediação a partir da skill
-casada por CWE/OWASP. O relatório e o dashboard nunca dependem de IA.
+casada por CWE/OWASP. O relatório e o dashboard nunca dependem de IA — a
+diferença que a IA traz é **riqueza e autonomia**, não funcionalidade.
 
 ## Roadmap por fases
 

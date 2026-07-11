@@ -14,10 +14,12 @@ honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
   postura de risco (dashboard/relatório).
 - **Purple:** Mapa MITRE ATT&CK dos findings + gap analysis + relatório executivo.
 - **Engine:** Correlação por ativo + Risk Engine (CVSS/EPSS/KEV com `UNVERIFIED`).
-- **Núcleo Cognitivo (ADR-0007):** Planner goal-driven + Tool Selection Engine +
-  loop `Goal→Plano→Seleção→Execução→Feedback→replan→Stop`, com **Agente Recon
-  real** e IA opcional (só ordena capacidades; fallback determinístico). CLI
-  `eigan plan`.
+- **Agente autônomo — Núcleo Cognitivo (ADR-0007/0009):** `AgenticPlanner` — a IA
+  **comanda** o scan (planeja + replaneja por onda, saída validada Pydantic v2,
+  grounded no registry) sobre o loop `Goal→Plano→Seleção→Execução→Feedback→replan→
+  Stop`, com **Agente Recon real** (Web + Infra), Tool Selection Engine
+  determinístico e **fallback determinístico** (cascata como piso). Timeline de
+  raciocínio em tempo real na UI. CLI `eigan plan`.
 - **Memória entre scans (Pilar 2 / ADR-0008):** diff determinístico
   (novos/corrigidos/persistentes + novos ativos/serviços). CLI `eigan diff`.
 - **Auto Remediation (Pilar 6 / ADR-0008):** playbooks Ansible revisáveis a partir

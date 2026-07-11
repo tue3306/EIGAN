@@ -3,8 +3,10 @@
 </p>
 
 <p align="center">
-  <strong>Plataforma modular de operações de segurança — Red · Blue · Purple.</strong><br>
-  Core Engine próprio, arquitetura de plugins, <strong>funciona offline e sem chave de IA</strong>.
+  <strong>EIGAN — Enhanced Intelligent Guardian for Autonomous Networks.</strong><br>
+  Agente de segurança <strong>autônomo dirigido por IA</strong> (Red · Blue · Purple): a IA
+  planeja, orquestra em ondas adaptativas e correlaciona — Core Engine próprio,
+  arquitetura de plugins e <strong>fallback determinístico que funciona offline e sem chave de IA</strong>.
 </p>
 
 <p align="center">
