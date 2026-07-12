@@ -44,7 +44,17 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 ### Fixed (frontend)
 - Marca **VulnForge** residual removida do dashboard (`index.html`).
 
+### Removed
+- **Código morto: `CascadeOrchestrator`** (`engine/cascade_orchestrator.py` + teste)
+  — 0 referências em produção desde que o `ScanManager` migrou para o
+  `CognitiveEngine` (ADR-0009). Removida junto a *seam* do `ScanObserver`/
+  `_NullObserver` no `Orchestrator`, que só existia para ele (nenhum código morto novo).
+
 ### Docs
+- **Mapa do código** em [`src/eigan/README.md`](src/eigan/README.md) (camadas,
+  módulos e onde adicionar coisas) — onboarding rápido; corrige o overclaim "cada
+  diretório tem README". READMEs dos plugins reais `enum4linux` e `nmap_nse`
+  padronizados (faltavam).
 - **README reescrito** com estrutura de projeto OSS profissional: banner
   theme-aware (`<picture>` light/dark), índice, badges e seções Sobre · Recursos ·
   Demonstração · Arquitetura · Instalação · Quick Start · Exemplos · Estrutura ·

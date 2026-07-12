@@ -319,7 +319,9 @@ docs/                               architecture · adr/ · design/ · roadmap/ 
 examples/  docker/  tests/          alvos de exemplo · sandbox · unit + integração local
 ```
 
-Cada diretório relevante tem o seu próprio `README.md`.
+Os diretórios principais têm o seu próprio `README.md`; o **mapa do código-fonte**
+(camadas, módulos e onde adicionar coisas) está em
+[`src/eigan/README.md`](src/eigan/README.md).
 
 ## 🗺️ Roadmap
 

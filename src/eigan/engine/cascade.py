@@ -17,7 +17,8 @@ Princípios (inegociáveis do CLAUDE.md):
   ``naabu`` — quem provê a descoberta é intercambiável.
 * **Domínio puro.** Este módulo não faz I/O nem importa infraestrutura; só depende
   do schema de :class:`Finding`. A *execução* dos disparos é responsabilidade do
-  :class:`~eigan.engine.cascade_orchestrator.CascadeOrchestrator`.
+  :class:`~eigan.engine.cognitive.CognitiveEngine` (que consome este grafo como
+  piso de segurança da cascata).
 """
 
 from __future__ import annotations

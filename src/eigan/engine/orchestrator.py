@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Optional, Protocol
+from typing import TYPE_CHECKING, Callable, Optional
 
 if TYPE_CHECKING:
     from .risk import RiskScorer
@@ -33,32 +33,6 @@ from .registry import PluginRegistry
 log = logging.getLogger("eigan.orchestrator")
 
 ProgressCb = Callable[[str], None]
-
-
-class ScanObserver(Protocol):
-    """Observador opcional do progresso do scan (porta do domínio).
-
-    Permite que uma camada acima (ex.: :class:`CascadeOrchestrator`) reaja a cada
-    estágio e a cada lote de findings — para cascata e streaming em tempo real —
-    **sem** que o Core conheça cascata, eventos ou WebSocket. Default: ninguém
-    observa (o Core roda idêntico ao modo headless)."""
-
-    def stage_started(self, stage: str) -> None: ...
-
-    def findings_produced(self, stage: str, findings: list[Finding]) -> None: ...
-
-    def stage_finished(self, stage: str, count: int) -> None: ...
-
-
-class _NullObserver:
-    def stage_started(self, stage: str) -> None:
-        return None
-
-    def findings_produced(self, stage: str, findings: list[Finding]) -> None:
-        return None
-
-    def stage_finished(self, stage: str, count: int) -> None:
-        return None
 
 
 @dataclass
@@ -115,10 +89,8 @@ class Orchestrator:
         profile: str = "standard",
         override_perspective: bool = False,
         progress: Optional[ProgressCb] = None,
-        observer: Optional[ScanObserver] = None,
         **tool_opts,
     ) -> ScanReport:
-        obs: ScanObserver = observer if observer is not None else _NullObserver()
         persp = perspective or scope.perspective
         persp_profile = profile_for(persp)
 
@@ -155,7 +127,6 @@ class Orchestrator:
                 continue
             stages_run.append(stage.name)
             emit(f"== estágio '{stage.name}': {[s.name for s in specs]} ==")
-            obs.stage_started(stage.name)
             # plugins do mesmo estágio rodam em paralelo (respeitando rate limit).
             jobs = [(spec, target) for spec in specs for target in targets]
             max_workers = len(jobs) if stage.parallel else 1
@@ -164,12 +135,9 @@ class Orchestrator:
                 results = pool.map(lambda j: self._safe_scan(*j, emit=emit, **tool_opts), jobs)
                 for res in results:
                     stage_findings.extend(res)
-            # carimba a perspectiva já aqui para o observer ver o finding final.
             for f in stage_findings:
                 f.perspective = persp
             raw.extend(stage_findings)
-            obs.findings_produced(stage.name, stage_findings)
-            obs.stage_finished(stage.name, len(stage_findings))
 
         # carimba a perspectiva em cada finding (rastreabilidade da origem).
         for f in raw:
