@@ -101,11 +101,16 @@ Tudo gira em torno de duas perguntas:
   antes de qualquer provedor externo, alvos validados contra *argument injection*.
 - 📊 **Correlação · inventário · MITRE ATT&CK** — dedup entre ferramentas por ativo, mapa de
   técnicas e gap analysis — sem fundir perspectivas cegamente.
-- 📄 **Relatórios** Técnico e Executivo em **HTML · PDF · JSON · CSV · SARIF** — narrativas por
-  IA, exportações determinísticas (reprodutíveis para SIEM/CI), hash de integridade e
-  metodologia (PTES / NIST 800-115).
-- 🚀 **Baixa e roda** — um comando do zip ao menu; wizard guiado, `doctor` que diz o que falta
-  e como instalar, zero-config por padrão.
+- 📄 **Relatórios corporativos** Técnico e Executivo em **HTML · PDF · JSON · CSV · SARIF** —
+  capa com **ID único**, **classificação da informação** (Público → Restrito), **score de
+  postura**, gráficos, **mascaramento de segredos por padrão**, aviso de confidencialidade,
+  hash de integridade e metodologia (PTES / NIST 800-115). Narrativas por IA; exportações
+  determinísticas reprodutíveis para SIEM/CI.
+- 🖥️ **Dashboard estilo SOC** — tema **claro/escuro**, gráficos (donut + gauge de score), scan
+  **ao vivo** via WebSocket (tempo decorrido · ETA · ferramenta atual · timeline de raciocínio ·
+  feed de descobertas) e tabela de findings com **busca/filtro/ordenação/paginação e drill-down**.
+- 🚀 **Baixa e roda** — um comando do zip ao menu; wizard guiado, `doctor` (com `--probe-ai`
+  para **certificar que a IA responde**, incluindo Ollama local), zero-config por padrão.
 
 <sub><b>Ferramentas hoje (Red / Recon real):</b> nmap · naabu · nuclei · subfinder · dnsx ·
 httpx · enum4linux · nmap-nse. Dezenas de outras (whatweb, wpscan, sqlmap, testssl, AD, cloud,
@@ -137,8 +142,10 @@ Blue e Purple) já existem como <b>scaffold honesto</b>: aparecem no <code>docto
 #3 [stop] no_new_evidence
 ```
 
-**Dashboard web** (`eigan serve` → `http://127.0.0.1:8000`): progresso em tempo real via
-WebSocket, timeline de raciocínio, findings priorizados por risco e export de relatório.
+**Dashboard web (SOC)** (`eigan serve` → `http://127.0.0.1:8000`): tema claro/escuro, gráficos
+(donut de severidade + gauge de score), scan **ao vivo** via WebSocket (tempo decorrido · ETA ·
+ferramenta atual · timeline de raciocínio · feed de descobertas) e tabela de findings com
+busca/filtro/ordenação/paginação/drill-down — export de relatório com escolha de classificação.
 
 <!-- 📸 Para um GIF/screenshot ao vivo, grave o dashboard e salve em web/assets/demo.gif;
      depois troque este bloco por:  ![Demo do EIGAN](web/assets/demo.gif)
@@ -246,8 +253,12 @@ eigan scan 10.0.0.5    --perspective internal --profile standard --scope scope.y
 eigan plan example.com --goal attack-surface        # não executa nada
 eigan plan 10.0.0.5    --goal network-assessment --execute   # roda (passa pelo consent gate)
 
-# Relatório de um scan salvo — estilos: technical | executive
-eigan report --scan 1 --format pdf  --style executive
+# Certifica que a IA responde de verdade (Ollama local, nuvem, etc.) — chamada real
+eigan doctor --probe-ai
+
+# Relatório corporativo de um scan salvo — estilos: technical | executive
+eigan report --scan 1 --format pdf --style executive --classification confidential
+eigan report --scan 1 --format pdf --style technical --show-sensitive   # NÃO mascara segredos
 eigan report --scan 1 --format sarif                # para GitHub code scanning / SIEM
 
 # Memória entre execuções: o que mudou desde o scan anterior do alvo
@@ -275,11 +286,11 @@ laboratório local em [`examples/`](examples/).
 | `eigan` | Abre o menu interativo (porta de entrada de produto) |
 | `eigan scan ALVO…` | Scan direto contra alvos autorizados (headless/CI) |
 | `eigan plan ALVO --goal …` | Planner cognitivo por objetivo (dry-run por padrão; `--execute` roda) |
-| `eigan report --scan N` | Gera relatório (`--format` pdf/html/json/csv/sarif · `--style` technical/executive) |
+| `eigan report --scan N` | Relatório corporativo (`--format` pdf/html/json/csv/sarif · `--style` technical/executive · `--classification` public/internal/confidential/restricted · `--show-sensitive`) |
 | `eigan diff --scan N` | Diff determinístico contra o scan anterior do alvo |
 | `eigan remediate --scan N` | Gera playbooks Ansible revisáveis (sugestões) |
-| `eigan serve` | Sobe API + dashboard |
-| `eigan doctor [--install]` | Diagnóstico do ambiente (ferramentas, IA, Docker, PDF, feeds) |
+| `eigan serve` | Sobe API + dashboard SOC (tema claro/escuro, tempo real) |
+| `eigan doctor [--install] [--probe-ai]` | Diagnóstico do ambiente; `--probe-ai` faz uma chamada real p/ certificar a IA |
 | `eigan feeds update` | Atualiza o catálogo CISA KEV (fonte oficial, com cache) |
 
 </details>
@@ -312,10 +323,11 @@ Cada diretório relevante tem o seu próprio `README.md`.
 
 ## 🗺️ Roadmap
 
-**Entregue na v1.0:** núcleo agêntico (a IA comanda o scan fim a fim) · Recon Red real (8
+**Entregue (v1.0.x):** núcleo agêntico (a IA comanda o scan fim a fim) · Recon Red real (8
 plugins) · cascata adaptativa · perspectivas Outside-In/Inside-Out · Risk Engine (CVSS/EPSS/KEV)
-· correlação + inventário + ATT&CK · relatórios Técnico/Executivo em 5 formatos · dashboard com
-timeline · "baixa e roda" · Policy Engine (Fase 0) · multi-provedor de IA.
+· correlação + inventário + ATT&CK · **relatórios corporativos** em 5 formatos (classificação +
+masking + score) · **dashboard SOC** (tema claro/escuro, tempo real) · multi-provedor de IA (com
+`doctor --probe-ai`) · "baixa e roda" · Policy Engine (Fase 0).
 
 **Próximo (scaffold honesto → real):**
 
