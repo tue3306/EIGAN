@@ -7,7 +7,12 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
-Nada ainda — as próximas mudanças entram aqui.
+### Docs
+- **README reescrito** com estrutura de projeto OSS profissional: banner
+  theme-aware (`<picture>` light/dark), índice, badges e seções Sobre · Recursos ·
+  Demonstração · Arquitetura · Instalação · Quick Start · Exemplos · Estrutura ·
+  Roadmap · Contribuição · FAQ · Licença · **Créditos**. Inventário honesto de
+  plugins reais (8) vs scaffold; Policy Engine descrito como roadmap (sem overclaim).
 
 ## [1.0.1] — 2026-07-11
 

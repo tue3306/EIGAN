@@ -1,356 +1,425 @@
 <p align="center">
-  <img src="web/assets/logo.svg" alt="EIGAN" height="72">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="web/assets/logo-dark.svg">
+    <img src="web/assets/logo-light.svg" alt="EIGAN — Enhanced Intelligent Guardian for Autonomous Assessment" height="84">
+  </picture>
 </p>
 
 <p align="center">
-  <strong>EIGAN — Enhanced Intelligent Guardian for Autonomous Assessment.</strong><br>
+  <strong>Enhanced Intelligent Guardian for Autonomous Assessment</strong><br>
   Agente de segurança <strong>autônomo dirigido por IA</strong> (Red · Blue · Purple): a IA
-  planeja, escolhe as ferramentas, orquestra em <strong>cascata adaptativa</strong>, reage às
-  descobertas e correlaciona tudo — Core Engine próprio, arquitetura de plugins e
-  <strong>independência de provedor</strong> (Claude · GPT · Gemini · Groq · … · <strong>Ollama local</strong>).
+  <strong>planeja, escolhe as ferramentas, orquestra em cascata adaptativa</strong>, reage às
+  descobertas e correlaciona tudo — sobre um Core Engine próprio, arquitetura de plugins
+  e independência de provedor (Claude · GPT · Gemini · Groq · … · <strong>Ollama local</strong>).
 </p>
 
 <p align="center">
   <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-1.0.1-blue">
   <a href="LICENSE"><img alt="Licença" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-blue"></a>
-  <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
+  <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white">
   <a href="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Testes" src="https://img.shields.io/badge/testes-234%20passed-brightgreen">
-  <img alt="AI-native" src="https://img.shields.io/badge/IA-native%20(obrigat%C3%B3ria)-6c5ce7">
+  <img alt="IA" src="https://img.shields.io/badge/IA-native%20(obrigat%C3%B3ria)-6c5ce7">
+  <img alt="PRs" src="https://img.shields.io/badge/PRs-bem--vindos-brightgreen">
+</p>
+
+<p align="center">
+  <a href="#-quick-start">Quick Start</a> ·
+  <a href="#-instalação">Instalação</a> ·
+  <a href="#-exemplos-de-uso">Exemplos</a> ·
+  <a href="docs/architecture.md">Arquitetura</a> ·
+  <a href="CONTRIBUTING.md">Contribuir</a> ·
+  <a href="docs/adr/">ADRs</a>
 </p>
 
 ---
 
-> ## ⚠️ AVISO LEGAL — USO AUTORIZADO APENAS
->
-> Scanning ativo de vulnerabilidades **sem autorização documentada é ilegal** em
-> muitas jurisdições. O EIGAN **bloqueia por padrão** qualquer alvo fora de um
-> `scope.yaml` autorizado e exige confirmação de autorização. Você é o único
-> responsável por operar **apenas** contra sistemas que possui ou tem permissão
-> escrita para testar. Testes de integração rodam somente contra alvos
-> vulneráveis **locais** (DVWA/Juice Shop), nunca contra terceiros.
+> ### ⚠️ Aviso legal — uso autorizado apenas
+> Scanning ativo de vulnerabilidades **sem autorização documentada é ilegal** em muitas
+> jurisdições. O EIGAN **bloqueia por padrão** qualquer alvo fora de um escopo autorizado e
+> exige confirmação de autorização a cada execução. Você é o **único responsável** por operar
+> apenas contra sistemas que possui ou tem permissão escrita para testar. Os testes de
+> integração rodam somente contra alvos vulneráveis **locais** (DVWA/Juice Shop), nunca contra
+> terceiros.
 
-## ⚡ Quickstart (menos de 3 minutos)
+## Índice
 
-**Um único comando, sem instalar nada antes.** O launcher cria o ambiente,
-instala o EIGAN e abre o menu — você não precisa conhecer a estrutura do
-projeto:
+- [Sobre](#-sobre)
+- [Principais recursos](#-principais-recursos)
+- [Demonstração](#-demonstração)
+- [Arquitetura](#-arquitetura)
+- [Instalação](#-instalação)
+- [Quick Start](#-quick-start)
+- [Exemplos de uso](#-exemplos-de-uso)
+- [Estrutura do projeto](#-estrutura-do-projeto)
+- [Roadmap](#-roadmap)
+- [Contribuição](#-contribuição)
+- [FAQ](#-faq)
+- [Licença](#-licença)
+- [Créditos](#-créditos)
 
-```bash
-git clone https://github.com/tue3306/vulnerability-scanner.git
-cd vulnerability-scanner          # (a pasta local pode se chamar ScanVuln)
-python3 eigan.py              # cria .venv, instala e abre o menu — ou ./eigan
-```
+## 🛡️ Sobre
+
+O EIGAN **não é "só um scanner"**: é uma **plataforma de operações de segurança** com Core
+Engine próprio que orquestra ferramentas, **normaliza** os resultados em um schema único,
+**correlaciona** entre fontes, **prioriza risco** (CVSS · EPSS · CISA KEV) e **gera
+relatórios** — extensível por **plugins**, pensada para crescer a 100+ módulos sem reescrever
+o núcleo.
+
+Ele é **AI-native e AI-obrigatória**: a IA é a ferramenta. Rodar um scan exige um provedor de
+IA configurado (nuvem **ou Ollama local**); sem provedor, o scan é **recusado** com uma
+mensagem acionável. Toda a autonomia da IA acontece **dentro** de um envelope determinístico —
+autorização, escopo e grounding — que ela nunca contorna.
+
+Tudo gira em torno de duas perguntas:
+
+| | Perspectiva | Pergunta |
+|---|---|---|
+| 🌐 | **Outside-In** (`external`) | O que um atacante descobre vindo **de fora** da organização? |
+| 🏠 | **Inside-Out** (`internal`) | O que um analista identifica estando **dentro** da rede? |
+
+## ✨ Principais recursos
+
+- 🤖 **Agente de IA que comanda o scan** — planeja a estratégia (objetivo → *capacidades* →
+  ordem), reage às descobertas em **ondas adaptativas**, decide quando parar e redige as
+  narrativas. Cada passo aparece na **timeline de raciocínio**, justificado — sem caixa-preta.
+- 🔌 **Independência de provedor** — **Anthropic (Claude) · OpenAI (GPT) · Google Gemini ·
+  OpenRouter · Groq · Together AI · Azure OpenAI · Ollama (local)**. Adicionar um provedor é
+  registrar um `ProviderSpec` — o núcleo não muda ([ADR-0010](docs/adr/0010-ai-provider-registry.md)).
+- 🧩 **Arquitetura de plugins/capabilities** — pense em *capacidades*, não em ferramentas;
+  trocar uma ferramenta não quebra nada acima. Adicionar uma = criar uma pasta (auto-discovery
+  por `metadata.yaml`; o Core intacto).
+- 🔗 **Cascata adaptativa** — cada descoberta encadeia o próximo passo (porta 445 → enumera
+  SMB; WordPress → scan WP), com um **piso determinístico** que garante que nada crítico é
+  ignorado.
+- 🧭 **Perspectiva de 1ª classe** — Outside-In/Inside-Out dirigem guardrails, ferramentas e
+  rate limit por **configuração**, não por `if` espalhado.
+- 🎯 **Risk Engine honesto** — CVSS v3.1/v4, EPSS (FIRST.org) e CISA KEV de **fonte oficial**;
+  sinal não confirmado sai `UNVERIFIED`, **nunca fabricado**.
+- 🔐 **Segurança do próprio produto** — subprocess sempre com lista de argumentos (nunca
+  `shell=True`), escopo bloqueado por padrão, consent gate inline, *redaction* de segredos/PII
+  antes de qualquer provedor externo, alvos validados contra *argument injection*.
+- 📊 **Correlação · inventário · MITRE ATT&CK** — dedup entre ferramentas por ativo, mapa de
+  técnicas e gap analysis — sem fundir perspectivas cegamente.
+- 📄 **Relatórios** Técnico e Executivo em **HTML · PDF · JSON · CSV · SARIF** — narrativas por
+  IA, exportações determinísticas (reprodutíveis para SIEM/CI), hash de integridade e
+  metodologia (PTES / NIST 800-115).
+- 🚀 **Baixa e roda** — um comando do zip ao menu; wizard guiado, `doctor` que diz o que falta
+  e como instalar, zero-config por padrão.
+
+<sub><b>Ferramentas hoje (Red / Recon real):</b> nmap · naabu · nuclei · subfinder · dnsx ·
+httpx · enum4linux · nmap-nse. Dezenas de outras (whatweb, wpscan, sqlmap, testssl, AD, cloud,
+Blue e Purple) já existem como <b>scaffold honesto</b>: aparecem no <code>doctor</code>,
+<i>sugeridas — não executadas</i> — até serem implementadas.</sub>
+
+## 🎬 Demonstração
+
+**Menu interativo** (`python3 eigan.py` ou `eigan`):
 
 ```
 ╔══════════════════════════════════════════════════════════╗
-║ EIGAN · Plataforma de Operações de Segurança         ║
+║  EIGAN · Plataforma de Operações de Segurança            ║
 ╚══════════════════════════════════════════════════════════╝
   1) Novo Scan      2) Dashboard   3) Histórico   4) Configuração
   5) Doctor         6) Atualizar Ferramentas      7) Sair
 ```
 
-- **1) Novo Scan** → assistente guiado (alvo → perspectiva → **autorização
-  inline** → progresso → relatório).
-- **2) Dashboard** → sobe a API e **abre o navegador** em `http://127.0.0.1:8000`.
-- **5) Doctor** → diagnóstico do ambiente (ferramentas, IA, Docker, feeds).
+**Timeline de raciocínio do agente** (o que a IA decide, ao vivo — CLI e dashboard):
 
-Requisitos: **Python 3.11+** (e `python3-venv` no Debian/Ubuntu/Kali — o launcher
-avisa se faltar). Com uma TTY e o extra `[tui]`, o menu vira uma **interface
-full-screen** (Textual); sem isso, cai no menu numerado — a diferença é conforto,
-não funcionalidade.
-
-> **Aceite medido (não estimado):** do projeto descompactado até o menu/wizard
-> rodando = **1 comando** (`python3 eigan.py`). Medido em **2026-07-10**, em
-> **Kali Linux** (kernel 7.0.x, Python 3.13), a partir da working tree copiada
-> (202 arquivos) e de um Python **sem o pacote instalado**: o launcher criou o
-> `.venv`, instalou `.[pdf,tui]`, gerou o `.env` e abriu o menu — sem nenhum
-> outro passo manual. Sem `python3-venv`, o launcher diz exatamente o que instalar.
-
-## 🧠 Como funciona — passo a passo (do zip ao relatório)
-
-O EIGAN é um **agente de segurança dirigido por IA**: você dá o alvo e a IA
-**planeja, orquestra em ondas adaptativas e correlaciona** — e cada ação passa por
-um **motor de política determinístico** (autorização, escopo, destrutividade)
-antes de tocar a rede. Fluxo completo:
-
-**1. Baixe e rode (Ubuntu / Kali / qualquer Linux):**
-```bash
-git clone https://github.com/tue3306/vulnerability-scanner.git   # ou baixe o .zip e descompacte
-cd vulnerability-scanner
-python3 eigan.py                     # cria .venv, instala tudo e abre o menu
+```text
+#0 [planned] plano por IA: subdomain-enum, http-probe, port-scan   ← estratégia de «attack-surface»
+#0 [stop-hint] IA sugere encerrar quando: cobertura de portas e web esgotada
+#1 [selected]  port-scan · agente=network · nmap   ← naabu indisponível; nmap cobre serviço+versão
+#1 [executed]  port-scan · nmap · 4 finding(s)
+#1 [replan:cascade] +smb-enumeration   ← cascata: porta 445/Samba (via enum4linux)
+#2 [executed]  smb-enumeration · enum4linux · 2 finding(s)
+#2 [replan:ai]  +web-vuln-scan   ← IA (adaptativo): HTTP 200 + tech WordPress observado
+#3 [stop] no_new_evidence
 ```
 
-**2. Insira sua API de IA (obrigatório — EIGAN é um agente de IA)** — menu →
-**Configuração** → escolha o provedor (Claude, GPT, Gemini, OpenRouter, Groq,
-Together, Azure ou **Ollama local**) → cole a chave → informe o modelo. A chave é
-gravada no `.env` (fora do git, `chmod 600`) e **nunca é exibida**. Quer
-privacidade/offline sem custo? Use **Ollama local**. Ver
-[docs/ai-providers.md](docs/ai-providers.md) (quais APIs usar).
+**Dashboard web** (`eigan serve` → `http://127.0.0.1:8000`): progresso em tempo real via
+WebSocket, timeline de raciocínio, findings priorizados por risco e export de relatório.
 
-**3. Informe o alvo** — menu → **Novo Scan** → digite o **site, IP ou URL** →
-escolha a perspectiva (external = visão de atacante; internal = dentro da rede) →
-**confirme a autorização** (obrigatório: só escaneie o que você tem permissão para
-testar).
+<!-- 📸 Para um GIF/screenshot ao vivo, grave o dashboard e salve em web/assets/demo.gif;
+     depois troque este bloco por:  ![Demo do EIGAN](web/assets/demo.gif)
+     Enquanto isso, veja a prévia visual em web/index.html (a landing) ou rode `eigan serve`. -->
 
-**4. O que a IA faz (visível, sem caixa-preta):**
-- **Planeja** a estratégia: traduz seu objetivo em *capacidades* e a ordem delas.
-- **Seleciona** a melhor ferramenta disponível para cada capacidade (justificado).
-- **Executa** em ondas e **reage** às descobertas: achou porta 445 → enumera SMB;
-  detectou WordPress → roda scan WP (replanejamento adaptativo).
-- **Correlaciona** os achados e **redige** as narrativas Técnica e Executiva.
-- Cada passo é **registrado e justificado**; ações intrusivas/de exploração pedem
-  **aprovação humana**; alvo fora do escopo é **recusado** pelo Policy Engine.
+> A landing page ([`web/index.html`](web/index.html)) traz a prévia visual com a identidade do
+> produto — abra-a local com `python -m http.server -d web 5500`.
 
-**5. Veja o resultado — dashboard OU PDF:**
-```bash
-python3 eigan.py --serve             # dashboard web + timeline de raciocínio ao vivo
-#   → abre http://127.0.0.1:8000 (Novo Scan, progresso em tempo real, findings)
-```
-- **Dashboard:** menu → **Dashboard** (ou `--serve`) — acompanha o raciocínio do
-  agente em tempo real, os findings e o risco priorizado.
-- **PDF / relatório:** ao fim do wizard ele **oferece gerar o relatório**; ou pelo
-  menu → **Histórico** → escolha o scan → gerar relatório
-  (**PDF/HTML/JSON/CSV/SARIF**, Técnico ou Executivo).
+## 🏗️ Arquitetura
 
-> **EIGAN é um agente de IA (§AI-native):** sem um provedor de IA configurado, o
-> scan é **recusado** com uma mensagem que diz como resolver — a IA é a ferramenta.
-> Para privacidade/offline sem custo, use **Ollama local**. A segurança
-> (autorização, escopo, política) é **sempre** aplicada.
-
-## 🔗 Cascata adaptativa — as ferramentas conversam entre si
-
-O EIGAN não roda ferramentas soltas: cada descoberta **encadeia** o próximo passo
-mais inteligente (a IA prioriza sobre um piso determinístico que garante que nada
-crítico é ignorado). Exemplos reais que já executam:
+Camadas com dependências apontando **para dentro** (Clean/Hexagonal): o domínio não conhece
+banco, rede nem ferramentas.
 
 ```
-nmap/naabu acha 445 (Samba/SMB)
-        │
-        ├─▶ enum4linux   → usuários, shares, null session, domínio
-        │        │
-        │        └─(share gravável)─▶ nmap-nse  → volta ao nmap com scripts
-        │                                          NSE de SMB (smb-vuln-*)
-        └─▶ nmap-nse      → scripts NSE do serviço (vuln)
-
-httpx confirma serviço web ─▶ whatweb (fingerprint) ─(WordPress)─▶ wpscan + nuclei
-endpoint TLS               ─▶ testssl (cifras/protocolos fracos)
-NSE confirma "VULNERABLE"  ─▶ validação de PoC (gated: exige autorização + HITL)
+Interfaces │ CLI & Wizard  ·  API REST /api/v1 + WebSocket  ·  Dashboard  ·  Landing
+           ▼
+Aplicação  │ Núcleo cognitivo (Planner → Selection → Execution → Feedback → Stop)
+           │ Orchestrator · Pipeline · Enricher · Correlação · Risk Engine
+           ▼
+Domínio    │ Finding · Scope/Consent · Perspective · Capability          (sem I/O)
+           ▲
+Infra      │ plugins (red/blue/purple) · Store (SQLite/Postgres) · IA multi-provedor
+           │ Report (PDF/HTML/JSON/CSV/SARIF) · feeds (EPSS/KEV) · Policy Engine
 ```
 
-É exatamente o "achou um banco Samba → dispara o passo focado em Samba, e pode
-voltar ao próprio nmap para um scan diferente". Cada disparo é **registrado e
-justificado** na timeline (sem caixa-preta) e regido pela classe de
-destrutividade (o Policy Engine decide autônomo × aprovação humana × recusa).
-Ferramentas ainda não instaladas aparecem como *sugeridas* (o `doctor` mostra como
-instalar) — nunca fingem ter rodado.
-
-### Flags do launcher
-
-```bash
-python3 eigan.py --with-tools   # provisiona ferramentas reais (doctor --install, com confirmação)
-python3 eigan.py --with-ai      # instala o extra de IA e mostra como configurar a chave
-python3 eigan.py --serve        # sobe o dashboard e abre o navegador
-python3 eigan.py --reinstall    # recria o .venv do zero
-python3 eigan.py --no-venv      # usa o interpretador atual (não cria .venv)
-python3 eigan.py --help         # ajuda do launcher (flags + comandos da CLI)
-```
-
-Provisão de ferramentas (ADR-0006): `--with-tools` (ou `eigan doctor
---install`) lista **exatamente** o que vai rodar e instala só após sua
-confirmação; o que não é verificável (ferramentas ProjectDiscovery) aponta a
-fonte oficial + Docker, sem fabricar comando. PDF opcional: se as libs do
-WeasyPrint faltarem, o relatório **degrada para HTML** e o `doctor` avisa como
-habilitar.
-
-### Prefere instalar como comando (igual nmap/sqlmap)?
-
-```bash
-pip install -e ".[tui]"           # + [pdf] p/ PDF, [dev] p/ desenvolver
-eigan                          # abre o mesmo menu
-eigan doctor                   # diagnóstico do ambiente
-eigan scan example.com         # scan direto (headless/CI)
-eigan plan example.com --goal attack-surface   # planner por objetivo (dry-run seguro)
-eigan diff --scan 7            # o que mudou desde o scan anterior do alvo
-eigan remediate --scan 7       # playbooks Ansible revisáveis (sugestão)
-eigan serve                    # dashboard web em http://127.0.0.1:8000
-```
-
-O EIGAN é **AI-native**: o `scan` exige um provedor de IA configurado (sem
-provedor, é recusado com um erro acionável). `doctor`, `plan` (dry-run), `diff`,
-`remediate`, os relatórios e o dashboard sobre scans já existentes funcionam sem chave.
-
-## 🗺️ Mapa do projeto
+**Pipeline do Core (event-driven, cada estágio testável isolado):**
 
 ```
-src/eigan/       Core: domínio, engine, análises, report, IA, API, CLI
-plugins/             Capabilities intercambiáveis (red/ blue/ purple/) — auto-discovery
-config/              profiles.yaml · tools.yaml · ai.yaml (zero-config por padrão)
-knowledge/           Base determinística: skills/ (SKILL.md), attack/, compliance/
-web/                 Landing page + design tokens + logo/favicon
-docs/                architecture · adr/ · design/ · roadmap/ · AUDIT · BLOCKERS
-examples/            Alvos de exemplo + laboratório local
-docker/              Dockerfile + compose (sandbox das ferramentas)
-tests/               Unit + integração (só contra alvos locais)
+Discovery → Fingerprint → Execução (plugins) → Normalização → Correlação
+   → Enriquecimento (ATT&CK · CVSS · CWE · CAPEC · EPSS/KEV) → Remediação
+   → Priorização (Risk) → Dashboard / Reporting → API
 ```
 
-Cada diretório tem seu próprio `README.md`.
+Adicionar uma ferramenta = criar uma pasta de plugin; **o Core não muda**. Detalhes em
+[docs/architecture.md](docs/architecture.md) e nos [ADRs](docs/adr/) (o *porquê* de cada decisão).
 
-## O que é (e o que não é)
+## 📦 Instalação
 
-O EIGAN não é "só um scanner": é uma **plataforma** com **Core Engine
-próprio** que orquestra ferramentas, **normaliza** os resultados em um schema
-único, **correlaciona** entre fontes, **prioriza risco** (CVSS/EPSS/KEV) e
-**gera relatórios** — extensível por **plugins** e pensada para crescer a 100+
-módulos sem reescrever o núcleo. É **AI-native e AI-obrigatória**: rodar um scan
-exige um provedor de IA configurado (Anthropic/OpenAI/Gemini/… ou **Ollama
-local**) — sem provedor, o scan é recusado.
+**Requisitos:** Python **3.11+** (e `python3-venv` no Debian/Ubuntu/Kali — o launcher avisa se
+faltar). Um provedor de IA (chave de nuvem **ou** Ollama local) para escanear.
 
-Tudo gira em torno de duas perguntas:
-
-- **Outside-In** — o que um atacante descobre vindo de fora?
-- **Inside-Out** — o que um analista identifica estando dentro da rede?
-
-## Diferenciais
-
-- 🧩 **Plugins/capabilities** — adicionar uma ferramenta é criar uma pasta; o
-  Core não muda (auto-discovery por `metadata.yaml`).
-- 🧭 **Perspectiva de 1ª classe** — Outside-In/Inside-Out dirigem guardrails,
-  ferramentas e rate limit por configuração, não por `if` espalhado.
-- 🎯 **Risk Engine honesto** — CVSS v3.1/v4, EPSS (FIRST.org) e CISA KEV de fonte
-  oficial; sinal não confirmado sai `UNVERIFIED`, **nunca** fabricado.
-- 🔗 **Correlação + inventário + ATT&CK** — dedup entre ferramentas por ativo,
-  mapa MITRE e gap analysis, sem fundir perspectivas cegamente.
-- 📄 **Relatórios** técnico e executivo em **HTML/PDF/JSON/CSV/SARIF** — narrativas
-  por IA, exportações determinísticas, hash de integridade e metodologia (PTES/NIST).
-- 🤖 **IA obrigatória, multi-provedor** (Anthropic/OpenAI/Gemini/OpenRouter/Groq/
-  Together/Azure/**Ollama local**) com grounding; a IA **comanda** o scan, jamais
-  afirma fato fora das evidências, e cada alvo passa pelo **gate de escopo/
-  autorização** (a arbitragem por impacto do Policy Engine é roadmap — ADR-0011).
-- 🚀 **Baixa e roda** — wizard, `doctor`, consent inline e zero-config.
-
-## Arquitetura
-
-```
-Interfaces:  CLI & Wizard  ·  API REST + WebSocket  ·  Dashboard  ·  Landing
-      │
-Core Engine: Discovery → Fingerprint → Execução (plugins) → Normalização
-             → Correlação → Enriquecimento (ATT&CK·CVSS·CWE·CAPEC·EPSS/KEV)
-             → Risco → Reporting                                    ← núcleo estável
-      │
-Infra:  plugins (red/blue/purple)  ·  Store (SQLite/Postgres)
-        ·  Relatórios (PDF/HTML/JSON/CSV/SARIF)  ·  IA multi-provedor (obrigatória)
-```
-
-Dependências apontam para dentro: o domínio (`findings/`, `security/`,
-`perspective.py`) não conhece banco, rede nem ferramentas. Detalhes em
-[docs/architecture.md](docs/architecture.md) e nos [ADRs](docs/adr/).
-
-## Tecnologias
-
-Python 3.11+ · Pydantic v2 (schema) · SQLite via stdlib (Repository Pattern,
-Postgres opcional via `DATABASE_URL`) · Click (CLI) + wizard · FastAPI + Uvicorn
-(API/WS) · Jinja2 + WeasyPrint (PDF) · pytest · ruff · mypy.
-
-## Instalação
+<table>
+<tr><th>Opção A — Launcher (recomendado)</th><th>Opção B — pip (como comando)</th></tr>
+<tr valign="top"><td>
 
 ```bash
 git clone https://github.com/tue3306/vulnerability-scanner.git
 cd vulnerability-scanner
-pip install -e ".[pdf,dev]"        # extras: pdf, ai, dev
+python3 eigan.py     # cria .venv, instala e abre o menu
 ```
 
-Ferramentas externas (nmap, nuclei, subfinder, ...) são detectadas no PATH;
-adapters indisponíveis são **pulados com aviso** (não quebram o scan). `eigan
-doctor` diz exatamente o que falta e como instalar. Caminho recomendado com
-sandbox: [docker/](docker/) (`docker compose up`).
+Um comando do clone ao menu — sem conhecer a estrutura.
 
-## Uso
+</td><td>
 
 ```bash
-# escopo: copie e edite com APENAS os seus alvos autorizados
+pip install -e ".[pdf,tui]"   # extras: pdf · ai · tui · dev
+eigan                         # abre o mesmo menu
+eigan --version
+```
+
+Instala o comando `eigan` (headless/CI amigável).
+
+</td></tr>
+</table>
+
+Ferramentas externas (nmap, nuclei, subfinder, …) são detectadas no `PATH`; as ausentes são
+**puladas com aviso** (não quebram o scan). Rode **`eigan doctor`** para ver exatamente o que
+falta e o comando de instalação. Caminho recomendado com sandbox:
+[`docker/`](docker/) (`docker compose up`). PDF é opcional — sem WeasyPrint, o relatório
+**degrada para HTML**.
+
+## 🚀 Quick Start
+
+```bash
+# 1) Clone e abra o menu (cria o ambiente e instala tudo)
+git clone https://github.com/tue3306/vulnerability-scanner.git
+cd vulnerability-scanner && python3 eigan.py
+
+# 2) Configure a IA (obrigatório):  menu → Configuração → escolha o provedor → cole a chave
+#    (gravada em .env, chmod 600, nunca exibida)   — ou use Ollama local, offline e sem custo
+
+# 3) Novo Scan:  menu → Novo Scan → alvo (site/IP/URL) → perspectiva → CONFIRME a autorização
+#    Acompanhe a IA planejar/reagir em tempo real e gere o relatório (PDF/HTML/JSON/CSV/SARIF)
+```
+
+Sem provedor de IA, o scan é **recusado** com uma mensagem que diz como resolver — a IA é a
+ferramenta ([ADR-0012](docs/adr/0012-ai-native-mandatory.md)). Prefere a interface web?
+`python3 eigan.py --serve` sobe o dashboard e abre o navegador.
+
+## 🧪 Exemplos de uso
+
+O usuário final não precisa da CLI (o menu/dashboard cobre tudo); ela existe para **dev, CI e
+power users**.
+
+```bash
+# Escopo: copie e edite com APENAS os seus alvos autorizados (trava dura opcional p/ times)
 cp scope.example.yaml scope.yaml
 
-# scan (exige um provedor de IA configurado) — escolha a perspectiva
-eigan scan app.local --perspective external --profile standard --scope scope.yaml
-eigan scan 10.0.0.5   --perspective internal --profile standard --scope scope.yaml
+# Scan direto (exige provedor de IA) — escolha a perspectiva
+eigan scan example.com --perspective external --profile standard --scope scope.yaml
+eigan scan 10.0.0.5    --perspective internal --profile standard --scope scope.yaml
 
-# relatório (sem nenhuma chave de API); estilos: technical | executive
-eigan report --scan 1 --format pdf --style executive
+# Planner por objetivo: mostra a IA escolhendo/justificando capacidades (dry-run seguro)
+eigan plan example.com --goal attack-surface        # não executa nada
+eigan plan 10.0.0.5    --goal network-assessment --execute   # roda (passa pelo consent gate)
+
+# Relatório de um scan salvo — estilos: technical | executive
+eigan report --scan 1 --format pdf  --style executive
+eigan report --scan 1 --format sarif                # para GitHub code scanning / SIEM
+
+# Memória entre execuções: o que mudou desde o scan anterior do alvo
+eigan diff --scan 7
+
+# Playbooks de remediação (Ansible) revisáveis — SUGESTÃO, nunca auto-aplicada
+eigan remediate --scan 7
 
 # API + dashboard
-eigan serve                    # http://127.0.0.1:8000  (/docs, /api/v1/...)
+eigan serve                                         # http://127.0.0.1:8000  (/docs, /api/v1/…)
 
-# CI: falha o pipeline se houver finding alto
+# CI: falha o pipeline se houver finding acima do limiar
 eigan scan --target-list examples/targets.example.txt --profile web-only \
   --scope scope.yaml --yes --fail-on high
 ```
 
-Perfis: `quick`, `standard`, `deep`, `network-only`, `web-only`. Mais exemplos e
-laboratório local em [examples/](examples/).
+**Perfis:** `quick` · `standard` · `deep` · `network-only` · `web-only`. Mais exemplos e um
+laboratório local em [`examples/`](examples/).
 
-## Camada de IA (obrigatória, multi-provedor)
+<details>
+<summary><b>Referência rápida da CLI</b> (clique para expandir)</summary>
 
-O EIGAN é **AI-native**: a IA é a ferramenta — **sem um provedor configurado, não
-há scan** (o comando recusa com uma mensagem acionável; ADR-0012). É **independente
-de provedor**: **Anthropic (Claude), OpenAI (GPT), Google Gemini, OpenRouter, Groq,
-Together AI, Azure OpenAI** e **Ollama (local)** — escolha por env
-(`EIGAN_AI_PROVIDER`) ou `config/ai.yaml`, ou pelo menu (*Configuração*). Adicionar
-um provedor novo é modular: implementar a interface padrão e registrar um
-`ProviderSpec` — nada mais no código muda
-([ADR-0010](docs/adr/0010-ai-provider-registry.md),
-[docs/ai-providers.md](docs/ai-providers.md): **quais APIs usar**).
+| Comando | O que faz |
+|---|---|
+| `eigan` | Abre o menu interativo (porta de entrada de produto) |
+| `eigan scan ALVO…` | Scan direto contra alvos autorizados (headless/CI) |
+| `eigan plan ALVO --goal …` | Planner cognitivo por objetivo (dry-run por padrão; `--execute` roda) |
+| `eigan report --scan N` | Gera relatório (`--format` pdf/html/json/csv/sarif · `--style` technical/executive) |
+| `eigan diff --scan N` | Diff determinístico contra o scan anterior do alvo |
+| `eigan remediate --scan N` | Gera playbooks Ansible revisáveis (sugestões) |
+| `eigan serve` | Sobe API + dashboard |
+| `eigan doctor [--install]` | Diagnóstico do ambiente (ferramentas, IA, Docker, PDF, feeds) |
+| `eigan feeds update` | Atualiza o catálogo CISA KEV (fonte oficial, com cache) |
 
-Para **privacidade/offline sem custo por token**, use **Ollama local** — nada sai
-da máquina. A IA **comanda** o scan (planeja, escolhe as ferramentas, reage às
-descobertas e redige as narrativas, marcadas `ai_generated`); chaves só por env /
-`.env` (nunca no arquivo versionado, `chmod 600`); *redaction* de segredos/PII
-antes de provedor externo. A execução real passa pelo **Policy Engine**
-determinístico (autorização/escopo/destrutividade,
-[ADR-0011](docs/adr/0011-policy-guardrail-engine.md)) — a IA nunca opera fora do
-escopo nem afirma fato fora das evidências.
+</details>
 
-## Screenshots
+## 🗂️ Estrutura do projeto
 
-A landing page ([`web/index.html`](web/index.html)) traz uma prévia do dashboard
-com a identidade visual do produto. O dashboard real sobe com `eigan serve`.
+```
+src/eigan/
+├─ capability.py  perspective.py    conceitos de 1ª classe do domínio
+├─ findings/                        schema normalizado · store (SQLite) · dedup/correlação
+├─ engine/                          orchestrator · pipeline · registry · cascade · risk · feeds
+│  └─ cognitive/                    núcleo agêntico: goal · planner · selection · agent · engine
+├─ analysis/                        inventário · MITRE ATT&CK · conformidade · diff
+├─ report/                          determinístico (HTML/PDF) + exporters (JSON/CSV/SARIF)
+├─ ai/                              provider multi-fornecedor (pré-requisito de execução)
+├─ policy/                          Policy/Guardrail Engine (ImpactClass + vet)
+├─ security/                        scope guardrail · consent gate · onboarding
+├─ api/                             FastAPI (/api/v1 + WS) + static/ (dashboard SPA)
+└─ cli/                             Click: scan · plan · report · serve · doctor · feeds + wizard
 
-> 📸 _GIFs/screenshots animados do wizard e do dashboard entram aqui em uma
-> próxima iteração (placeholder)._ Para vê-los agora, rode `eigan serve` ou
-> abra a landing localmente (`python -m http.server -d web 5500`).
+plugins/<red|blue|purple>/…         capabilities intercambiáveis (auto-discovery)
+config/                             profiles.yaml · tools.yaml · ai.yaml (zero-config por padrão)
+knowledge/                          base determinística: skills/ · attack/ · compliance/
+web/                                landing page + design tokens + logo/favicon
+docs/                               architecture · adr/ · design/ · roadmap/ · AUDIT · DECISIONS
+examples/  docker/  tests/          alvos de exemplo · sandbox · unit + integração local
+```
 
-## FAQ
+Cada diretório relevante tem o seu próprio `README.md`.
 
-**Preciso de uma chave de IA?** **Sim** — o EIGAN é um agente de IA (AI-native):
-sem um provedor configurado, o scan é recusado com uma mensagem que diz como
-resolver. Você pode usar um provedor de nuvem (Claude/GPT/Gemini/Groq/…) **ou o
-Ollama local** (sem chave, sem custo, offline). Ver
-[docs/ai-providers.md](docs/ai-providers.md).
+## 🗺️ Roadmap
 
-**É legal usar?** Depende de **você** ter autorização. Só escaneie o que você
-possui ou tem permissão escrita para testar. O produto bloqueia alvos fora do
-escopo por padrão — trate isso como recurso, não obstáculo. Veja o
-[SECURITY.md](SECURITY.md) e o aviso legal acima.
+**Entregue na v1.0:** núcleo agêntico (a IA comanda o scan fim a fim) · Recon Red real (8
+plugins) · cascata adaptativa · perspectivas Outside-In/Inside-Out · Risk Engine (CVSS/EPSS/KEV)
+· correlação + inventário + ATT&CK · relatórios Técnico/Executivo em 5 formatos · dashboard com
+timeline · "baixa e roda" · Policy Engine (Fase 0) · multi-provedor de IA.
 
-**Como adiciono uma ferramenta?** Criando uma pasta em `plugins/` — o Core faz
-auto-discovery. Passo a passo no [CONTRIBUTING.md](CONTRIBUTING.md).
+**Próximo (scaffold honesto → real):**
 
-Mais perguntas na seção FAQ da [landing page](web/index.html).
+- 🔴 **Red** — Web (whatweb/wpscan/katana/feroxbuster), TLS (testssl), SQLi (sqlmap, *gated*),
+  Windows/AD, Cloud.
+- 🔵 **Blue** / 🟣 **Purple** — log-analysis, threat-hunting, detection/control validation.
+- ⚙️ **Policy Engine — Fase 3**: submeter cada *tool-call* ao `vet()` (arbitragem por
+  `ImpactClass`, HITL) no loop de execução ([ADR-0011](docs/adr/0011-policy-guardrail-engine.md)).
+- 🧠 Memória de longo prazo, attack paths, purple loop.
 
-## Roadmap
+Visão completa e faseada em [docs/ROADMAP.md](docs/ROADMAP.md). Itens comerciais são **apenas
+documentados** ([docs/roadmap/commercial.md](docs/roadmap/commercial.md)), sem código.
 
-MVP entregue (Red/Blue/Purple), módulos futuros como *scaffold honesto* e a visão
-de plataforma estão em [docs/ROADMAP.md](docs/ROADMAP.md). Itens comerciais são
-**apenas documentados** em [docs/roadmap/commercial.md](docs/roadmap/commercial.md)
-(sem código).
+## 🤝 Contribuição
 
-## Contribuindo
+Contribuições são muito bem-vindas! O ponto forte da arquitetura é que **adicionar uma
+ferramenta é criar uma pasta** — o Core não muda.
 
-Contribuições são bem-vindas! Veja [CONTRIBUTING.md](CONTRIBUTING.md) (inclui
-"adicionar um plugin em ~5 min" e a Definition of Done) e o
-[Código de Conduta](CODE_OF_CONDUCT.md). Mudanças de comportamento vêm com teste;
-`ruff` + `mypy` + `pytest` verdes antes do PR.
+```
+plugins/red/minha-ferramenta/
+├─ metadata.yaml   nome · capabilities · perspectivas · impact_class · triggers_on
+├─ runner.py       execução segura (lista de args, NUNCA shell=True)
+├─ parser.py       normaliza a saída para o schema único de Finding
+├─ ai.py           enriquecimento por IA
+└─ tests/          unit + fixtures de saída real da ferramenta
+```
 
-## Licença
+Passo a passo ("plugin em ~5 min"), a Definition of Done e o fluxo de PR em
+[CONTRIBUTING.md](CONTRIBUTING.md). Antes do PR: **`ruff` + `mypy` + `pytest` verdes** e
+mudanças de comportamento com teste. Todos seguem o [Código de Conduta](CODE_OF_CONDUCT.md).
+Vulnerabilidades no próprio EIGAN: veja [SECURITY.md](SECURITY.md) (divulgação responsável).
 
-[Apache-2.0](LICENSE) — © 2026 EIGAN contributors.
+## ❓ FAQ
+
+<details>
+<summary><b>Preciso mesmo de uma chave de IA?</b></summary>
+
+**Sim.** O EIGAN é um agente de IA (AI-native): sem um provedor configurado, o scan é recusado
+com uma mensagem acionável. Use um provedor de nuvem (Claude/GPT/Gemini/Groq/…) **ou o Ollama
+local** — sem chave, sem custo, 100% offline. Ver [docs/ai-providers.md](docs/ai-providers.md).
+</details>
+
+<details>
+<summary><b>É legal usar?</b></summary>
+
+Depende de **você** ter autorização. Só escaneie o que possui ou tem permissão escrita para
+testar. O produto **bloqueia alvos fora do escopo por padrão** e exige confirmação — trate isso
+como recurso, não obstáculo. Veja o aviso legal acima e o [SECURITY.md](SECURITY.md).
+</details>
+
+<details>
+<summary><b>A IA vê minhas credenciais/segredos?</b></summary>
+
+Não sem *redaction*. Segredos e PII são removidos **antes** de qualquer envio a um provedor
+externo; chaves de API só vivem em variáveis de ambiente / `.env` (`chmod 600`, fora do git).
+Para privacidade máxima, use **Ollama local** — nada sai da máquina.
+</details>
+
+<details>
+<summary><b>Meus dados de CVE/EPSS/KEV são confiáveis?</b></summary>
+
+Sim — vêm de **fonte oficial** (NVD/OSV, FIRST.org, CISA KEV) com cache. Sinal não confirmado
+sai `UNVERIFIED`; o EIGAN **nunca fabrica** score, CVE ou versão.
+</details>
+
+<details>
+<summary><b>Como adiciono uma ferramenta?</b></summary>
+
+Criando uma pasta em `plugins/` com `metadata.yaml` + `runner.py` + `parser.py` — o Core faz
+auto-discovery. Ver [Contribuição](#-contribuição) e o [CONTRIBUTING.md](CONTRIBUTING.md).
+</details>
+
+<details>
+<summary><b>Funciona no Windows/macOS?</b></summary>
+
+O core (Python 3.11+) é multiplataforma; as ferramentas externas seguem o seu SO. O caminho
+recomendado e reprodutível é **Docker** (`docker compose up`), que isola as ferramentas.
+</details>
+
+## 📄 Licença
+
+Distribuído sob a licença **[Apache-2.0](LICENSE)**. © 2026 EIGAN contributors.
+
+## 🙏 Créditos
+
+Construído sobre o trabalho de uma comunidade enorme:
+
+- **Ferramentas orquestradas** — [Nmap](https://nmap.org/), a suíte
+  [ProjectDiscovery](https://projectdiscovery.io/) (naabu · nuclei · subfinder · dnsx · httpx),
+  enum4linux e os projetos do roadmap (whatweb, wpscan, testssl, sqlmap, …). O EIGAN os
+  **orquestra**; todo o crédito das ferramentas é de seus autores.
+- **Padrões e feeds** — MITRE [ATT&CK](https://attack.mitre.org/) · [CAPEC](https://capec.mitre.org/)
+  · [CWE](https://cwe.mitre.org/), [OWASP](https://owasp.org/), [NIST](https://www.nist.gov/)
+  (SP 800-115 · CSF), [FIRST.org EPSS](https://www.first.org/epss/), [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog)
+  e [NVD](https://nvd.nist.gov/) / [OSV](https://osv.dev/).
+- **Stack** — [Python](https://www.python.org/), [FastAPI](https://fastapi.tiangolo.com/),
+  [Pydantic](https://docs.pydantic.dev/), [Click](https://click.palletsprojects.com/),
+  [Uvicorn](https://www.uvicorn.org/), [Jinja2](https://jinja.palletsprojects.com/),
+  [WeasyPrint](https://weasyprint.org/), [ruff](https://docs.astral.sh/ruff/),
+  [mypy](https://mypy-lang.org/) e [pytest](https://pytest.org/).
+- **Comparações com outras ferramentas** só por características verificáveis — nunca alegação
+  depreciativa.
+
+<p align="center"><sub>
+  Feito para aguentar auditoria de especialistas e uso por grandes empresas —
+  segurança e legalidade antes de conveniência. · <a href="#índice">▲ topo</a>
+</sub></p>
