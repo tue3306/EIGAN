@@ -31,6 +31,18 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - **Mascaramento parcial de segredos por padrão** (chave privada, AWS key, JWT,
   `password/token/secret`) nas evidências (CWE-200 no próprio relatório);
   `--show-sensitive` / `show_sensitive=true` mostra a versão completa.
+- **Dashboard reconstruído (estilo SOC)** — SPA vanilla sem build, modular:
+  **tema claro/escuro** (persistido), layout responsivo, animações suaves,
+  **gráficos SVG** (donut de severidade + gauge de score, sem dependência),
+  **score de postura** (mesma fórmula do PDF). Scan ao vivo (WebSocket) com
+  **tempo decorrido, ETA, ferramenta atual, barra de progresso, fases, timeline
+  de raciocínio e feed de descobertas**. Tabela de findings com **busca
+  instantânea, filtro, ordenação, paginação e drill-down** (CVSS/EPSS/KEV/CWE/
+  OWASP/ATT&CK/evidência/referências); histórico com busca/filtro; export de
+  relatório com escolha de classificação.
+
+### Fixed (frontend)
+- Marca **VulnForge** residual removida do dashboard (`index.html`).
 
 ### Docs
 - **README reescrito** com estrutura de projeto OSS profissional: banner
