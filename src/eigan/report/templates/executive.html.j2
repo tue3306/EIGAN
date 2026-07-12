@@ -1,123 +1,86 @@
-<!doctype html>
-<html lang="pt-br">
-<head>
-<meta charset="utf-8">
-<style>
-  @page { size: A4; margin: 2cm; @bottom-center { content: "Página " counter(page) " / " counter(pages); font-size: 9px; color: #888; } }
-  body { font-family: "DejaVu Sans", Arial, sans-serif; color: #1a1a1a; font-size: 11px; }
-  h1 { color: #0b3d5c; } h2 { color: #0b3d5c; border-bottom: 2px solid #0b3d5c; padding-bottom: 3px; margin-top: 24px; }
-  .cover { text-align: center; margin-top: 25%; }
-  .meta { color: #555; font-size: 10px; }
-  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-  th, td { border: 1px solid #ccc; padding: 5px; text-align: left; vertical-align: top; }
-  th { background: #0b3d5c; color: #fff; }
-  .sev-critical { color: #fff; background: #7b0000; padding: 1px 6px; border-radius: 3px; }
-  .sev-high { color: #fff; background: #c0392b; padding: 1px 6px; border-radius: 3px; }
-  .sev-medium { color: #000; background: #f39c12; padding: 1px 6px; border-radius: 3px; }
-  .sev-low { color: #000; background: #f1c40f; padding: 1px 6px; border-radius: 3px; }
-  .sev-info { color: #fff; background: #7f8c8d; padding: 1px 6px; border-radius: 3px; }
-  .ai-tag { font-size: 8px; background: #6c5ce7; color:#fff; padding: 1px 4px; border-radius: 3px; }
-  .kev { font-size: 8px; background: #7b0000; color:#fff; padding: 1px 4px; border-radius: 3px; }
-  .chain { font-size: 9px; color: #444; margin: 2px 0 0 0; }
-  .legal { border: 1px solid #c0392b; background: #fdf0ef; padding: 8px; font-size: 9px; }
-  .bar { height: 12px; background: #0b3d5c; display: inline-block; }
-</style>
-</head>
-<body>
-  <div class="cover">
-    <h1>{{ brand }}</h1>
-    <h2 style="border:none">Relatório Executivo de Riscos</h2>
-    <p class="meta">Engajamento: {{ engagement }}</p>
-    <p class="meta">Gerado em: {{ generated_at }}</p>
-    <p class="meta">Metodologia: PTES · NIST SP 800-115</p>
-    <p class="meta">Versão da ferramenta: {{ tool_version }}</p>
-    <p class="meta">Feeds — KEV: {{ feeds.kev or "UNVERIFIED" }} · EPSS: {{ feeds.epss or "UNVERIFIED" }}</p>
-    <p class="meta">Hash de integridade: <code>{{ dataset_hash }}</code></p>
-  </div>
+{% extends "base_corporate.html.j2" %}
+{% block doctitle %}Relatório Executivo de Riscos{% endblock %}
+{% block cover_kind %}Relatório Executivo{% endblock %}
+{% block cover_title %}Relatório Executivo de Riscos{% endblock %}
+{% block content %}
 
-  <div style="page-break-before: always"></div>
-  <div class="legal">
-    <strong>Aviso legal:</strong> avaliação realizada exclusivamente contra os
-    alvos autorizados listados no escopo.
+  <h2>1. Sumário executivo {% if executive_ai %}<span class="tag ai">gerado por IA</span>{% endif %}</h2>
+  <div class="split">
+    <div style="flex:0 0 auto">{{ gauge_svg|safe }}</div>
+    <div style="flex:1">
+      <p>{{ executive_summary }}</p>
+      <p class="muted small">Score de postura
+        <strong style="color:{{ security_score.color }}">{{ security_score.score }}/100 · nota
+        {{ security_score.grade }} ({{ security_score.label }})</strong> — heurística
+        determinística (severidade + CISA KEV); não é certificação de conformidade.</p>
+    </div>
   </div>
-
-  <h2>1. Sumário executivo {% if executive_ai %}<span class="ai-tag">gerado por IA</span>{% endif %}</h2>
-  <p>{{ executive_summary }}</p>
 
   <h2>2. Postura de risco</h2>
-  <table>
-    <tr><th>Severidade</th><th>Quantidade</th><th></th></tr>
-    {% for sev, count in summary.items() %}
-    <tr>
-      <td><span class="sev-{{ sev }}">{{ sev|upper }}</span></td>
-      <td>{{ count }}</td>
-      <td><span class="bar" style="width: {{ (count * 12) if count < 20 else 240 }}px"></span></td>
-    </tr>
-    {% endfor %}
-  </table>
-  <p class="meta">Ativos avaliados: {{ correlations|length }} ·
-     Em CISA KEV (exploração ativa conhecida): {{ kev_count }}{% if not feeds.kev %} (KEV UNVERIFIED){% endif %}</p>
-  {% if inventory_summary %}
-  <p class="meta">Inventário: {{ inventory_summary.assets }} ativo(s) ·
-     {{ inventory_summary.with_open_ports }} com portas abertas ·
-     {{ inventory_summary.with_web }} com web ·
-     {{ inventory_summary.total_ports }} porta(s) no total.</p>
-  {% endif %}
+  <div class="split">
+    <div style="flex:0 0 auto">{{ donut_svg|safe }}</div>
+    <div style="flex:1">
+      <div class="grid" style="grid-template-columns: repeat(5,1fr)">
+        {% for sev in ["critical","high","medium","low","info"] %}
+        <div class="kpi"><div class="n" style="color:{{ sev_colors[sev] }}">{{ summary[sev] }}</div>
+          <div class="l">{{ sev }}</div></div>
+        {% endfor %}
+      </div>
+      <p class="muted small">Ativos avaliados: {{ correlations|length }} ·
+        Em <strong>CISA KEV</strong> (exploração ativa conhecida): {{ kev_count }}{% if not feeds.kev %}
+        <span class="tag unv">KEV UNVERIFIED</span>{% endif %}
+        {% if inventory_summary %}<br>Inventário: {{ inventory_summary.assets }} ativo(s) ·
+        {{ inventory_summary.with_open_ports }} com portas · {{ inventory_summary.with_web }} com web ·
+        {{ inventory_summary.total_ports }} porta(s).{% endif %}</p>
+    </div>
+  </div>
 
   <h2>3. Riscos prioritários</h2>
   <table>
-    <tr><th>#</th><th>Risco</th><th>Severidade</th><th>Ativo</th><th>Risco composto</th><th>EPSS</th><th>KEV</th></tr>
+    <thead><tr><th>#</th><th>Risco</th><th>Sev.</th><th>Ativo</th><th>Risco</th><th>EPSS</th><th>KEV</th></tr></thead>
+    <tbody>
     {% for f in top_risks %}
-    <tr>
-      <td>{{ loop.index }}</td>
-      <td>{{ f.title }}</td>
-      <td><span class="sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span></td>
-      <td>{{ f.affected_asset }}</td>
-      <td>{{ "%.0f"|format(f.risk_rank) }}</td>
-      <td>{% if f.risk and f.risk.epss_verified %}{{ "%.3f"|format(f.risk.epss) }}{% else %}<span class="ai-tag" style="background:#c0392b">UNVERIFIED</span>{% endif %}</td>
-      <td>{% if f.risk and f.risk.kev %}<span class="kev">KEV</span>{% elif f.risk and f.risk.kev_verified %}não{% else %}?{% endif %}</td>
-    </tr>
+      <tr>
+        <td>{{ loop.index }}</td><td>{{ f.title }}</td>
+        <td><span class="sev sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span></td>
+        <td><code>{{ f.affected_asset }}</code></td>
+        <td>{{ "%.0f"|format(f.risk_rank) }}</td>
+        <td>{% if f.risk and f.risk.epss_verified %}{{ "%.3f"|format(f.risk.epss) }}{% else %}<span class="tag unv">UNVERIFIED</span>{% endif %}</td>
+        <td>{% if f.risk and f.risk.kev %}<span class="tag kev">KEV</span>{% elif f.risk and f.risk.kev_verified %}não{% else %}?{% endif %}</td>
+      </tr>
     {% endfor %}
+    </tbody>
   </table>
 
   <h2>4. Ativos mais críticos</h2>
   {% for a in correlations[:10] %}
-  <div style="page-break-inside: avoid; margin: 8px 0;">
+  <div class="panel">
     <strong>{{ a.asset }}</strong>
-    <span class="meta">— risco {{ "%.0f"|format(a.max_risk) }} · perspectivas: {{ a.perspectives|join(", ") }}
-    {% if a.cross_perspective %}<span class="ai-tag">Outside-In × Inside-Out</span>{% endif %}</span>
-    {% if a.attack_chain %}
-    <p class="chain">Cadeia possível (heurística): {{ a.attack_chain|join("  →  ") }}</p>
-    {% endif %}
+    <span class="muted small">— risco {{ "%.0f"|format(a.max_risk) }} · perspectivas:
+      {{ a.perspectives|join(", ") }}
+      {% if a.cross_perspective %}<span class="tag ai">Outside-In × Inside-Out</span>{% endif %}</span>
+    {% if a.attack_chain %}<p class="small muted" style="margin:3pt 0 0">Cadeia possível (heurística):
+      {{ a.attack_chain|join("  →  ") }}</p>{% endif %}
   </div>
   {% endfor %}
 
   {% if attack %}
-  <h2>5. Cobertura MITRE ATT&amp;CK (Purple)</h2>
+  <h2>5. Cobertura MITRE ATT&amp;CK</h2>
   {% if attack.hits %}
   <table>
-    <tr><th>Técnica</th><th>Nome</th><th>Tática</th><th>Ocorrências</th></tr>
-    {% for h in attack.hits %}
-    <tr><td><code>{{ h.technique }}</code></td><td>{{ h.name }}</td><td>{{ h.tactic }}</td><td>{{ h.count }}</td></tr>
-    {% endfor %}
+    <thead><tr><th>Técnica</th><th>Nome</th><th>Tática</th><th>Ocorrências</th></tr></thead>
+    <tbody>{% for h in attack.hits %}<tr><td><code>{{ h.technique }}</code></td><td>{{ h.name }}</td>
+      <td>{{ h.tactic }}</td><td>{{ h.count }}</td></tr>{% endfor %}</tbody>
   </table>
-  <p class="meta"><strong>Táticas com sinal:</strong> {{ attack.tactics_covered|join(", ") or "nenhuma" }}</p>
-  <p class="meta"><strong>Gap (táticas sem sinal neste scan):</strong> {{ attack.tactics_gap|join(", ") }}</p>
-  {% if attack.unmapped %}<p class="meta">Técnicas fora do catálogo curado (não mapeadas): {{ attack.unmapped|join(", ") }}</p>{% endif %}
+  <p class="muted small"><strong>Táticas com sinal:</strong> {{ attack.tactics_covered|join(", ") or "nenhuma" }} ·
+     <strong>Gap:</strong> {{ attack.tactics_gap|join(", ") or "—" }}
+     {% if attack.unmapped %}· Fora do catálogo: {{ attack.unmapped|join(", ") }}{% endif %}</p>
   {% else %}
-  <p class="meta">Nenhuma técnica ATT&amp;CK associada aos findings deste scan.</p>
+  <p class="muted small">Nenhuma técnica ATT&amp;CK associada aos findings deste scan.</p>
   {% endif %}
   {% endif %}
 
   <h2>6. Recomendações</h2>
-  <ol>
-    {% for rec in recommendations %}<li>{{ rec }}</li>{% endfor %}
-  </ol>
+  <ol>{% for rec in recommendations %}<li>{{ rec }}</li>{% endfor %}</ol>
 
-  <p class="meta" style="margin-top:30px">
-    Sinais marcados <span class="ai-tag" style="background:#c0392b">UNVERIFIED</span> não foram
-    confirmados contra a fonte oficial (rode <code>eigan feeds update</code>). A cadeia de
-    ataque é heurística e requer validação por especialista.
-  </p>
-</body>
-</html>
+{% endblock %}

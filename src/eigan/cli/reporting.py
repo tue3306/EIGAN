@@ -38,15 +38,23 @@ def write_report(
     out: str | None,
     use_ai: bool,
     feeds_meta: dict | None = None,
+    classification: str = "confidential",
+    show_sensitive: bool = False,
 ) -> tuple[Path, bool]:
     """Gera o relatório e devolve (caminho, ia_usada). Levanta ValueError se o
-    scan não existir."""
+    scan não existir.
+
+    ``classification`` (público|interno|confidencial|restrito) dirige o destaque
+    visual e o aviso; ``show_sensitive`` desliga o mascaramento de segredos
+    (padrão: mascarado — §Tratamento de Informações Sensíveis)."""
     meta = store.get_scan(scan_id)
     if not meta:
         raise ValueError(f"Scan {scan_id} não encontrado.")
     findings = store.get_findings(scan_id)
     targets = json.loads(meta["targets"])
     engagement = meta["engagement"]
+    scan_type = str(meta.get("profile", ""))  # ex.: "external/standard"
+    mask = not show_sensitive
 
     gen, enricher = build_generator(use_ai=use_ai, feeds_meta=feeds_meta)
     out_path = Path(out or f"report_scan_{scan_id}_{style}.{fmt}")
@@ -55,8 +63,25 @@ def write_report(
         out_path.write_text(gen.export(findings, fmt, engagement=engagement, targets=targets))
     elif fmt == "html":
         out_path.write_text(
-            gen.render_html(findings, engagement=engagement, targets=targets, style=style)
+            gen.render_html(
+                findings,
+                engagement=engagement,
+                targets=targets,
+                style=style,
+                classification=classification,
+                mask_sensitive=mask,
+                scan_type=scan_type,
+            )
         )
     else:  # pdf
-        gen.render_pdf(findings, out_path, engagement=engagement, targets=targets, style=style)
+        gen.render_pdf(
+            findings,
+            out_path,
+            engagement=engagement,
+            targets=targets,
+            style=style,
+            classification=classification,
+            mask_sensitive=mask,
+            scan_type=scan_type,
+        )
     return out_path, enricher.ai_enabled

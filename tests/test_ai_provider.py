@@ -10,14 +10,17 @@ import json
 import pytest
 
 from eigan.ai.provider import (
+    PROVIDERS,
     AIProvider,
     AnthropicProvider,
     Enricher,
     Explanation,
     GroqProvider,
+    OllamaProvider,
     OpenAIProvider,
     ProviderSpec,
     _build_prompts,
+    _LOCAL_TIMEOUT,
     _parse_explanation,
     default_provider,
     list_providers,
@@ -269,3 +272,106 @@ def test_enricher_without_provider_is_deterministic(tmp_path):
     enricher = Enricher(KnowledgeBase(tmp_path), provider=None)
     assert enricher.ai_enabled is False
     assert enricher.explain(_finding()).ai_generated is False
+
+
+# --------------------------------------------------------------------------- #
+# Ollama local (round-trip, normalização de host, timeout) — antes sem cobertura
+# --------------------------------------------------------------------------- #
+def test_ollama_roundtrip_and_host_normalization():
+    # Prova o parser Ollama (/api/chat → message.content) E que um OLLAMA_HOST sem
+    # esquema ('localhost:11434') vira uma URL válida (http://…), que antes quebrava.
+    httpx = pytest.importorskip("httpx")
+    captured = {}
+
+    def handler(request):
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"message": {"content": "resposta local"}})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    provider = OllamaProvider(model="qwen2.5:0.5b", credential="localhost:11434", client=client)
+    assert provider.complete("s", "u") == "resposta local"
+    assert captured["url"] == "http://localhost:11434/api/chat"
+
+
+def _ollama_client(models):
+    httpx = pytest.importorskip("httpx")
+
+    def handler(request):
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": [{"model": m} for m in models]})
+        return httpx.Response(200, json={"message": {"content": "x"}})
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_ollama_probe_ok_when_model_present():
+    client = _ollama_client(["qwen2.5:0.5b", "llama3.2:1b"])
+    p = OllamaProvider(model="qwen2.5:0.5b", credential="http://localhost:11434", client=client)
+    ok, detail = p.probe()
+    assert ok and "presente" in detail
+
+
+def test_ollama_probe_matches_by_base_name():
+    # usuário setou só 'qwen2.5' (sem :tag) — casa pelo nome base
+    client = _ollama_client(["qwen2.5:0.5b"])
+    ok, _ = OllamaProvider(model="qwen2.5", credential="http://h", client=client).probe()
+    assert ok
+
+
+def test_ollama_probe_fails_when_model_not_pulled():
+    client = _ollama_client(["outro-modelo"])
+    ok, detail = OllamaProvider(model="qwen2.5:0.5b", credential="http://h", client=client).probe()
+    assert not ok and "pull" in detail  # aponta o comando exato
+
+
+def test_ollama_probe_fails_when_server_down():
+    httpx = pytest.importorskip("httpx")
+
+    def handler(request):
+        raise httpx.ConnectError("connection refused")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    ok, detail = OllamaProvider(
+        model="m", credential="http://localhost:11434", client=client
+    ).probe()
+    assert not ok and "não respondeu" in detail
+
+
+def test_cloud_probe_ok_and_failure():
+    httpx = pytest.importorskip("httpx")
+
+    def ok_handler(request):
+        return httpx.Response(200, json={"content": [{"type": "text", "text": "pong"}]})
+
+    p = AnthropicProvider(
+        model="claude-opus-4-8",
+        credential="k",
+        client=httpx.Client(transport=httpx.MockTransport(ok_handler)),
+    )
+    ok, detail = p.probe()
+    assert ok and "pong" in detail
+
+    def boom_handler(request):
+        return httpx.Response(500, json={"error": "x"})
+
+    p2 = AnthropicProvider(
+        model="m", credential="k", client=httpx.Client(transport=httpx.MockTransport(boom_handler))
+    )
+    ok2, _ = p2.probe()
+    assert not ok2  # HTTP 500 → raise_for_status → probe reporta falha (não crash)
+
+
+def test_ollama_uses_local_timeout(monkeypatch):
+    # A regressão real: timeout curto fazia toda completude local estourar.
+    assert PROVIDERS["ollama"].timeout == _LOCAL_TIMEOUT
+    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:11434")
+    monkeypatch.setenv("OLLAMA_MODEL", "m")
+    prov = PROVIDERS["ollama"].build()
+    assert prov is not None and prov._timeout == _LOCAL_TIMEOUT  # 300s, não os 60s da nuvem
+
+
+def test_ai_timeout_env_override(monkeypatch):
+    monkeypatch.setenv("EIGAN_AI_TIMEOUT", "12.5")
+    monkeypatch.setenv("OLLAMA_HOST", "http://h")
+    monkeypatch.setenv("OLLAMA_MODEL", "m")
+    assert PROVIDERS["ollama"].build()._timeout == 12.5

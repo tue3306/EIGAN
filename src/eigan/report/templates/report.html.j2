@@ -1,99 +1,124 @@
-<!doctype html>
-<html lang="pt-br">
-<head>
-<meta charset="utf-8">
-<style>
-  @page { size: A4; margin: 2cm; @bottom-center { content: "Página " counter(page) " / " counter(pages); font-size: 9px; color: #888; } }
-  body { font-family: "DejaVu Sans", Arial, sans-serif; color: #1a1a1a; font-size: 11px; }
-  h1 { color: #0b3d5c; } h2 { color: #0b3d5c; border-bottom: 2px solid #0b3d5c; padding-bottom: 3px; margin-top: 24px; }
-  .cover { text-align: center; margin-top: 30%; }
-  .meta { color: #555; font-size: 10px; }
-  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-  th, td { border: 1px solid #ccc; padding: 5px; text-align: left; vertical-align: top; }
-  th { background: #0b3d5c; color: #fff; }
-  .sev-critical { color: #fff; background: #7b0000; padding: 1px 6px; border-radius: 3px; }
-  .sev-high { color: #fff; background: #c0392b; padding: 1px 6px; border-radius: 3px; }
-  .sev-medium { color: #000; background: #f39c12; padding: 1px 6px; border-radius: 3px; }
-  .sev-low { color: #000; background: #f1c40f; padding: 1px 6px; border-radius: 3px; }
-  .sev-info { color: #fff; background: #7f8c8d; padding: 1px 6px; border-radius: 3px; }
-  .ai-tag { font-size: 8px; background: #6c5ce7; color:#fff; padding: 1px 4px; border-radius: 3px; }
-  .finding { page-break-inside: avoid; border-left: 3px solid #0b3d5c; padding-left: 10px; margin: 14px 0; }
-  code, pre { background: #f4f4f4; font-family: "DejaVu Sans Mono", monospace; font-size: 9px; white-space: pre-wrap; word-break: break-all; }
-  .legal { border: 1px solid #c0392b; background: #fdf0ef; padding: 8px; font-size: 9px; }
-</style>
-</head>
-<body>
-  <div class="cover">
-    <h1>{{ brand }}</h1>
-    <h2 style="border:none">Relatório de Avaliação de Vulnerabilidades</h2>
-    <p class="meta">Engajamento: {{ engagement }}</p>
-    <p class="meta">Gerado em: {{ generated_at }}</p>
-    <p class="meta">Metodologia: PTES · NIST SP 800-115</p>
-    <p class="meta">Versão da ferramenta: {{ tool_version }}</p>
-    <p class="meta">Hash de integridade do dataset: <code>{{ dataset_hash }}</code></p>
+{% extends "base_corporate.html.j2" %}
+{% block doctitle %}Relatório de Avaliação de Vulnerabilidades{% endblock %}
+{% block cover_kind %}Relatório Técnico{% endblock %}
+{% block cover_title %}Avaliação de Vulnerabilidades{% endblock %}
+{% block content %}
+
+  <h2>1. Sumário executivo {% if executive_ai %}<span class="tag ai">gerado por IA</span>{% endif %}</h2>
+  <div class="split">
+    <div style="flex:0 0 auto">{{ gauge_svg|safe }}</div>
+    <div style="flex:1">
+      <p>{{ executive_summary }}</p>
+      <p class="muted small">Score de postura
+        <strong style="color:{{ security_score.color }}">{{ security_score.score }}/100 · nota
+        {{ security_score.grade }} ({{ security_score.label }})</strong> —
+        indicador heurístico determinístico (severidade + CISA KEV), não uma certificação.</p>
+    </div>
   </div>
 
-  <div style="page-break-before: always"></div>
-  <div class="legal">
-    <strong>Aviso legal:</strong> este relatório documenta testes realizados
-    exclusivamente contra os alvos autorizados listados no escopo. Uso não
-    autorizado de técnicas de scanning é ilegal em diversas jurisdições.
+  <h2>2. Escopo e metodologia</h2>
+  <p><strong>Escopo autorizado:</strong></p>
+  <ul>{% for t in targets %}<li><code>{{ t }}</code></li>{% endfor %}</ul>
+  <p><strong>Metodologia:</strong> PTES · NIST SP 800-115 &nbsp;·&nbsp;
+     <strong>Tipo de scan:</strong> {{ scan_type or "—" }} &nbsp;·&nbsp;
+     <strong>Gerado em:</strong> {{ generated_at }}</p>
+  {% if tools_executed %}<p><strong>Ferramentas executadas:</strong> {{ tools_executed|join(" · ") }}</p>{% endif %}
+
+  <h2>3. Postura de risco</h2>
+  <div class="split">
+    <div style="flex:0 0 auto">{{ donut_svg|safe }}</div>
+    <div style="flex:1">
+      <div class="grid" style="grid-template-columns: repeat(5,1fr)">
+        {% for sev in ["critical","high","medium","low","info"] %}
+        <div class="kpi"><div class="n" style="color:{{ sev_colors[sev] }}">{{ summary[sev] }}</div>
+          <div class="l">{{ sev }}</div></div>
+        {% endfor %}
+      </div>
+      <p class="muted small">Total de {{ findings|length }} achado(s) em
+        {{ inventory_summary.assets if inventory_summary else 0 }} ativo(s) ·
+        Em <strong>CISA KEV</strong> (exploração ativa): {{ kev_count }}{% if not feeds.kev %}
+        <span class="tag unv">KEV UNVERIFIED</span>{% endif %}</p>
+    </div>
   </div>
 
-  <h2>1. Escopo autorizado</h2>
-  <ul>{% for t in targets %}<li>{{ t }}</li>{% endfor %}</ul>
-
-  <h2>2. Sumário por severidade</h2>
+  <h2>4. Findings — visão geral</h2>
   <table>
-    <tr><th>Severidade</th><th>Quantidade</th></tr>
-    {% for sev, count in summary.items() %}
-    <tr><td><span class="sev-{{ sev }}">{{ sev|upper }}</span></td><td>{{ count }}</td></tr>
-    {% endfor %}
-  </table>
-  {% if executive_summary %}
-  <h2>3. Sumário executivo {% if executive_ai %}<span class="ai-tag">gerado por IA</span>{% endif %}</h2>
-  <p>{{ executive_summary }}</p>
-  {% endif %}
-
-  <h2>4. Findings</h2>
-  <table>
-    <tr><th>#</th><th>Título</th><th>Severidade</th><th>Perspectiva</th><th>Ativo</th><th>CWE</th><th>OWASP</th><th>Fonte</th></tr>
+    <thead><tr><th>#</th><th>Título</th><th>Sev.</th><th>Risco</th><th>Perspectiva</th>
+      <th>Ativo</th><th>CWE</th><th>OWASP</th><th>Fonte</th></tr></thead>
+    <tbody>
     {% for f in findings %}
-    <tr>
-      <td>{{ loop.index }}</td><td>{{ f.title }}</td>
-      <td><span class="sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span></td>
-      <td>{{ f.perspective.value }}</td>
-      <td>{{ f.affected_asset }}</td><td>{{ f.cwe or "—" }}</td>
-      <td>{{ f.owasp or "—" }}</td><td>{{ f.source_tool }}</td>
-    </tr>
+      <tr>
+        <td>{{ loop.index }}</td><td>{{ f.title }}</td>
+        <td><span class="sev sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span></td>
+        <td>{{ "%.0f"|format(f.risk_rank) }}</td>
+        <td>{{ f.perspective.value }}</td><td><code>{{ f.affected_asset }}</code></td>
+        <td>{{ f.cwe or "—" }}</td><td>{{ f.owasp or "—" }}</td><td>{{ f.source_tool }}</td>
+      </tr>
     {% endfor %}
+    </tbody>
   </table>
 
-  <h2>5. Detalhamento</h2>
+  <h2>5. Detalhamento técnico</h2>
   {% for f in findings %}
   <div class="finding">
     <h3>{{ loop.index }}. {{ f.title }}
-      <span class="sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span>
-      {% if f.confidence.value == "unverified" %}<span class="ai-tag" style="background:#c0392b">UNVERIFIED</span>{% endif %}
-      {% if f.ai_generated %}<span class="ai-tag">IA</span>{% endif %}
+      <span class="sev sev-{{ f.severity.value }}">{{ f.severity.value|upper }}</span>
+      {% if f.risk and f.risk.kev %}<span class="tag kev">CISA KEV</span>{% endif %}
+      {% if f.confidence.value == "unverified" %}<span class="tag unv">UNVERIFIED</span>{% endif %}
+      {% if f.ai_generated %}<span class="tag ai">IA</span>{% endif %}
     </h3>
-    <p><strong>Ativo:</strong> {{ f.affected_asset }} · <strong>Perspectiva:</strong> {{ f.perspective.value }}
-    · <strong>Fonte:</strong> {{ f.source_tool }}
-    {% if f.cvss %} · <strong>CVSS {{ f.cvss.version }}:</strong> {{ f.cvss.score }}{% endif %}</p>
+    <table>
+      <tbody>
+      <tr><th style="width:20%">Ativo</th><td><code>{{ f.affected_asset }}</code></td>
+          <th style="width:20%">Perspectiva</th><td>{{ f.perspective.value }}</td></tr>
+      <tr><th>Fonte</th><td>{{ f.source_tool }}{% if f.correlated_sources %} (+ {{ f.correlated_sources|join(", ") }}){% endif %}</td>
+          <th>Confiança</th><td>{{ f.confidence.value }}</td></tr>
+      <tr><th>CVSS</th><td>{% if f.cvss %}{{ f.cvss.version }} · {{ f.cvss.score }}{% else %}—{% endif %}</td>
+          <th>Risco composto</th><td>{{ "%.0f"|format(f.risk_rank) }}/100</td></tr>
+      <tr><th>EPSS</th><td>{% if f.risk and f.risk.epss_verified %}{{ "%.3f"|format(f.risk.epss) }}{% else %}<span class="tag unv">UNVERIFIED</span>{% endif %}</td>
+          <th>CWE · OWASP</th><td>{{ f.cwe or "—" }} · {{ f.owasp or "—" }}</td></tr>
+      <tr><th>Técnica ATT&amp;CK</th><td>{{ f.attack_technique or "—" }}</td>
+          <th>KEV</th><td>{% if f.risk and f.risk.kev %}sim (exploração ativa){% elif f.risk and f.risk.kev_verified %}não{% else %}UNVERIFIED{% endif %}</td></tr>
+      </tbody>
+    </table>
     <p><strong>Descrição:</strong> {{ enrichment[loop.index0].text }}</p>
-    {% if f.evidence %}<p><strong>Evidência:</strong></p><pre>{{ f.evidence }}</pre>{% endif %}
-    {% if f.reproduction %}<p><strong>Reprodução:</strong> <code>{{ f.reproduction }}</code></p>{% endif %}
+    {% if f.evidence %}
+    <p><strong>Evidência</strong>{% if mask_sensitive %} <span class="muted small">(dados sensíveis mascarados)</span>{% endif %}:</p>
+    <pre>{{ f.evidence | mask }}</pre>{% endif %}
+    {% if f.reproduction %}<p><strong>Reprodução:</strong></p><pre>{{ f.reproduction | mask }}</pre>{% endif %}
     <p><strong>Remediação:</strong> {{ enrichment[loop.index0].remediation }}</p>
-    {% if f.references %}<p><strong>Referências:</strong></p>
-    <ul>{% for r in f.references %}<li><code>{{ r }}</code></li>{% endfor %}</ul>{% endif %}
-    <p class="meta">Técnica ATT&CK: {{ f.attack_technique or "—" }} · Confiança: {{ f.confidence.value }}</p>
+    {% if f.references %}<p><strong>Referências:</strong>
+      {% for r in f.references %}<code>{{ r }}</code>{% if not loop.last %} {% endif %}{% endfor %}</p>{% endif %}
   </div>
   {% endfor %}
 
-  <p class="meta" style="margin-top:30px">
-    Seções marcadas com <span class="ai-tag">IA</span> foram geradas pela camada de IA e
-    requerem revisão humana. Itens <span class="ai-tag" style="background:#c0392b">UNVERIFIED</span>
-    não foram confirmados contra fonte oficial (NVD/OSV).
-  </p>
-</body>
-</html>
+  <h2>6. Inventário de ativos</h2>
+  {% if inventory %}
+  <table>
+    <thead><tr><th>Ativo</th><th>Portas</th><th>Endpoints web</th><th>Perspectivas</th>
+      <th>Findings</th><th>Risco máx.</th></tr></thead>
+    <tbody>
+    {% for a in inventory[:25] %}
+      <tr><td><code>{{ a.host }}</code></td><td>{{ a.ports|join(", ") or "—" }}</td>
+        <td>{{ a.web_endpoints|length }}</td><td>{{ a.perspectives|join(", ") }}</td>
+        <td>{{ a.finding_count }}</td><td>{{ "%.0f"|format(a.max_risk) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted small">Nenhum ativo estruturado neste scan.</p>{% endif %}
+
+  <h2>7. Cobertura MITRE ATT&amp;CK</h2>
+  {% if attack and attack.hits %}
+  <table>
+    <thead><tr><th>Técnica</th><th>Nome</th><th>Tática</th><th>Ocorrências</th></tr></thead>
+    <tbody>{% for h in attack.hits %}<tr><td><code>{{ h.technique }}</code></td><td>{{ h.name }}</td>
+      <td>{{ h.tactic }}</td><td>{{ h.count }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <p class="muted small">Táticas com sinal: {{ attack.tactics_covered|join(", ") or "nenhuma" }}.
+     Gap: {{ attack.tactics_gap|join(", ") or "—" }}.</p>
+  {% else %}<p class="muted small">Nenhuma técnica ATT&amp;CK associada aos findings deste scan.</p>{% endif %}
+
+  <h2>8. Recomendações e remediação</h2>
+  <ol>{% for rec in recommendations %}<li>{{ rec }}</li>{% endfor %}</ol>
+
+{% endblock %}

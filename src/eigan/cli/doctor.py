@@ -41,6 +41,30 @@ def _detect_ai() -> str | None:
     return None
 
 
+def probe_ai(echo: Callable = print, secho: Callable = print) -> bool:
+    """Testa de VERDADE se o provedor de IA ativo responde — faz uma chamada real.
+
+    Diferente da linha 'IA' do relatório (que só reflete a config): aqui chamamos
+    ``provider.probe()`` — Ollama checa ``/api/tags`` (servidor no ar + modelo
+    puxado); a nuvem faz uma completude mínima. É o "certifique que a IA funciona"
+    na prática (opt-in via ``doctor --probe-ai`` porque toca a rede/o modelo)."""
+    from ..ai.provider import default_provider
+
+    prov = default_provider()
+    if prov is None:
+        secho("\nIA (teste real): nenhum provedor configurado — nada a testar.", fg="yellow")
+        return False
+    secho("\nTestando o provedor de IA ativo (chamada real)…", fg="cyan")
+    ok, detail = prov.probe()
+    secho(
+        f"  {'✔ IA respondeu' if ok else '✗ IA NÃO respondeu'} — {detail}",
+        fg="green" if ok else "red",
+    )
+    if not ok:
+        echo("  (config presente, mas a IA não respondeu — sem isso o scan cai no substrato.)")
+    return ok
+
+
 @dataclass
 class ToolStatus:
     name: str

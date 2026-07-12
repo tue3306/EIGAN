@@ -264,13 +264,33 @@ def plan(
 )
 @click.option("--out", default=None)
 @click.option("--ai/--no-ai", default=False, help="Enriquecer narrativa com IA (se houver chave).")
-def report(scan_id, db, fmt, style, out, ai):
+@click.option(
+    "--classification",
+    type=click.Choice(["public", "internal", "confidential", "restricted"]),
+    default="confidential",
+    show_default=True,
+    help="Classificação da informação (destaque na capa/cabeçalho/rodapé + aviso).",
+)
+@click.option(
+    "--show-sensitive",
+    is_flag=True,
+    help="NÃO mascarar segredos/credenciais no relatório (padrão: mascarado). Use com cuidado.",
+)
+def report(scan_id, db, fmt, style, out, ai, classification, show_sensitive):
     """Gera relatório de um scan em HTML/PDF/JSON/CSV/SARIF (técnico ou executivo)."""
     store = FindingStore(db)
     fmeta = feeds_meta(FeedCache.load())
     try:
         path, ai_used = write_report(
-            store, scan_id, fmt=fmt, style=style, out=out, use_ai=ai, feeds_meta=fmeta
+            store,
+            scan_id,
+            fmt=fmt,
+            style=style,
+            out=out,
+            use_ai=ai,
+            feeds_meta=fmeta,
+            classification=classification,
+            show_sensitive=show_sensitive,
         )
     except ValueError as exc:
         raise click.UsageError(str(exc)) from exc
@@ -279,7 +299,15 @@ def report(scan_id, db, fmt, style, out, ai):
             click.secho(f"PDF indisponível: {exc}", fg="yellow", err=True)
             click.secho("Gerando HTML equivalente…", fg="yellow", err=True)
             path, ai_used = write_report(
-                store, scan_id, fmt="html", style=style, out=None, use_ai=ai, feeds_meta=fmeta
+                store,
+                scan_id,
+                fmt="html",
+                style=style,
+                out=None,
+                use_ai=ai,
+                feeds_meta=fmeta,
+                classification=classification,
+                show_sensitive=show_sensitive,
             )
             click.secho(
                 f"Relatório HTML gerado: {path}. Para PDF, habilite o WeasyPrint "
@@ -458,15 +486,24 @@ def menu_cmd(db):
     help="Provisiona (com confirmação) as ferramentas com runner real que faltam.",
 )
 @click.option("--yes", is_flag=True, help="Confirma sem interação (automação autorizada).")
-def doctor(do_install, yes):
+@click.option(
+    "--probe-ai",
+    "probe_ai",
+    is_flag=True,
+    help="Testa de verdade se a IA responde (chamada real ao provedor ativo).",
+)
+def doctor(do_install, yes, probe_ai):
     """Diagnostica o ambiente (Python, ferramentas, IA, Docker, PDF, feeds).
 
     Com --install, lista exatamente o que vai rodar e, após sua confirmação
     (consent gate), instala as ferramentas reais ausentes — nunca de fonte não
-    oficial, nunca com shell.
+    oficial, nunca com shell. Com --probe-ai, faz uma chamada real ao provedor de
+    IA configurado para certificar que ele responde (Ollama, nuvem, etc.).
     """
     report_ = doctor_mod.gather()
     doctor_mod.render(report_, click.echo, click.secho)
+    if probe_ai:
+        doctor_mod.probe_ai(click.echo, click.secho)
     if do_install:
         actions = doctor_mod.plan_install(report_)
         doctor_mod.run_install(actions, assume_yes=yes, echo=click.echo)

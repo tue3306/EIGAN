@@ -40,6 +40,12 @@ class AIProvider(ABC):
     @abstractmethod
     def explain(self, finding: Finding, context: str) -> Explanation: ...
 
+    def probe(self) -> tuple[bool, str]:
+        """Checagem **real** de reachability: diferente de :meth:`available`
+        (que só olha a config), faz uma chamada mínima e diz se a IA de fato
+        respondeu. Sobrescrita pelos provedores concretos; nunca levanta."""
+        return False, "provedor não suporta verificação de reachability"
+
 
 class DeterministicEnricher:
     """Fallback sem IA: monta explicação e remediação a partir da base de
@@ -116,7 +122,12 @@ class Enricher:
 _DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"  # verificado (claude-api skill)
 _ANTHROPIC_VERSION = "2023-06-01"
 _MAX_TOKENS = 1024
-_TIMEOUT = 30.0
+_TIMEOUT = 60.0  # provedores de nuvem (rede)
+# Modelo local (Ollama) na CPU carrega o modelo + gera devagar: um timeout curto
+# faz CADA completude real estourar e cair no determinístico ("configurado mas não
+# funciona"). Medido: um round-trip trivial num modelo 0.5B pode passar de 20s.
+# Ajustável por env ``EIGAN_AI_TIMEOUT`` (segundos).
+_LOCAL_TIMEOUT = 300.0
 
 _SYSTEM_PROMPT = (
     "Você é um analista de segurança sênior. Explique o finding para uma equipe "
@@ -209,6 +220,16 @@ class _HTTPProvider(AIProvider):
         (ADR-0007). Aplica a mesma redaction externa que ``explain`` (o prompt do
         Planner pode conter títulos/ativos de findings)."""
         return self._complete(system, redact(user) if self._redact_external else user)
+
+    def probe(self) -> tuple[bool, str]:
+        """Faz uma completude mínima real para provar que a IA responde (custa
+        poucos tokens na nuvem; Ollama sobrescreve com uma checagem sem inferência)."""
+        try:
+            out = self._complete("Responda apenas: pong", "ping")
+        except Exception as exc:  # noqa: BLE001 — o objetivo é reportar a falha
+            return False, f"{type(exc).__name__}: {exc}"
+        text = (out or "").strip().replace("\n", " ")
+        return (bool(text), text[:80] if text else "resposta vazia do provedor")
 
     def _complete(self, system: str, user: str) -> str:  # pragma: no cover - abstrato
         raise NotImplementedError
@@ -357,9 +378,17 @@ class GoogleProvider(_HTTPProvider):
 class OllamaProvider(_HTTPProvider):
     """Modelo local (sem chave, sem redaction obrigatória — não sai da máquina)."""
 
+    def _host(self) -> str:
+        """Normaliza ``OLLAMA_HOST``: aceita ``localhost:11434`` (sem esquema),
+        prefixando ``http://`` — senão a URL montada seria inválida."""
+        host = self._credential.strip().rstrip("/")
+        if "://" not in host:
+            host = "http://" + host
+        return host
+
     def _complete(self, system: str, user: str) -> str:
         data = self._post(
-            f"{self._credential.rstrip('/')}/api/chat",
+            f"{self._host()}/api/chat",
             headers={"content-type": "application/json"},
             payload={
                 "model": self._model,
@@ -371,6 +400,32 @@ class OllamaProvider(_HTTPProvider):
             },
         )
         return str(data["message"]["content"])
+
+    def probe(self) -> tuple[bool, str]:
+        """Reachability barata do Ollama: ``GET /api/tags`` (sem inferência) e
+        confere se o modelo foi puxado — os dois modos reais de falha ("servidor
+        offline" e "modelo não baixado"). Erro de conexão ⇒ servidor fora."""
+        import httpx
+
+        url = f"{self._host()}/api/tags"
+        try:
+            if self._client is not None:
+                resp = self._client.get(url)
+            else:
+                resp = httpx.get(url, timeout=5.0)
+            resp.raise_for_status()
+            tags = resp.json()
+        except Exception as exc:  # noqa: BLE001 — o objetivo é reportar a falha
+            return False, f"servidor Ollama não respondeu em {self._host()} ({type(exc).__name__})"
+        # Ollama lista 'nome:tag'; aceita match exato ou pelo nome sem a tag.
+        names = {str(m.get("model", "")) for m in tags.get("models", [])}
+        base = self._model.split(":")[0]
+        if self._model in names or any(n.split(":")[0] == base for n in names):
+            return True, f"Ollama online em {self._host()} · modelo '{self._model}' presente"
+        return False, (
+            f"servidor online, mas o modelo '{self._model}' NÃO foi puxado. "
+            f"Rode:  ollama pull {self._model}"
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -399,6 +454,7 @@ class ProviderSpec:
     base_url_env: str | None = None  # env para sobrescrever o endpoint
     default_base_url: str | None = None
     scan_fit: str = ""  # nota de adequação ao projeto (docs/onboarding)
+    timeout: float | None = None  # override do timeout (Ollama local precisa mais)
 
     def credential(self) -> str | None:
         return os.getenv(self.key_env)
@@ -416,6 +472,16 @@ class ProviderSpec:
             return False
         return True
 
+    def _timeout(self) -> float:
+        """Timeout efetivo: env ``EIGAN_AI_TIMEOUT`` > override do spec > padrão."""
+        env_t = os.getenv("EIGAN_AI_TIMEOUT")
+        if env_t:
+            try:
+                return float(env_t)
+            except ValueError:
+                pass
+        return self.timeout or _TIMEOUT
+
     def build(self, *, client: Any = None) -> _HTTPProvider | None:
         if not self.configured():
             return None
@@ -423,6 +489,7 @@ class ProviderSpec:
             "model": self.model(),
             "credential": self.credential(),
             "redact_external": self.external,
+            "timeout": self._timeout(),
             "client": client,
         }
         if self.base_url_env is not None:
@@ -525,6 +592,7 @@ for _spec in (
         "OLLAMA_HOST",
         "OLLAMA_MODEL",
         external=False,
+        timeout=_LOCAL_TIMEOUT,  # inferência local na CPU é lenta — timeout generoso
         scan_fit="Roda 100% local: nada sai da máquina (sem redaction externa). Privacidade máxima.",
     ),
 ):

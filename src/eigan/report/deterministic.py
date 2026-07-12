@@ -17,17 +17,38 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader, pass_context, select_autoescape
 
 from ..ai.provider import Enricher
 from ..analysis.attack import map_attack
 from ..analysis.inventory import build_inventory, summarize
 from ..engine.correlation import AssetCorrelation, correlate_assets
 from ..findings.schema import Finding, Severity
-from . import exporters
+from . import corporate, exporters
+from .corporate import Classification
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _SEV_ORDER = [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO]
+
+# Índice (número, título) por estilo — mantém o TOC e os <h2> em sincronia.
+_TOC_TECHNICAL = [
+    (1, "Sumário executivo"),
+    (2, "Escopo e metodologia"),
+    (3, "Postura de risco"),
+    (4, "Findings — visão geral"),
+    (5, "Detalhamento técnico"),
+    (6, "Inventário de ativos"),
+    (7, "Cobertura MITRE ATT&CK"),
+    (8, "Recomendações e remediação"),
+]
+_TOC_EXECUTIVE = [
+    (1, "Sumário executivo"),
+    (2, "Postura de risco"),
+    (3, "Riscos prioritários"),
+    (4, "Ativos mais críticos"),
+    (5, "Cobertura MITRE ATT&CK"),
+    (6, "Recomendações"),
+]
 
 
 def _dataset_hash(findings: list[Finding]) -> str:
@@ -53,6 +74,17 @@ class ReportGenerator:
             autoescape=select_autoescape(["html", "xml"]),
         )
 
+        # Filtro de mascaramento: só oculta segredos quando o contexto pede
+        # (mask_sensitive=True). Fica ligado ao contexto para não duplicar a
+        # decisão em cada template (§Tratamento de Informações Sensíveis).
+        @pass_context
+        def _mask(ctx: object, value: object) -> str:
+            text = str(value)
+            enabled = getattr(ctx, "get", lambda *_: False)("mask_sensitive")
+            return corporate.mask_sensitive(text) if enabled else text
+
+        self._env.filters["mask"] = _mask
+
     # ── metadados comuns ────────────────────────────────────────────────────────
     def _base_meta(self, findings: list[Finding], engagement: str, targets: list[str]) -> dict:
         return {
@@ -72,6 +104,41 @@ class ReportGenerator:
         counts = Counter(f.severity for f in findings)
         return {s.value: counts.get(s, 0) for s in _SEV_ORDER}
 
+    def _corporate_ctx(
+        self,
+        findings: list[Finding],
+        engagement: str,
+        targets: list[str],
+        *,
+        classification: str | Classification,
+        scan_type: str,
+        mask_sensitive: bool,
+    ) -> dict:
+        """Base + primitivas corporativas: classificação, id único, score de
+        postura, gráficos SVG, ferramentas executadas e o flag de mascaramento."""
+        meta = self._base_meta(findings, engagement, targets)
+        cls = Classification.from_str(classification)
+        summary = self._summary(findings)
+        score = corporate.security_score(findings)
+        meta.update(
+            {
+                "classification": cls,
+                "report_id": corporate.report_id(meta["dataset_hash"]),
+                "scan_type": scan_type,
+                "security_score": score,
+                "summary": summary,
+                "donut_svg": corporate.severity_donut_svg(summary),
+                "gauge_svg": corporate.score_gauge_svg(score),
+                "sev_colors": corporate._SEV_COLOR,
+                "mask_sensitive": mask_sensitive,
+                "tools_executed": sorted(
+                    {f.source_tool for f in findings}
+                    | {s for f in findings for s in f.correlated_sources}
+                ),
+            }
+        )
+        return meta
+
     # ── relatório técnico (detalhado) ───────────────────────────────────────────
     def render_html(
         self,
@@ -81,6 +148,9 @@ class ReportGenerator:
         targets: list[str],
         executive_summary: str = "",
         style: str = "technical",
+        classification: str | Classification = "confidential",
+        mask_sensitive: bool = True,
+        scan_type: str = "",
     ) -> str:
         if style == "executive":
             return self.render_executive_html(
@@ -88,15 +158,38 @@ class ReportGenerator:
                 engagement=engagement,
                 targets=targets,
                 executive_summary=executive_summary,
+                classification=classification,
+                mask_sensitive=mask_sensitive,
+                scan_type=scan_type,
             )
-        ctx = self._base_meta(findings, engagement, targets)
+        ctx = self._corporate_ctx(
+            findings,
+            engagement,
+            targets,
+            classification=classification,
+            scan_type=scan_type,
+            mask_sensitive=mask_sensitive,
+        )
+        inventory = build_inventory(findings)
+        kev_count = sum(1 for f in findings if f.risk and f.risk.kev)
+        summary = ctx["summary"]
+        ai = bool(executive_summary) and self._enricher.ai_enabled
+        if not executive_summary:
+            executive_summary = self._deterministic_executive(
+                findings, correlate_assets(findings), summary, kev_count
+            )
         ctx.update(
             {
-                "summary": self._summary(findings),
                 "findings": findings,
                 "enrichment": [self._enricher.explain(f) for f in findings],
                 "executive_summary": executive_summary,
-                "executive_ai": bool(executive_summary) and self._enricher.ai_enabled,
+                "executive_ai": ai,
+                "inventory": inventory,
+                "inventory_summary": summarize(inventory),
+                "kev_count": kev_count,
+                "attack": map_attack(findings),
+                "recommendations": self._recommendations(findings),
+                "toc": _TOC_TECHNICAL,
             }
         )
         return self._env.get_template("report.html.j2").render(**ctx)
@@ -109,9 +202,20 @@ class ReportGenerator:
         engagement: str,
         targets: list[str],
         executive_summary: str = "",
+        classification: str | Classification = "confidential",
+        mask_sensitive: bool = True,
+        scan_type: str = "",
     ) -> str:
         correlations = correlate_assets(findings)
-        summary = self._summary(findings)
+        ctx = self._corporate_ctx(
+            findings,
+            engagement,
+            targets,
+            classification=classification,
+            scan_type=scan_type,
+            mask_sensitive=mask_sensitive,
+        )
+        summary = ctx["summary"]
         kev_count = sum(1 for f in findings if f.risk and f.risk.kev)
         top_risks = sorted(findings, key=lambda f: f.risk_rank, reverse=True)[:15]
 
@@ -122,10 +226,8 @@ class ReportGenerator:
             )
 
         inventory = build_inventory(findings)
-        ctx = self._base_meta(findings, engagement, targets)
         ctx.update(
             {
-                "summary": summary,
                 "correlations": correlations,
                 "kev_count": kev_count,
                 "top_risks": top_risks,
@@ -134,6 +236,7 @@ class ReportGenerator:
                 "executive_ai": ai,
                 "attack": map_attack(findings),  # Purple: cobertura ATT&CK + gap
                 "inventory_summary": summarize(inventory),  # Blue: números do inventário
+                "toc": _TOC_EXECUTIVE,
             }
         )
         return self._env.get_template("executive.html.j2").render(**ctx)
@@ -201,6 +304,9 @@ class ReportGenerator:
         targets: list[str],
         executive_summary: str = "",
         style: str = "technical",
+        classification: str | Classification = "confidential",
+        mask_sensitive: bool = True,
+        scan_type: str = "",
     ) -> Path:
         html = self.render_html(
             findings,
@@ -208,6 +314,9 @@ class ReportGenerator:
             targets=targets,
             executive_summary=executive_summary,
             style=style,
+            classification=classification,
+            mask_sensitive=mask_sensitive,
+            scan_type=scan_type,
         )
         out = Path(out_path)
         # PDF é opcional (§12): ImportError = extra ausente; OSError = libs

@@ -1,12 +1,13 @@
-"""Testes de exporters (JSON/CSV/SARIF) e do relatório Executivo — todos sem IA."""
+"""Testes de exporters (JSON/CSV/SARIF) e dos relatórios corporativos — sem IA."""
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from eigan.ai.provider import Enricher
 from eigan.findings.schema import CVSS, Finding, RiskScore, Severity
 from eigan.knowledge.loader import KnowledgeBase
-from eigan.report import exporters
+from eigan.report import corporate, exporters
 from eigan.report.deterministic import ReportGenerator
 
 _KB = Path(__file__).resolve().parents[1] / "knowledge" / "skills"
@@ -104,3 +105,62 @@ def test_executive_marks_unverified_when_no_feed():
     f = Finding(title="X", severity=Severity.MEDIUM, affected_asset="h", source_tool="nuclei")
     html = gen.render_html([f], engagement="lab", targets=["h"], style="executive")
     assert "UNVERIFIED" in html
+
+
+# --------------------------------------------------------------------------- #
+# Relatório corporativo: classificação, score, masking, id, gráficos
+# --------------------------------------------------------------------------- #
+def test_classification_labels_and_sensitivity():
+    C = corporate.Classification
+    assert C.from_str("restricted").label == "RESTRITO" and C.from_str("restricted").sensitive
+    assert C.from_str("public").sensitive is False
+    assert C.from_str(None) is C.CONFIDENTIAL  # default seguro
+    assert C.from_str("lixo") is C.CONFIDENTIAL  # inválido → default
+
+
+def test_security_score_penalizes_severity_and_kev():
+    assert corporate.security_score([])["score"] == 100  # sem findings → nota máxima
+    crit = Finding(title="x", severity=Severity.CRITICAL, affected_asset="h", source_tool="t")
+    crit.risk = RiskScore(score=95, kev=True, kev_verified=True)
+    worse = corporate.security_score([crit])
+    assert worse["score"] < 100 and worse["grade"] in {"C", "D", "E", "F", "B"}
+
+
+def test_mask_sensitive_hides_secrets_partially():
+    out = corporate.mask_sensitive("password: SuperSecret123 e AKIAABCDEFGHIJKLMNOP")
+    assert "SuperSecret123" not in out and "AKIAABCDEFGHIJKLMNOP" not in out
+    assert "•" in out  # mascarado parcialmente, não removido
+
+
+def test_report_id_is_deterministic_and_formatted():
+    rid = corporate.report_id("a1b2c3d4e5", datetime(2026, 7, 11, tzinfo=timezone.utc))
+    assert rid == "EIGAN-20260711-A1B2C3"
+
+
+def test_svg_helpers_render():
+    assert "<svg" in corporate.severity_donut_svg({"critical": 1, "high": 0, "medium": 2})
+    assert "<svg" in corporate.score_gauge_svg(
+        {"score": 70, "grade": "C", "label": "x", "color": "#000"}
+    )
+
+
+def test_report_classifies_and_masks_by_default():
+    gen = ReportGenerator(Enricher(KnowledgeBase(_KB), provider=None), tool_version="1.0.1")
+    f = Finding(
+        title="Arquivo .env exposto",
+        severity=Severity.CRITICAL,
+        affected_asset="https://h/.env",
+        source_tool="nuclei",
+        evidence="password: SuperSecret123 AKIAABCDEFGHIJKLMNOP",
+    )
+    html = gen.render_html(
+        [f], engagement="lab", targets=["h"], style="technical", classification="restricted"
+    )
+    assert "RESTRITO" in html  # classificação em destaque
+    assert "EIGAN-" in html  # identificador único
+    assert "/100" in html  # score de postura
+    assert "confidencialidade" in html.lower()  # aviso
+    assert "SuperSecret123" not in html  # mascarado por padrão
+
+    full = gen.render_html([f], engagement="lab", targets=["h"], mask_sensitive=False)
+    assert "SuperSecret123" in full  # show-sensitive mostra o valor completo

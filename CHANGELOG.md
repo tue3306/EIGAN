@@ -7,6 +7,31 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Fixed
+- **IA com Ollama local não funcionava de fato** (configurado ≠ funcional): o
+  timeout fixo de 30s fazia toda completude local (CPU lenta) estourar e cair
+  silenciosamente no determinístico. Agora o timeout é **60s (nuvem) / 300s
+  (Ollama)**, ajustável por `EIGAN_AI_TIMEOUT`. `OLLAMA_HOST` sem esquema
+  (`localhost:11434`) passou a ser normalizado (antes montava URL inválida).
+
+### Added
+- **`provider.probe()` + `eigan doctor --probe-ai`**: checagem **real** de
+  reachability (chamada de verdade) — antes só se checava a config. Ollama testa
+  `/api/tags` (servidor no ar + modelo puxado); a nuvem faz uma completude mínima.
+  Fecha o "configurado mas não responde". Cobertura de teste do path Ollama (mock).
+- **Relatório corporativo (PDF/HTML) reescrito** (`report/corporate.py` +
+  templates com herança Jinja): capa com logo/alvo/tipo de scan/data/**ID único**/
+  versão, índice, sumário executivo, metodologia, cabeçalho/rodapé com numeração e
+  **classificação em todas as páginas**, **score de postura** (heurístico
+  documentado), **gráficos SVG** (donut de severidade + gauge de score, sem
+  dependência), tabelas, inventário, cobertura ATT&CK e recomendações.
+- **Classificação da informação** (Público/Interno/Confidencial/Restrito) com
+  destaque na capa/cabeçalho/rodapé + **aviso de confidencialidade e de
+  responsabilidade**. `--classification` na CLI e API.
+- **Mascaramento parcial de segredos por padrão** (chave privada, AWS key, JWT,
+  `password/token/secret`) nas evidências (CWE-200 no próprio relatório);
+  `--show-sensitive` / `show_sensitive=true` mostra a versão completa.
+
 ### Docs
 - **README reescrito** com estrutura de projeto OSS profissional: banner
   theme-aware (`<picture>` light/dark), índice, badges e seções Sobre · Recursos ·

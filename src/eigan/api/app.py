@@ -198,8 +198,13 @@ def scan_report(
     fmt: str = Query("html", alias="format"),
     style: str = Query("executive"),
     ai: bool = Query(False),
+    classification: str = Query("confidential"),
+    show_sensitive: bool = Query(False),
 ) -> FileResponse:
-    """Gera e devolve o relatório para download. PDF degrada para HTML (§13)."""
+    """Gera e devolve o relatório para download. PDF degrada para HTML (§13).
+
+    ``classification`` (public|internal|confidential|restricted) e
+    ``show_sensitive`` (desliga o mascaramento de segredos) espelham a CLI."""
     from ..cli.reporting import write_report
     from ..cli.session import feeds_meta
     from ..engine.feeds import FeedCache
@@ -227,6 +232,8 @@ def scan_report(
             out=str(tmp / f"eigan_scan{scan_id}_{style}.{fmt}"),
             use_ai=ai,
             feeds_meta=fmeta,
+            classification=classification,
+            show_sensitive=show_sensitive,
         )
     except RuntimeError as exc:  # PDF indisponível → HTML equivalente (§13)
         if fmt != "pdf":
@@ -241,6 +248,8 @@ def scan_report(
             out=str(tmp / f"eigan_scan{scan_id}_{style}.html"),
             use_ai=ai,
             feeds_meta=fmeta,
+            classification=classification,
+            show_sensitive=show_sensitive,
         )
     return FileResponse(
         str(path), media_type=_REPORT_MEDIA[fmt], filename=path.name, headers=headers
