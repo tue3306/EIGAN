@@ -150,12 +150,17 @@ def test_configure_ai_provider_writes_env_without_leaking_key(tmp_path, monkeypa
     assert os.environ["GROQ_API_KEY"] == "gsk-secret-key"  # aplicado na sessão
 
 
-def test_configure_ai_provider_skip_keeps_deterministic(tmp_path, monkeypatch):
+def test_configure_ai_provider_skip_writes_no_env_and_warns_scan_refused(tmp_path, monkeypatch):
+    # Pular a configuração é permitido (para ver dashboard/relatórios/histórico),
+    # mas a mensagem é honesta (AI-native, §3.4): o scan exige um provedor — não
+    # existe "modo determinístico" que rode um scan sem IA.
     monkeypatch.chdir(tmp_path)
     out: list[str] = []
     menu.configure_ai_provider(input_fn=_feeder(["0"]), echo=out.append)
     assert not (tmp_path / ".env").exists()
-    assert "sem ia" in "\n".join(out).lower()
+    joined = "\n".join(out).lower()
+    assert "scan exige um provedor" in joined
+    assert "sem ia" not in joined  # não promete mais "modo determinístico sem IA"
 
 
 # --------------------------------------------------------------------------- #

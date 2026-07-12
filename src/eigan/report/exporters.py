@@ -25,6 +25,22 @@ _SARIF_LEVEL: dict[Severity, str] = {
     Severity.INFO: "note",
 }
 
+_CSV_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value: str) -> str:
+    """Neutraliza *CSV/formula injection* (CWE-1236) em campos textuais.
+
+    Planilhas (Excel/Sheets/LibreOffice) executam células que começam com
+    ``= + - @`` (ou tab/CR) como fórmula. Como títulos/ativos vêm da saída de
+    ferramentas — e um alvo malicioso pode plantar, ex., um título HTTP
+    ``=cmd|'/c calc'!A1`` — prefixamos uma aspa simples para forçar texto. Não
+    altera o significado para SIEM, só desarma a execução em planilha.
+    """
+    s = str(value)
+    return "'" + s if s[:1] in _CSV_FORMULA_TRIGGERS else s
+
+
 _CSV_COLUMNS = [
     "title",
     "severity",
@@ -69,7 +85,8 @@ def to_csv(findings: list[Finding]) -> str:
         risk = f.risk
         writer.writerow(
             {
-                "title": f.title,
+                # campos textuais vêm de saída de ferramenta → neutraliza fórmula (CWE-1236)
+                "title": _csv_safe(f.title),
                 "severity": f.severity.value,
                 "risk_score": risk.score if risk else "",
                 "epss": (risk.epss if risk and risk.epss is not None else ""),
@@ -77,15 +94,15 @@ def to_csv(findings: list[Finding]) -> str:
                 "kev": (risk.kev if risk else ""),
                 "kev_verified": (risk.kev_verified if risk else ""),
                 "perspective": f.perspective.value,
-                "affected_asset": f.affected_asset,
-                "cwe": f.cwe or "",
-                "owasp": f.owasp or "",
-                "attack_technique": f.attack_technique or "",
-                "source_tool": f.source_tool,
+                "affected_asset": _csv_safe(f.affected_asset),
+                "cwe": _csv_safe(f.cwe or ""),
+                "owasp": _csv_safe(f.owasp or ""),
+                "attack_technique": _csv_safe(f.attack_technique or ""),
+                "source_tool": _csv_safe(f.source_tool),
                 "confidence": f.confidence.value,
                 "cvss_version": f.cvss.version if f.cvss else "",
                 "cvss_score": f.cvss.score if f.cvss else "",
-                "references": " ".join(f.references),
+                "references": _csv_safe(" ".join(f.references)),
             }
         )
     return buf.getvalue()

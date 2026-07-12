@@ -58,6 +58,21 @@ def test_csv_export_has_header_and_rows():
     assert "CWE-89" in out and "10.0.0.5:80" in out
 
 
+def test_csv_neutralizes_formula_injection():
+    # Um alvo malicioso pode plantar um título/ativo que o Excel executaria como
+    # fórmula (CWE-1236). O exporter força texto (prefixo aspa simples).
+    evil = Finding(
+        title="=cmd|'/c calc'!A1",
+        severity=Severity.INFO,
+        affected_asset="@SUM(1+1)",
+        source_tool="nuclei",
+    )
+    out = exporters.to_csv([evil])
+    assert "'=cmd|'/c calc'!A1" in out  # título desarmado
+    assert "'@SUM(1+1)" in out  # ativo desarmado
+    assert "\n=cmd" not in out  # nenhuma célula crua iniciando com '='
+
+
 def test_sarif_is_valid_2_1_0():
     out = exporters.to_sarif(_findings(), tool_version="0.2.0")
     log = json.loads(out)

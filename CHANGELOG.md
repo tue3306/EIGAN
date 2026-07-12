@@ -9,6 +9,43 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 Nada ainda — as próximas mudanças entram aqui.
 
+## [1.0.1] — 2026-07-11
+
+Gate de release (auditoria RC 1.0): hardening de segurança + consistência.
+**Sem mudança de comportamento do motor de scan.**
+
+### Security
+- **Argument injection barrado** (`perspective.validate_target`): um alvo que
+  começa com `-` (ex.: `--script=…` → execução de NSE) ou contém espaço/caractere
+  de controle é recusado no choke-point `Scope.enforce` (`InvalidTarget`) — antes
+  de chegar a qualquer runner — e rejeitado com HTTP 400 na API. Defesa em
+  profundidade (§5); cobre todos os caminhos de execução.
+- **CSV/formula injection neutralizado (CWE-1236)** no `to_csv`: campos textuais
+  vindos de saída de ferramenta (título/ativo) que começam com `= + - @`/tab/CR
+  são forçados a texto — não executam como fórmula ao abrir a planilha.
+
+### Changed
+- **Renome do acrônimo:** *Enhanced Intelligent Guardian for Autonomous
+  **Assessment*** (antes "Networks") — README, CLAUDE.md, ADR-0009, pyproject e
+  logo.
+
+### Fixed
+- **Consistência AI-native:** removidas as contradições residuais "AI-opcional /
+  scan sem IA / modo determinístico 100% funcional" do README, do wizard (branch
+  morto — o gate já recusa sem provedor), do menu (opção "Pular" reescrita) e de
+  `docs/DECISIONS.md` — alinhadas ao §3.4 (o scan exige um provedor; o
+  determinístico é substrato, não um modo sem IA).
+- **Policy Engine — doc honesta (§3.6):** README e a docstring de `policy/engine`
+  deixam de afirmar que "a execução passa pelo Policy Engine". O gate de escopo/
+  autorização já roda em todo caminho ativo; submeter cada tool-call ao `vet()`
+  (arbitragem por `ImpactClass`) é a Fase 3 do ADR-0011.
+- Índice de ADRs (`docs/DECISIONS.md`) completado (faltavam 0004–0012); exemplo
+  comentado no CI usava `--target` inexistente (agora alvo posicional); docstring
+  do `ScanManager` citava `CascadeOrchestrator` (migrado para `CognitiveEngine`).
+
+### Docs
+- Badges do README atualizados (versão 1.0.1, 234 testes).
+
 ## [1.0.0] — 2026-07-11
 
 ### Added

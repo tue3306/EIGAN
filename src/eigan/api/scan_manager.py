@@ -8,7 +8,7 @@ precisa afirmar autorização — sem isso, o scan é recusado (equivalente ao c
 gate inline da CLI).
 
 Este módulo é a fronteira entre o mundo síncrono/threaded do engine e o mundo
-async da API: o :class:`CascadeOrchestrator` emite eventos por um
+async da API: o :class:`~eigan.engine.cognitive.CognitiveEngine` emite eventos por um
 :class:`~eigan.engine.events.EventSink` síncrono; o buffer é lido pelo
 handler async. A ponte é um buffer protegido por lock (simples e robusto) — sem
 malabarismo de event loop entre threads.
@@ -27,7 +27,7 @@ from ..engine.feeds import FeedCache
 from ..engine.risk import RiskScorer
 from ..findings.store import FindingStore
 from ..engine.registry import PluginRegistry
-from ..perspective import Perspective
+from ..perspective import Perspective, validate_target
 from ..security.onboarding import build_scope
 from ..security.scope import ScopeViolation
 
@@ -176,6 +176,8 @@ class ScanManager:
         require_provider()
         if not targets:
             raise ValueError("Informe ao menos um alvo.")
+        for t in targets:  # forma do alvo (§5): rejeita cedo (400) — anti argument-injection
+            validate_target(t)
         try:
             persp = Perspective(perspective.strip().lower())
         except ValueError as exc:

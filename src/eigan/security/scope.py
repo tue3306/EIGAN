@@ -16,11 +16,19 @@ from pathlib import Path
 
 import yaml
 
-from ..perspective import Perspective, extract_host, target_allowed
+from ..perspective import Perspective, extract_host, target_allowed, validate_target
 
 
 class ScopeViolation(Exception):
     """Lançada quando um alvo fora do escopo autorizado é submetido."""
+
+
+class InvalidTarget(ScopeViolation):
+    """Alvo malformado (forma inválida: começa com '-', contém espaço/controle).
+
+    Subclasse de :class:`ScopeViolation` para que todo handler que já barra
+    violação de escopo também barre um alvo malformado — nunca chega a um runner
+    (defesa em profundidade contra *argument injection*, §5)."""
 
 
 class PerspectiveViolation(ScopeViolation):
@@ -95,6 +103,13 @@ class Scope:
         libera autorização nem pertencimento ao escopo.
         """
         persp = perspective or self.perspective
+
+        # 0. Forma do alvo (defesa em profundidade, §5): barra antes de tudo para
+        #    que um alvo malformado nunca alcance o build_args de um runner.
+        try:
+            validate_target(target)
+        except ValueError as exc:
+            raise InvalidTarget(str(exc)) from exc
 
         if not self.authorized:
             raise ScopeViolation(

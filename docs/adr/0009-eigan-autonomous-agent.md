@@ -21,7 +21,7 @@ A decisão desta ADR é dupla:
    adaptativas e decide quando parar. É a virada de "AI-assisted" para
    "AI-driven" (agente autônomo).
 2. **Renome do produto para EIGAN** — *Enhanced Intelligent Guardian for
-   Autonomous Networks*. Pacote Python `vulnforge` → `eigan`; comando `eigan`
+   Autonomous Assessment*. Pacote Python `vulnforge` → `eigan`; comando `eigan`
    (alias de transição `vulnforge`).
 
 ## Decisão

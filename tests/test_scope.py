@@ -4,8 +4,8 @@ Cobre a interação escopo × perspectiva (público×privado)."""
 
 import pytest
 
-from eigan.perspective import Perspective
-from eigan.security.scope import PerspectiveViolation, Scope, ScopeViolation
+from eigan.perspective import Perspective, validate_target
+from eigan.security.scope import InvalidTarget, PerspectiveViolation, Scope, ScopeViolation
 
 INTERNAL = Perspective.INTERNAL
 EXTERNAL = Perspective.EXTERNAL
@@ -79,3 +79,41 @@ def test_override_allows_perspective_mismatch_but_not_scope():
 def test_perspective_from_scope_used_when_not_passed():
     scope = Scope(authorized=True, hosts=["10.0.0.5"], perspective=INTERNAL)
     scope.enforce("10.0.0.5")  # usa a perspectiva do próprio scope
+
+
+# ── forma do alvo (anti argument-injection, §5) ─────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "-oN",  # flag do nmap
+        "--script=http-shellshock",  # execução de NSE via flag
+        "-iL/etc/passwd",
+        "  ",  # só espaço
+        "",  # vazio
+        "exemplo .com",  # espaço no meio
+        "host\tname",  # tab
+        "host\nname",  # quebra de linha
+        "host\x00name",  # NUL
+    ],
+)
+def test_validate_target_rejects_malformed(target):
+    with pytest.raises(ValueError):
+        validate_target(target)
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["example.com", "10.0.0.5", "example.com:8443", "https://example.com/path?q=1", "[::1]:80"],
+)
+def test_validate_target_accepts_valid(target):
+    assert validate_target(target) == target.strip()
+
+
+def test_enforce_rejects_argument_injection_even_if_in_scope():
+    # Alvo malformado é barrado ANTES do escopo — nunca chega a um runner, mesmo
+    # que (num escopo efêmero) ele "pertença" ao escopo por ser um dos alvos.
+    scope = Scope(authorized=True, hosts=["--script=x"], perspective=INTERNAL)
+    with pytest.raises(InvalidTarget):
+        scope.enforce("--script=x", perspective=INTERNAL)

@@ -68,10 +68,8 @@ def run_wizard(db: str = "eigan.db") -> int:
 
     profile = click.prompt("\nPerfil de scan", type=click.Choice(_PROFILES), default="standard")
 
-    ai_detected = _ai_ready()
-    click.echo(
-        f"\nIA: {'provedor configurado — explicações enriquecidas' if ai_detected else 'nenhum provedor — modo determinístico (100% funcional)'}."
-    )
+    ai_detected = _ai_ready()  # True aqui: o gate acima recusa a ausência de provedor
+    click.echo("\nIA: provedor configurado — enriquece a análise e as narrativas.")
     online = click.confirm(
         "Enriquecer risco com EPSS online (FIRST.org) para os CVEs encontrados?", default=False
     )

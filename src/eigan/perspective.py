@@ -96,6 +96,30 @@ def extract_host(target: str) -> str:
     return t
 
 
+def validate_target(target: str) -> str:
+    """Valida a *forma* de um alvo antes de qualquer uso ativo (secure coding §5).
+
+    Um alvo legítimo é IP, hostname, ``host:port`` ou URL. Ele **nunca** começa
+    com ``-`` (a ferramenta o leria como uma flag — *argument injection*: ``nmap``
+    interpretaria ``--script=...`` como execução de script) nem contém espaços ou
+    caracteres de controle (um único token de ``argv`` não os tem). Esta é uma
+    barreira determinística de defesa em profundidade: roda antes do gate de
+    escopo, para que um alvo malformado nunca chegue ao ``build_args`` de um
+    runner. Retorna o alvo normalizado (``strip``) ou levanta ``ValueError``.
+    """
+    t = target.strip()
+    if not t:
+        raise ValueError("alvo vazio")
+    if t[0] == "-":
+        raise ValueError(
+            f"alvo inválido {target!r}: não pode começar com '-' "
+            "(seria interpretado como argumento de ferramenta)."
+        )
+    if any(c.isspace() or ord(c) < 0x20 or ord(c) == 0x7F for c in t):
+        raise ValueError(f"alvo inválido {target!r}: contém espaço ou caractere de controle.")
+    return t
+
+
 def classify_host(host: str) -> HostClass:
     try:
         ip = ipaddress.ip_address(host)

@@ -50,4 +50,4 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v4
   #     - run: pip install -e .
-  #     - run: eigan scan --target 127.0.0.1 --scope scope.yaml --yes --fail-on high
+  #     - run: eigan scan 127.0.0.1 --scope scope.yaml --yes --fail-on high

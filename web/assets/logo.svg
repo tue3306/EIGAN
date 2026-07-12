@@ -12,8 +12,8 @@
   </defs>
 
   <!-- Emblema exclusivo do EIGAN: escudo hexagonal (Guardian) com uma constelação
-       de rede (Autonomous Networks) comandada por um hub central (o agente de IA
-       que orquestra). Guardian + Intelligent + Autonomous Networks. -->
+       de rede comandada por um hub central (o agente de IA que orquestra),
+       evocando avaliação autônoma. Guardian + Intelligent + Autonomous Assessment. -->
   <g transform="translate(8 6)">
     <path d="M30 0 L54 14 L54 42 L30 56 L6 42 L6 14 Z" fill="url(#eiganGrad)"/>
     <g stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0.92">

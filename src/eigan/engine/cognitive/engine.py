@@ -141,8 +141,10 @@ class CognitiveEngine:
         self._selector = selector if selector is not None else ToolSelector(self._registry)
         self._risk = risk
         self._store = store
-        # Planner: AgenticPlanner (IA comanda o plano fim a fim) se houver IA
-        # disponível; senão o determinístico (fallback — funciona sem chave).
+        # Planner: AgenticPlanner (IA comanda o plano fim a fim) quando há um
+        # provedor; senão o DeterministicPlanner — o substrato determinístico que
+        # a IA comanda (§3.4), não um "modo sem IA": o gate de produto exige um
+        # provedor antes de chegar aqui.
         base = DeterministicPlanner(self._registry, self._graph)
         if planner is not None:
             self._planner: Planner = planner

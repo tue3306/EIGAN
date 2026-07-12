@@ -200,18 +200,22 @@ def configure_ai_provider(
     """Setup interativo do provedor de IA: escolher provedor → chave → modelo.
 
     Grava em ``.env`` (nunca ecoa a chave) e define ``EIGAN_AI_PROVIDER``. A IA é
-    opcional: pular mantém o modo determinístico 100% funcional."""
+    **obrigatória para escanear** (§3.4/ADR-0012): pular permite configurar
+    depois, mas o scan é recusado enquanto não houver um provedor."""
     from ..ai.provider import list_providers
 
     specs = list_providers()
-    echo("\nProvedores de IA disponíveis (o EIGAN é independente de provedor):")
+    echo("\nProvedores de IA disponíveis (multi-provedor — escolha um para escanear):")
     for i, s in enumerate(specs, start=1):
         echo(f"  {i:>2}. {s.label}")
         echo(f"      {s.scan_fit}")
-    echo("   0. Pular (seguir sem IA — modo determinístico)")
+    echo("   0. Pular (configurar depois — sem provedor, o scan é recusado)")
     raw = input_fn("\nEscolha o provedor [0]: ").strip() or "0"
     if not raw.isdigit() or int(raw) == 0 or int(raw) > len(specs):
-        echo("Mantido sem IA. O EIGAN segue 100% funcional (determinístico).")
+        echo(
+            "Provedor não configurado. Você pode ver dashboard, relatórios e "
+            "histórico, mas o scan exige um provedor (configure em Configuração)."
+        )
         return
     spec = specs[int(raw) - 1]
     values: dict[str, str] = {"EIGAN_AI_PROVIDER": spec.name}
@@ -244,7 +248,7 @@ def configure_ai_provider(
     for k, v in values.items():
         os.environ[k] = v  # aplica na sessão atual também
     echo(f"\n[✔] {spec.label} configurado e gravado em .env (fora do git, chmod 600).")
-    echo("    A chave nunca é exibida. Rode 'Doctor' para confirmar. Use IA com --ai.")
+    echo("    A chave nunca é exibida. Rode 'Doctor' para confirmar o provedor ativo.")
 
 
 def action_config(
@@ -259,7 +263,7 @@ def action_config(
     ai_state = (
         f"{ready[0].label} · modelo={ready[0].model()}"
         if ready
-        else "nenhum provedor — modo determinístico (100% funcional)"
+        else "nenhum provedor — o scan será recusado (configure em Configuração)"
     )
     terms_state = "aceito" if terms_accepted() else "pendente (pedido no 1º scan)"
     kev_state = fc.kev_date() if fc.kev_available else "UNVERIFIED (opção 6 atualiza)"

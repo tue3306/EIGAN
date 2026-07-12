@@ -11,11 +11,11 @@
 </p>
 
 <p align="center">
-  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-1.0.0-blue">
+  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-1.0.1-blue">
   <a href="LICENSE"><img alt="Licença" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-blue"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
   <a href="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Testes" src="https://img.shields.io/badge/testes-218%20passed-brightgreen">
+  <img alt="Testes" src="https://img.shields.io/badge/testes-234%20passed-brightgreen">
   <img alt="AI-native" src="https://img.shields.io/badge/IA-native%20(obrigat%C3%B3ria)-6c5ce7">
 </p>
 
@@ -176,7 +176,9 @@ eigan remediate --scan 7       # playbooks Ansible revisáveis (sugestão)
 eigan serve                    # dashboard web em http://127.0.0.1:8000
 ```
 
-Sem nenhuma chave de API, **tudo acima funciona** — a IA só enriquece quando presente.
+O EIGAN é **AI-native**: o `scan` exige um provedor de IA configurado (sem
+provedor, é recusado com um erro acionável). `doctor`, `plan` (dry-run), `diff`,
+`remediate`, os relatórios e o dashboard sobre scans já existentes funcionam sem chave.
 
 ## 🗺️ Mapa do projeto
 
@@ -200,8 +202,9 @@ O EIGAN não é "só um scanner": é uma **plataforma** com **Core Engine
 próprio** que orquestra ferramentas, **normaliza** os resultados em um schema
 único, **correlaciona** entre fontes, **prioriza risco** (CVSS/EPSS/KEV) e
 **gera relatórios** — extensível por **plugins** e pensada para crescer a 100+
-módulos sem reescrever o núcleo. É **AI-native por design e AI-opcional por
-requisito**.
+módulos sem reescrever o núcleo. É **AI-native e AI-obrigatória**: rodar um scan
+exige um provedor de IA configurado (Anthropic/OpenAI/Gemini/… ou **Ollama
+local**) — sem provedor, o scan é recusado.
 
 Tudo gira em torno de duas perguntas:
 
@@ -222,7 +225,8 @@ Tudo gira em torno de duas perguntas:
   por IA, exportações determinísticas, hash de integridade e metodologia (PTES/NIST).
 - 🤖 **IA obrigatória, multi-provedor** (Anthropic/OpenAI/Gemini/OpenRouter/Groq/
   Together/Azure/**Ollama local**) com grounding; a IA **comanda** o scan, jamais
-  afirma fato fora das evidências, e a execução passa pelo Policy Engine.
+  afirma fato fora das evidências, e cada alvo passa pelo **gate de escopo/
+  autorização** (a arbitragem por impacto do Policy Engine é roadmap — ADR-0011).
 - 🚀 **Baixa e roda** — wizard, `doctor`, consent inline e zero-config.
 
 ## Arquitetura
@@ -235,7 +239,7 @@ Core Engine: Discovery → Fingerprint → Execução (plugins) → Normalizaç�
              → Risco → Reporting                                    ← núcleo estável
       │
 Infra:  plugins (red/blue/purple)  ·  Store (SQLite/Postgres)
-        ·  Relatórios (PDF/HTML/JSON/CSV/SARIF)  ·  IA (opcional, com fallback)
+        ·  Relatórios (PDF/HTML/JSON/CSV/SARIF)  ·  IA multi-provedor (obrigatória)
 ```
 
 Dependências apontam para dentro: o domínio (`findings/`, `security/`,
@@ -267,7 +271,7 @@ sandbox: [docker/](docker/) (`docker compose up`).
 # escopo: copie e edite com APENAS os seus alvos autorizados
 cp scope.example.yaml scope.yaml
 
-# scan determinístico (sem IA) — escolha a perspectiva
+# scan (exige um provedor de IA configurado) — escolha a perspectiva
 eigan scan app.local --perspective external --profile standard --scope scope.yaml
 eigan scan 10.0.0.5   --perspective internal --profile standard --scope scope.yaml
 

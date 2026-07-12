@@ -1,9 +1,14 @@
 """PolicyEngine — arbitra cada ação proposta pela IA (determinístico, ADR-0011).
 
-Invariante mestre (CLAUDE.md §2/§4): **nenhuma ação ativa toca a rede sem passar
-por aqui**. A IA propõe uma :class:`ProposedAction`; o motor devolve um
+Invariante mestre-alvo (CLAUDE.md §2/§4): **nenhuma ação ativa deve tocar a rede
+sem passar por aqui**. A IA propõe uma :class:`ProposedAction`; o motor devolve um
 :class:`Verdict` — EXECUTE / NEEDS_APPROVAL (HITL) / REJECT — com motivo logado.
 Nada nisto depende de IA: é política pura, testável como *policy-as-code*.
+
+Estado (ADR-0011, honesto §3.6): a **trava dura de escopo/autorização** (passo 1
+de :meth:`_decide`, via :meth:`Scope.enforce`) já roda em todo o caminho de
+execução; submeter cada tool-call ao :meth:`vet` completo (arbitragem por
+``ImpactClass``) é a **Fase 3** do roadmap — ainda não está no caminho quente.
 
 Ordem de decisão (a primeira que casar vence):
 
