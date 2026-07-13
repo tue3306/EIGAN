@@ -51,6 +51,7 @@ def _hard_scope(*hosts: str, perspective=None) -> Scope:
         enforce_membership=True,
     )
 
+
 C = Capability
 P = Perspective
 

@@ -58,6 +58,9 @@ _INTERNAL: tuple[Stage, ...] = (
 # pipeline canônico. Descobre superfície pública (subdomínio/DNS/web) E hosts/portas/
 # serviços — sem obrigar o usuário a escolher perspectiva. A cascata aprofunda a
 # partir do que aparecer (ex.: porta 445 → SMB; WordPress → wpscan).
+# Ordem por VELOCIDADE: recon rápido e sinais úteis primeiro (feedback imediato),
+# ferramentas LENTAS (nuclei, nikto, testssl) por último — assim o usuário vê
+# resultado cedo em vez de esperar o TLS travar tudo no começo.
 _UNIFIED: tuple[Stage, ...] = (
     Stage("subdomain", (C.SUBDOMAIN_ENUMERATION,)),
     Stage("resolve", (C.DNS_RESOLUTION,)),
@@ -65,13 +68,14 @@ _UNIFIED: tuple[Stage, ...] = (
     Stage("ports", (C.PORT_DISCOVERY,)),
     Stage("service-auth", (C.SERVICE_DETECTION,)),
     Stage("web-probe", (C.WEB_PROBE,)),
+    Stage("cms", (C.CMS_SCAN,)),  # whatweb: rápido
     Stage("screenshot", (C.SCREENSHOT,)),
     Stage("crawl", (C.WEB_CRAWL,)),
-    Stage("params", (C.PARAM_DISCOVERY,)),
-    Stage("vuln-templates", (C.VULN_TEMPLATE_SCAN,)),
-    Stage("web-server", (C.WEB_SERVER_SCAN,)),
-    Stage("cms", (C.CMS_SCAN,)),
-    Stage("tls", (C.TLS_ASSESSMENT,)),
+    Stage("params", (C.PARAM_DISCOVERY,)),  # ffuf
+    # ── a partir daqui, ferramentas lentas (rodam por último) ────────────────
+    Stage("vuln-templates", (C.VULN_TEMPLATE_SCAN,)),  # nuclei
+    Stage("web-server", (C.WEB_SERVER_SCAN,)),  # nikto
+    Stage("tls", (C.TLS_ASSESSMENT,)),  # testssl
     Stage("cloud-api", (C.CLOUD_STORAGE_ENUM,)),
 )
 

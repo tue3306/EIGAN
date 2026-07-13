@@ -13,10 +13,22 @@ class NaabuRunner(BaseToolPlugin):
     name = "naabu"
 
     def build_args(
-        self, target: str, *, ports: str | None = None, rate_limit: int = 1000, **_
+        self,
+        target: str,
+        *,
+        ports: str | None = None,
+        port_rate: int = 1000,
+        rate_limit: int | None = None,
+        all_ports: bool = False,
+        **_,
     ) -> list[str]:
-        args = ["-host", target, "-json", "-silent", "-rate", str(int(rate_limit))]
-        if ports:
+        # port_rate é o rate de PORTAS (pacotes/s); distinto do rate_limit web.
+        # Aceita rate_limit como fallback para compatibilidade.
+        rate = int(port_rate if port_rate else (rate_limit or 1000))
+        args = ["-host", target, "-json", "-silent", "-rate", str(rate)]
+        if all_ports:
+            args += ["-p", "-"]  # todas as 65535 portas (máximo esforço)
+        elif ports:
             args += ["-p", ports]
         return args
 

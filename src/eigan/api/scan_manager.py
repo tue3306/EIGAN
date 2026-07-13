@@ -234,7 +234,12 @@ class ScanManager:
             )
             for t in job.targets:  # falha rápida se um alvo é totalmente não autorizado
                 scope.enforce(t, perspective=perspective, override=override)
-            engine.run(goal, scope=scope, override_perspective=override, sink=sink)
+            # Intensidade → opções de ferramenta (rate/timing/stealth/portas): a
+            # mesma capacidade roda com as melhores opções para o objetivo.
+            from ..engine.tuning import tool_options
+
+            opts = tool_options(profile, perspective)
+            engine.run(goal, scope=scope, override_perspective=override, sink=sink, **opts)
             store.close()
             job.status = "completed"
         except ScanCancelled:

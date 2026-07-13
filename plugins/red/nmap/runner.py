@@ -27,14 +27,34 @@ class NmapRunner(BaseToolPlugin):
     name = "nmap"
 
     def build_args(
-        self, target: str, *, ports: str | None = None, scripts: bool = False, **_
+        self,
+        target: str,
+        *,
+        ports: str | None = None,
+        scripts: bool = False,
+        timing: int = 4,
+        stealth: bool = False,
+        all_ports: bool = False,
+        **_,
     ) -> list[str]:
         args = ["-sV", "-oX", "-", "-Pn"]
+        # Timing template (-T0 paranoid … -T5 insane). Furtivo baixa para -T2.
+        t = 2 if stealth else timing
+        if isinstance(t, int) and 0 <= t <= 5:
+            args.append(f"-T{t}")
         if _is_root():
             # OS detection precisa de raw sockets (root). Sem root o nmap avisa e
             # segue; ligamos só quando é útil de fato, aproveitando o sudo.
             args.append("-O")
-        if ports:
+            if stealth:
+                # Evasão real (fragmenta pacotes) só com raw sockets — root.
+                args += ["-f", "--scan-delay", "200ms"]
+        elif stealth:
+            # Sem root: evasão possível sem raw sockets (connect scan mais lento).
+            args += ["--scan-delay", "300ms", "--max-rate", "50"]
+        if all_ports:
+            args += ["-p-"]  # varredura completa (65535) — máximo esforço
+        elif ports:
             # `ports` é um token isolado (nunca concatenado em shell).
             args += ["-p", ports]
         if scripts:

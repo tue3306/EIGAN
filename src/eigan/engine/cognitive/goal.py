@@ -73,12 +73,13 @@ GOAL_CAPABILITIES: dict[GoalKind, tuple[Capability, ...]] = {
         C.PORT_DISCOVERY,
         C.SERVICE_DETECTION,
         C.WEB_PROBE,
+        C.CMS_SCAN,
         C.WEB_CRAWL,
         C.PARAM_DISCOVERY,
-        C.CMS_SCAN,
-        C.TLS_ASSESSMENT,
+        # lentas por último (nuclei, nikto, testssl):
         C.VULN_TEMPLATE_SCAN,
         C.WEB_SERVER_SCAN,
+        C.TLS_ASSESSMENT,
     ),
     GoalKind.ATTACK_SURFACE: (
         C.SUBDOMAIN_ENUMERATION,
