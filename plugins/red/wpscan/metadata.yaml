@@ -1,15 +1,20 @@
-# SCAFFOLD HONESTO (roadmap) — ver docs/ROADMAP.md.
+# ATIVO — runner + parser + testes (scanner dedicado de WordPress).
 name: wpscan
 category: red
 subcategory: web
 capabilities: [cms_scan]
 supported_perspectives: [external, internal]
 tool: wpscan
-roadmap: true
-enabled_by_default: false
+roadmap: false
+enabled_by_default: true
 description: >-
   Scanner dedicado de WordPress: plugins/temas/usuários e vulnerabilidades
   conhecidas. Requer WordPress detectado (por httpx/whatweb) — cascata.
 install_hint: "sudo apt install wpscan  ·  https://wpscan.com/"
 requires_credentials: false
 impact_class: active_safe
+selection:
+  speed: low
+  accuracy: high
+  resource_usage: medium
+  preferred_when: [wordpress]

@@ -87,7 +87,7 @@ def default_agents() -> list[Agent]:
             name="active-directory",
             description="Enumeração de Active Directory / identidade (assumed breach).",
             capabilities=frozenset({C.AD_ENUMERATION}),
-            built=False,
+            built=True,  # tool real: ldapsearch (bind anônimo / RootDSE)
         ),
         Agent(
             name="exploitation",

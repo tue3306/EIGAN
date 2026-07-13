@@ -442,10 +442,11 @@ def test_engine_plan_only_does_not_execute():
 
 
 def test_engine_scaffold_agent_capability_is_suggested_not_executed():
-    reg = PluginRegistry([_spec("adx", (C.AD_ENUMERATION,))])  # há plugin, mas agente é scaffold
+    # agente 'cloud' segue scaffold (built=False): há plugin, mas não executa.
+    reg = PluginRegistry([_spec("cloudx", (C.CLOUD_AUDIT,))])
     engine = CognitiveEngine(reg)
     scope = build_scope(None, ["10.0.0.5"], P.INTERNAL)
-    goal = Goal.build(GoalKind.AD_ENUMERATION, ["10.0.0.5"])
+    goal = Goal.build(GoalKind.CLOUD_ASSESSMENT, ["10.0.0.5"])
     report = engine.run(goal, scope=scope)
     scaffolds = [d for d in report.decisions if d.action == "scaffold"]
     assert scaffolds  # agente não construído → sugerido, não executado

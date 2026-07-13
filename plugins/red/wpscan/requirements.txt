@@ -1,0 +1,2 @@
+# wpscan é um binário de sistema (Ruby gem) — instale via apt/gem.
+# https://wpscan.com/
