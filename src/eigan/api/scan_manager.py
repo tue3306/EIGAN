@@ -40,7 +40,9 @@ OBJECTIVE_PROFILE = {
 }
 
 # objetivo do EIGAN por perspectiva (foco v1.0: Web + Infra, Outside-In/Inside-Out).
+# UNIFIED (default do produto) → avaliação completa: recon externo + rede num só scan.
 _GOAL_BY_PERSPECTIVE = {
+    Perspective.UNIFIED: GoalKind.FULL_ASSESSMENT,
     Perspective.EXTERNAL: GoalKind.ATTACK_SURFACE,
     Perspective.INTERNAL: GoalKind.NETWORK_ASSESSMENT,
 }

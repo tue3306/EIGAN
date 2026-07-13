@@ -9,6 +9,16 @@
 # Valores: anthropic | openai | gemini | openrouter | groq | together | azure | ollama
 default: null
 
+# NÍVEL DE IA (tier) — env EIGAN_AI_TIER = low | medium | high (default: medium).
+# Você escolhe o NÍVEL e o EIGAN resolve o MODELO por provedor (você não decora id).
+# Um id explícito em <PROVIDER>_MODEL sempre sobrepõe o nível (override de power-user).
+# Modelos por nível (verificados p/ Anthropic e OpenAI; Gemini # VERIFICAR):
+#   anthropic → low: claude-haiku-4-5 · medium: claude-sonnet-5 · high: claude-opus-4-8
+#   openai    → low: gpt-5-mini       · medium: gpt-5          · high: gpt-5.5
+#   gemini    → low: gemini-2.5-flash · medium/high: gemini-2.5-pro  (# VERIFICAR)
+# Provedores sem mapa (Azure/Ollama/OpenRouter/Groq/Together) ainda exigem
+# <PROVIDER>_MODEL — não fabricamos um id que não conseguimos verificar (§3.1).
+
 ai:
   enabled: true           # a IA é obrigatória; ativa com o provedor configurado
 

@@ -26,6 +26,7 @@ class GoalKind(str, Enum):
     executadas* (scaffold), nunca fingindo rodar.
     """
 
+    FULL_ASSESSMENT = "full_assessment"  # modo produto: recon externo + rede num só scan
     ATTACK_SURFACE = "attack_surface"  # superfície de ataque externa (recon amplo)
     EXTERNAL_EXPOSURE = "external_exposure"  # validar exposição externa (portas/serviços/web)
     WEB_VULNERABILITIES = "web_vulnerabilities"  # cadeia web até templates de vuln
@@ -48,6 +49,7 @@ class GoalKind(str, Enum):
     @property
     def label(self) -> str:
         return {
+            GoalKind.FULL_ASSESSMENT: "Avaliação completa (recon + rede + web)",
             GoalKind.ATTACK_SURFACE: "Avaliar superfície de ataque",
             GoalKind.EXTERNAL_EXPOSURE: "Validar exposição externa",
             GoalKind.WEB_VULNERABILITIES: "Descobrir vulnerabilidades web",
@@ -61,6 +63,20 @@ class GoalKind(str, Enum):
 # intersecta isto com as capacidades que o registry realmente provê e com a
 # ordem canônica do pipeline. Editar aqui = nova estratégia, sem tocar o loop.
 GOAL_CAPABILITIES: dict[GoalKind, tuple[Capability, ...]] = {
+    # Modo produto (UNIFIED): união do recon externo com a descoberta de rede, na
+    # ordem canônica do pipeline. Descobre superfície pública E hosts/portas
+    # internos no mesmo scan; a cascata aprofunda a partir do que for encontrado.
+    GoalKind.FULL_ASSESSMENT: (
+        C.SUBDOMAIN_ENUMERATION,
+        C.DNS_RESOLUTION,
+        C.HOST_DISCOVERY,
+        C.PORT_DISCOVERY,
+        C.SERVICE_DETECTION,
+        C.WEB_PROBE,
+        C.WEB_CRAWL,
+        C.TLS_ASSESSMENT,
+        C.VULN_TEMPLATE_SCAN,
+    ),
     GoalKind.ATTACK_SURFACE: (
         C.SUBDOMAIN_ENUMERATION,
         C.DNS_RESOLUTION,
@@ -97,6 +113,7 @@ GOAL_CAPABILITIES: dict[GoalKind, tuple[Capability, ...]] = {
 
 # Perspectiva default de cada objetivo (o usuário pode sobrepor).
 GOAL_PERSPECTIVE: dict[GoalKind, Perspective] = {
+    GoalKind.FULL_ASSESSMENT: Perspective.UNIFIED,
     GoalKind.ATTACK_SURFACE: Perspective.EXTERNAL,
     GoalKind.EXTERNAL_EXPOSURE: Perspective.EXTERNAL,
     GoalKind.WEB_VULNERABILITIES: Perspective.EXTERNAL,

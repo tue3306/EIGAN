@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -121,8 +121,44 @@ class Enricher:
 # --------------------------------------------------------------------------- #
 _DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"  # verificado (claude-api skill)
 _ANTHROPIC_VERSION = "2023-06-01"
-_MAX_TOKENS = 1024
+# Orçamento de saída generoso: modelos de raciocínio (GPT-5, o-series) gastam
+# tokens "pensando" que contam contra este teto — com pouco, retornariam vazio e
+# a IA pareceria "configurada mas não funciona". 2048 cobre raciocínio + narrativa
+# curta com folga. Ajustável por env EIGAN_AI_MAX_TOKENS.
+_MAX_TOKENS = 2048
 _TIMEOUT = 60.0  # provedores de nuvem (rede)
+
+
+def _max_tokens() -> int:
+    raw = os.getenv("EIGAN_AI_MAX_TOKENS")
+    if raw:
+        try:
+            return max(256, int(raw))
+        except ValueError:
+            pass
+    return _MAX_TOKENS
+
+
+# ── Tiers de qualidade (baixo/médio/alto) ──────────────────────────────────── #
+# O usuário escolhe o NÍVEL, não o id do modelo — o EIGAN resolve o modelo concreto
+# por provedor (mapa abaixo + config/ai.yaml). Um id explícito em <PROVIDER>_MODEL
+# ainda vence (override de power-user). Só Anthropic e OpenAI têm defaults que
+# conseguimos verificar; os demais ficam marcados p/ VERIFICAR na config.
+TIERS = ("low", "medium", "high")
+_DEFAULT_TIER = "medium"
+_TIER_LABELS = {
+    "low": "Baixo — rápido e econômico",
+    "medium": "Médio — equilíbrio (recomendado)",
+    "high": "Alto — máxima capacidade de raciocínio",
+}
+
+
+def current_tier() -> str:
+    """Nível de qualidade escolhido (env ``EIGAN_AI_TIER``), default 'medium'."""
+    t = (os.getenv("EIGAN_AI_TIER") or _DEFAULT_TIER).strip().lower()
+    return t if t in TIERS else _DEFAULT_TIER
+
+
 # Modelo local (Ollama) na CPU carrega o modelo + gera devagar: um timeout curto
 # faz CADA completude real estourar e cair no determinístico ("configurado mas não
 # funciona"). Medido: um round-trip trivial num modelo 0.5B pode passar de 20s.
@@ -256,7 +292,7 @@ class AnthropicProvider(_HTTPProvider):
             },
             payload={
                 "model": self._model,
-                "max_tokens": _MAX_TOKENS,
+                "max_tokens": _max_tokens(),
                 "system": system,
                 "messages": [{"role": "user", "content": user}],
             },
@@ -277,6 +313,11 @@ class _OpenAICompatProvider(_HTTPProvider):
     um endpoint que possa mudar (anti-invenção §3.1)."""
 
     default_base_url = "https://api.openai.com/v1"
+    # Nome do parâmetro de limite de saída. Os modelos novos da OpenAI (GPT-5/
+    # o-series) recusam ``max_tokens`` e exigem ``max_completion_tokens``; gateways
+    # OpenAI-compat mais antigos (Groq/Together) ainda usam ``max_tokens``. Por isso
+    # é um atributo sobrescrevível por subclasse (verificado contra a API real).
+    token_param = "max_tokens"
 
     def __init__(self, *, base_url: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -294,18 +335,22 @@ class _OpenAICompatProvider(_HTTPProvider):
             headers=self._auth_headers(),
             payload={
                 "model": self._model,
-                "max_tokens": _MAX_TOKENS,
+                self.token_param: _max_tokens(),
                 "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
             },
         )
-        return str(data["choices"][0]["message"]["content"])
+        msg = data["choices"][0].get("message", {})
+        return str(msg.get("content") or "")
 
 
 class OpenAIProvider(_OpenAICompatProvider):
     default_base_url = "https://api.openai.com/v1"
+    # A API nativa da OpenAI (gpt-4o em diante e toda a série GPT-5) usa
+    # ``max_completion_tokens``; ``max_tokens`` retorna HTTP 400 nos modelos novos.
+    token_param = "max_completion_tokens"
 
 
 class OpenRouterProvider(_OpenAICompatProvider):
@@ -348,14 +393,15 @@ class AzureOpenAIProvider(_HTTPProvider):
             url,
             headers={"api-key": self._credential, "content-type": "application/json"},
             payload={
-                "max_tokens": _MAX_TOKENS,
+                "max_completion_tokens": _max_tokens(),
                 "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
             },
         )
-        return str(data["choices"][0]["message"]["content"])
+        msg = data["choices"][0].get("message", {})
+        return str(msg.get("content") or "")
 
 
 class GoogleProvider(_HTTPProvider):
@@ -455,12 +501,24 @@ class ProviderSpec:
     default_base_url: str | None = None
     scan_fit: str = ""  # nota de adequação ao projeto (docs/onboarding)
     timeout: float | None = None  # override do timeout (Ollama local precisa mais)
+    # Mapa tier→modelo: {low,medium,high} → id. Preenchido só onde conseguimos
+    # verificar os ids (Anthropic/OpenAI) e como defaults # VERIFICAR (Gemini). Onde
+    # está vazio, o provedor continua exigindo <PROVIDER>_MODEL (anti-invenção §3.1).
+    tier_models: dict[str, str] = field(default_factory=dict)
 
     def credential(self) -> str | None:
         return os.getenv(self.key_env)
 
     def model(self) -> str | None:
-        return os.getenv(self.model_env) or self.default_model
+        """Resolve o modelo: id explícito no env (override) > tier escolhido >
+        default fixo. Assim o usuário escolhe só o NÍVEL e o EIGAN acha o modelo."""
+        return (
+            os.getenv(self.model_env) or self.tier_models.get(current_tier()) or self.default_model
+        )
+
+    def tier_model(self, tier: str) -> str | None:
+        """Modelo que este provedor usaria no ``tier`` dado (para exibir na UI)."""
+        return self.tier_models.get(tier) or self.default_model
 
     def configured(self) -> bool:
         """True se dá para instanciar (credencial + modelo + endpoint, se exigido)."""
@@ -526,6 +584,12 @@ for _spec in (
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_MODEL",
         default_model=_DEFAULT_ANTHROPIC_MODEL,
+        # ids verificados (claude-api skill): Haiku 4.5 / Sonnet 5 / Opus 4.8.
+        tier_models={
+            "low": "claude-haiku-4-5-20251001",
+            "medium": "claude-sonnet-5",
+            "high": "claude-opus-4-8",
+        },
         scan_fit="Recomendado: melhor raciocínio de planejamento/narrativa; funciona só com a chave.",
     ),
     ProviderSpec(
@@ -536,7 +600,9 @@ for _spec in (
         "OPENAI_MODEL",
         base_url_env="OPENAI_BASE_URL",
         default_base_url="https://api.openai.com/v1",
-        scan_fit="Forte em análise e tool-calling; exige OPENAI_MODEL.",
+        # ids verificados contra a API real (GET /v1/models + completude de teste).
+        tier_models={"low": "gpt-5-mini", "medium": "gpt-5", "high": "gpt-5.5"},
+        scan_fit="Forte em análise e raciocínio; o nível escolhe o modelo (gpt-5-mini/gpt-5/gpt-5.5).",
     ),
     ProviderSpec(
         "gemini",
@@ -544,7 +610,14 @@ for _spec in (
         GoogleProvider,
         "GOOGLE_API_KEY",
         "GOOGLE_MODEL",
-        scan_fit="Bom custo/contexto longo; exige GOOGLE_MODEL.",
+        # defaults # VERIFICAR (sem chave para checar na fonte): confirme em
+        # ai.google.dev/gemini-api/docs/models ou defina GOOGLE_MODEL.
+        tier_models={
+            "low": "gemini-2.5-flash",
+            "medium": "gemini-2.5-pro",
+            "high": "gemini-2.5-pro",
+        },
+        scan_fit="Bom custo/contexto longo; o nível escolhe o modelo (confirme os ids na doc).",
     ),
     ProviderSpec(
         "openrouter",

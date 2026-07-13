@@ -228,7 +228,8 @@ cd vulnerability-scanner && python3 eigan.py
 # 2) Configure a IA (obrigatório):  menu → Configuração → escolha o provedor → cole a chave
 #    (gravada em .env, chmod 600, nunca exibida)   — ou use Ollama local, offline e sem custo
 
-# 3) Novo Scan:  menu → Novo Scan → alvo (site/IP/URL) → perspectiva → CONFIRME a autorização
+# 3) Novo Scan:  menu → Novo Scan → alvo (site/IP/URL) → CONFIRME a autorização
+#    Modo unificado: um só scan avalia público E privado e documenta o que achar.
 #    Acompanhe a IA planejar/reagir em tempo real e gere o relatório (PDF/HTML/JSON/CSV/SARIF)
 ```
 
@@ -242,12 +243,15 @@ O usuário final não precisa da CLI (o menu/dashboard cobre tudo); ela existe p
 power users**.
 
 ```bash
-# Escopo: copie e edite com APENAS os seus alvos autorizados (trava dura opcional p/ times)
-cp scope.example.yaml scope.yaml
+# Scan direto (exige provedor de IA). Modo unificado por padrão: avalia público E
+# privado e documenta o que encontrar — a autorização é o consent gate inline.
+eigan scan example.com --profile standard
+eigan scan 10.0.0.5    --profile standard
 
-# Scan direto (exige provedor de IA) — escolha a perspectiva
-eigan scan example.com --perspective external --profile standard --scope scope.yaml
-eigan scan 10.0.0.5    --perspective internal --profile standard --scope scope.yaml
+# Guardrail estrito (opt-in, para quem quer): external recusa privado, internal recusa
+# público; e --scope arquivo.yaml é a trava dura por allowlist (times/CI).
+eigan scan example.com --perspective external --profile standard
+eigan scan 10.0.0.5    --perspective internal --scope meu-escopo.yaml
 
 # Planner por objetivo: mostra a IA escolhendo/justificando capacidades (dry-run seguro)
 eigan plan example.com --goal attack-surface        # não executa nada
@@ -272,7 +276,7 @@ eigan serve                                         # http://127.0.0.1:8000  (/d
 
 # CI: falha o pipeline se houver finding acima do limiar
 eigan scan --target-list examples/targets.example.txt --profile web-only \
-  --scope scope.yaml --yes --fail-on high
+  --yes --fail-on high
 ```
 
 **Perfis:** `quick` · `standard` · `deep` · `network-only` · `web-only`. Mais exemplos e um

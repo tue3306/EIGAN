@@ -27,6 +27,13 @@ class Perspective(str, Enum):
 
     EXTERNAL = "external"
     INTERNAL = "internal"
+    # UNIFIED é o modo padrão da experiência de produto (wizard/dashboard): um só
+    # scan que avalia o alvo seja ele público OU privado, sem obrigar o usuário a
+    # escolher "de onde olha". Não bloqueia por classe de host — se encontrar um
+    # IP privado durante um recon externo, ele é DOCUMENTADO (vira ativo/finding),
+    # não recusado. EXTERNAL/INTERNAL seguem disponíveis para quem quer o guardrail
+    # estrito (CLI/CI de times), mas deixam de ser uma escolha imposta na UI.
+    UNIFIED = "unified"
 
 
 class HostClass(str, Enum):
@@ -72,6 +79,24 @@ _PROFILES: dict[Perspective, PerspectiveProfile] = {
         default_rate_limit=1000,  # mais agressivo permitido (ainda configurável)
         allow_credentials=True,
         osint_subdomains=False,  # já se está dentro; sem OSINT de subdomínio
+    ),
+    # Modo produto: aceita TODAS as classes de host — nunca bloqueia por
+    # público×privado. O alvo é avaliado como está e o que for encontrado (inclusive
+    # endereços internos) é documentado. É a perspectiva default do wizard/dashboard.
+    Perspective.UNIFIED: PerspectiveProfile(
+        description="Avaliação abrangente: público e privado no mesmo scan; documenta o que achar.",
+        allowed_host_classes=frozenset(
+            {
+                HostClass.PUBLIC,
+                HostClass.PRIVATE,
+                HostClass.LOOPBACK,
+                HostClass.LINK_LOCAL,
+                HostClass.HOSTNAME,
+            }
+        ),
+        default_rate_limit=300,  # equilíbrio entre cobertura e respeito à produção
+        allow_credentials=True,
+        osint_subdomains=True,
     ),
 }
 

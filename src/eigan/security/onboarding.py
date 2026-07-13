@@ -72,10 +72,14 @@ def accept_terms(*, assume_yes: bool = False, input_fn=input, echo=print) -> boo
 def build_scope(
     scope_path: str | Path | None, targets: list[str], perspective: Perspective
 ) -> Scope:
-    """Resolve o escopo: do ``scope.yaml`` (trava dura) ou efêmero dos alvos.
+    """Resolve o escopo: do ``scope.yaml`` (trava dura opt-in) ou efêmero dos alvos.
 
-    No modo efêmero, ``authorized=True`` porque a autorização é afirmada inline
-    (consent gate) e pelo termo de 1ª execução — nunca silenciosamente."""
+    No modo efêmero (default do produto), ``authorized=True`` porque a autorização
+    é afirmada inline (consent gate) e pelo termo de 1ª execução — nunca
+    silenciosamente — e ``enforce_membership=False``: o alvo informado É o escopo,
+    então não exigimos que ele conste de uma allowlist em arquivo (essa fricção
+    chegava a barrar o próprio alvo quando digitado como URL). A trava dura por
+    lista continua disponível para times/CI via ``--scope arquivo.yaml``."""
     if scope_path:
         return Scope.load(scope_path)
     return Scope(
@@ -83,4 +87,5 @@ def build_scope(
         engagement=f"ad-hoc:{','.join(targets)[:60]}",
         hosts=list(targets),
         perspective=perspective,
+        enforce_membership=False,
     )

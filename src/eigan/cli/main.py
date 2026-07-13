@@ -37,6 +37,12 @@ def cli(ctx: click.Context) -> None:
     Configuração, Doctor, Atualizar Ferramentas). Veja `eigan doctor` para
     checar o ambiente e `eigan scan ALVO` para um scan direto (headless/CI).
     """
+    # Carrega o .env (chaves de IA gravadas pelo onboarding) no início de TODO
+    # comando — sem isso a chave ficava só no arquivo e o scan era recusado por
+    # "falta de provedor". O ambiente real vence (override=False).
+    from ..envfile import load_dotenv
+
+    load_dotenv()
     if ctx.invoked_subcommand is None:
         from .menu import run_frontend
 
@@ -50,7 +56,8 @@ def cli(ctx: click.Context) -> None:
     "--perspective",
     type=click.Choice([p.value for p in Perspective]),
     default=None,
-    help="external|internal. Padrão: external (ou o do scope.yaml).",
+    help="unified (padrão) avalia público+privado; external/internal aplicam o "
+    "guardrail estrito para quem quer.",
 )
 @click.option("--profile", default="standard", show_default=True)
 @click.option(

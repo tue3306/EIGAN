@@ -56,6 +56,12 @@ def test_override_forces_allow_with_reason():
     assert ok and "OVERRIDE" in reason
 
 
+def test_unified_allows_all_host_classes():
+    # Modo produto: nunca bloqueia por público×privado — documenta o que achar.
+    for host in ("8.8.8.8", "10.0.0.1", "192.168.1.1", "127.0.0.1", "example.com"):
+        assert target_allowed(Perspective.UNIFIED, host)[0], host
+
+
 def test_profiles_differ():
     ext = profile_for(EXTERNAL)
     intr = profile_for(INTERNAL)

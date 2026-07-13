@@ -134,7 +134,12 @@ async function boot() {
   try {
     const m = await api('/meta');
     el('ver').textContent = 'v' + m.tool_version;
-    if (m.ai_enabled) el('ai').style.display = '';
+    if (m.ai_enabled) {
+      const b = el('ai');
+      b.style.display = '';
+      b.textContent = '🤖 ' + (m.ai_model || 'IA ativa');
+      b.title = 'Provedor: ' + (m.ai_provider || '—') + ' · nível ' + (m.ai_tier || '—');
+    }
   } catch (e) {}
   window.addEventListener('hashchange', router);
   router();
@@ -153,12 +158,14 @@ function setupBanner(s) {
 }
 
 async function viewDashboard(root) {
-  const [stats, scans, assets, setup] = await Promise.all([
+  const [stats, scans, assets, setup, jobs] = await Promise.all([
     api('/stats').catch(() => ({ scans: 0, findings: 0, severity: {}, kev: 0 })),
     api('/scans').catch(() => []),
     api('/assets').catch(() => ({ assets: [] })),
     api('/setup').catch(() => null),
+    api('/jobs').catch(() => []),
   ]);
+  const active = (jobs || []).filter((j) => j.status === 'running' || j.status === 'queued');
   const sev = stats.severity || {};
   const score = securityScore(sev, stats.kev || 0);
   const latest = scans[0];
@@ -168,6 +175,12 @@ async function viewDashboard(root) {
       <button class="btn-primary" onclick="location.hash='#/new'">+ Novo Scan</button>
     </div>
     ${setupBanner(setup)}
+    ${active.length ? `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--ok)">
+      <div class="between"><h2 style="margin:0">⚡ ${active.length} scan(s) em andamento</h2>
+        <span class="muted small">vários scans rodam em paralelo</span></div>
+      <div style="margin-top:8px">${active.map((j) => `<div class="between clickable" style="padding:6px 0;border-bottom:1px solid var(--border)" onclick="location.hash='#/job/${esc(j.id)}'">
+        <span><span class="badge live st-running">${esc(j.status)}</span> <span class="mono">${esc((j.targets || []).join(', '))}</span></span>
+        <span class="muted small">${esc(j.profile)} · ${j.events || 0} eventos →</span></div>`).join('')}</div></div>` : ''}
     <div class="grid" style="margin-bottom:14px">
       ${kpi(stats.scans || 0, 'scans', '🛰️')}
       ${kpi(stats.findings || 0, 'findings', '🐛')}
@@ -354,8 +367,10 @@ async function viewHistory(root) {
   render();
 }
 
-// ── VIEW: Wizard (5 passos) ────────────────────────────────────────────────────
-const wiz = { step: 1, targets: '', perspective: '', objective: 'standard', use_ai: true, authorized: false };
+// ── VIEW: Wizard (4 passos) ────────────────────────────────────────────────────
+// Perspectiva é 'unified' por padrão: um só scan avalia público E privado e
+// documenta o que achar (sem obrigar o usuário a escolher external/internal).
+const wiz = { step: 1, targets: '', perspective: 'unified', objective: 'standard', use_ai: true, authorized: false };
 const OBJECTIVES = [
   { id: 'quick', t: '🎯 Rápido (5–15 min)', d: 'Portscanning + identificação de serviço. Cobertura ~60%.' },
   { id: 'standard', t: '🔍 Padrão (30–60 min)', d: 'Portscan + service detection + templates de vuln. Cobertura ~85%.', reco: true },
@@ -365,10 +380,10 @@ const OBJECTIVES = [
 function viewWizard(root) { wiz.step = 1; renderWizard(root); }
 function renderWizard(root) {
   root.innerHTML = `<div class="wizard"><h1>Novo Scan</h1>
-    <div class="steps">${[1, 2, 3, 4, 5].map((n) => `<div class="step ${n <= wiz.step ? 'done' : ''}"></div>`).join('')}</div>
+    <div class="steps">${[1, 2, 3, 4].map((n) => `<div class="step ${n <= wiz.step ? 'done' : ''}"></div>`).join('')}</div>
     <div id="wstep"></div></div>`;
   const s = el('wstep');
-  [stepTarget, stepPerspective, stepObjective, stepAdvanced, stepConfirm][wiz.step - 1](s);
+  [stepTarget, stepObjective, stepAdvanced, stepConfirm][wiz.step - 1](s);
 }
 const navButtons = (backOk, nextLabel, nextFn, nextOk = true) => `<div class="wizard-nav">
   <button class="btn-ghost" ${backOk ? '' : 'disabled'} onclick="wizBack()">‹ Voltar</button>
@@ -382,18 +397,11 @@ function stepTarget(s) {
   el('wtarget').addEventListener('input', (e) => { wiz.targets = e.target.value; el('wnext').disabled = !e.target.value.trim(); });
   el('wnext').disabled = !wiz.targets.trim();
 }
-function stepPerspective(s) {
-  const opt = (id, t, d) => `<div class="choice ${wiz.perspective === id ? 'sel' : ''}" onclick="wizPersp('${id}')"><div class="t">${t}</div><div class="d">${d}</div></div>`;
-  s.innerHTML = `<label>De onde você está olhando a rede?</label>
-    ${opt('external', '🌐 EXTERNA (Outside-In)', 'Visão de atacante na internet: subdomínios, portas expostas, apps públicas.')}
-    ${opt('internal', '🏢 INTERNA (Inside-Out)', 'Dentro da rede: servidores internos, AD, SMB, LDAP (assumed breach).')}
-    ${navButtons(true, 'Próximo ›', 'wizToStep3', !!wiz.perspective)}`;
-}
 function stepObjective(s) {
   s.innerHTML = `<label>O que você quer descobrir?</label>
     ${OBJECTIVES.map((o) => `<div class="choice ${wiz.objective === o.id ? 'sel' : ''}" onclick="wizObj('${o.id}')">
       <div class="t">${o.t}${o.reco ? '<span class="reco">RECOMENDADO</span>' : ''}</div><div class="d">${o.d}</div></div>`).join('')}
-    ${navButtons(true, 'Próximo ›', 'wizToStep4', !!wiz.objective)}`;
+    ${navButtons(true, 'Próximo ›', 'wizToStep3', !!wiz.objective)}`;
 }
 function stepAdvanced(s) {
   s.innerHTML = `<label>Opções avançadas</label>
@@ -401,14 +409,14 @@ function stepAdvanced(s) {
       <div class="d">A cada descoberta, a IA/engine dispara as ferramentas certas (ex.: porta 445 → enum4linux). Cada disparo é registrado e justificado.</div></div>
     <div class="choice"><div class="t">⚙️ Rate limit</div><div class="d">Conservador (padrão) — respeita a produção. Ajuste fino via scope.yaml/CLI.</div></div>
     <div class="choice"><div class="t">🔒 Exploração / Validação</div><div class="d">Modo “validar apenas” (PoC seguro). Exploração real só com autorização explícita (gated).</div></div>
-    ${navButtons(true, 'Próximo ›', 'wizToStep5')}`;
+    ${navButtons(true, 'Próximo ›', 'wizToStep4')}`;
 }
 function stepConfirm(s) {
   const objLabel = (OBJECTIVES.find((o) => o.id === wiz.objective) || {}).t || wiz.objective;
   s.innerHTML = `<label>Confirmação</label>
     <div class="card"><table class="summary-tbl"><tbody>
       <tr><td>Alvo</td><td class="mono">${esc(wiz.targets)}</td></tr>
-      <tr><td>Perspectiva</td><td>${esc((wiz.perspective || '').toUpperCase())}</td></tr>
+      <tr><td>Modo</td><td>Unificado — avalia público e privado; documenta IPs internos que encontrar</td></tr>
       <tr><td>Objetivo</td><td>${esc(objLabel)}</td></tr>
       <tr><td>Cascata IA</td><td>${wiz.use_ai ? 'Sim' : 'Não'}</td></tr></tbody></table></div>
     <div class="consent"><b>⚠️ Confirmação de autorização</b>
@@ -422,8 +430,6 @@ window.wizBack = () => { if (wiz.step > 1) wiz.step--; renderWizard(el('view').f
 window.wizToStep2 = () => wiz.targets.trim() && ((wiz.step = 2), renderWizard(el('view').firstChild));
 window.wizToStep3 = () => ((wiz.step = 3), renderWizard(el('view').firstChild));
 window.wizToStep4 = () => ((wiz.step = 4), renderWizard(el('view').firstChild));
-window.wizToStep5 = () => ((wiz.step = 5), renderWizard(el('view').firstChild));
-window.wizPersp = (id) => { wiz.perspective = id; renderWizard(el('view').firstChild); };
 window.wizObj = (id) => { wiz.objective = id; renderWizard(el('view').firstChild); };
 window.wizToggleAI = () => { wiz.use_ai = !wiz.use_ai; renderWizard(el('view').firstChild); };
 window.wizStart = async () => {

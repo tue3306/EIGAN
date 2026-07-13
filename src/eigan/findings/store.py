@@ -41,8 +41,14 @@ CREATE INDEX IF NOT EXISTS idx_findings_scan ON findings(scan_id);
 class FindingStore:
     def __init__(self, db_path: str | Path = "eigan.db") -> None:
         self._path = str(db_path)
-        self._conn = sqlite3.connect(self._path)
+        # timeout generoso + WAL: suporta MÚLTIPLOS scans simultâneos (cada job roda
+        # em sua thread com sua própria conexão) sem "database is locked". WAL deixa
+        # leitores (dashboard/API) não bloquearem o escritor (o scan em andamento).
+        self._conn = sqlite3.connect(self._path, timeout=30.0)
         self._conn.row_factory = sqlite3.Row
+        if self._path != ":memory:":
+            self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA busy_timeout=30000")
         self._conn.executescript(_SCHEMA)
         self._conn.commit()
 

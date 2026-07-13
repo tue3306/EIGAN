@@ -154,8 +154,9 @@ def execute_scan(
     if not accept_terms(assume_yes=assume_yes, input_fn=input_fn, echo=echo):
         raise SessionAborted("Termo de uso não aceito.")
 
-    # Resolve a perspectiva: explícita > do scope.yaml > external (padrão §F).
-    scope = build_scope(scope_path, targets, perspective or Perspective.EXTERNAL)
+    # Resolve a perspectiva: explícita (--perspective) > do scope.yaml > unified.
+    # O default agora é UNIFIED (modo produto): não bloqueia por público×privado.
+    scope = build_scope(scope_path, targets, perspective or Perspective.UNIFIED)
     resolved = perspective or scope.perspective
 
     try:

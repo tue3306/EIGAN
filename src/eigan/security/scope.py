@@ -39,17 +39,35 @@ class PerspectiveViolation(ScopeViolation):
 
 @dataclass
 class Scope:
-    """Escopo autorizado carregado de ``scope.yaml``.
+    """Escopo autorizado.
 
-    ``hosts`` aceita IPs, hostnames e redes CIDR. ``authorized`` deve ser True
-    explicitamente — é o *consent gate* em disco: sem ele, tudo é bloqueado.
+    Há dois modos de uso, deliberadamente distintos:
+
+    * **Trava dura (opt-in)** — carregada de um ``scope.yaml`` explícito (``--scope``):
+      ``enforce_membership=True``. O alvo PRECISA pertencer a ``hosts``. É a trava
+      para times/CI que querem uma allowlist rígida por engajamento.
+    * **Efêmero (default do produto)** — construído a partir dos próprios alvos
+      informados, com ``enforce_membership=False``: a autorização é o *consent gate*
+      inline (o usuário afirma que tem permissão), não uma lista em arquivo. Foi a
+      fricção que travava scans legítimos (ex.: uma URL não casava consigo mesma).
+
+    ``hosts`` aceita IPs, hostnames e redes CIDR (URLs são normalizadas para o host).
     """
 
     authorized: bool = False
     engagement: str = ""
     hosts: list[str] = field(default_factory=list)
     exclude: list[str] = field(default_factory=list)
-    perspective: Perspective = Perspective.EXTERNAL
+    perspective: Perspective = Perspective.UNIFIED
+    # Só a trava dura por arquivo (scope.yaml explícito) exige pertencimento à lista.
+    # No modo efêmero o consent gate é a autorização — não uma allowlist.
+    enforce_membership: bool = True
+
+    def __post_init__(self) -> None:
+        # Normaliza para o host (tira esquema/porta/caminho de URLs) — assim uma
+        # entrada como "https://alvo/" casa com o alvo "alvo" e vice-versa.
+        self.hosts = [extract_host(str(h)) for h in self.hosts]
+        self.exclude = [extract_host(str(h)) for h in self.exclude]
 
     @classmethod
     def load(cls, path: str | Path) -> "Scope":
@@ -59,7 +77,8 @@ class Scope:
             engagement=str(data.get("engagement", "")),
             hosts=[str(h) for h in data.get("hosts", [])],
             exclude=[str(h) for h in data.get("exclude", [])],
-            perspective=Perspective(str(data.get("perspective", "external")).lower()),
+            perspective=Perspective(str(data.get("perspective", "unified")).lower()),
+            enforce_membership=True,  # arquivo explícito = trava dura por lista
         )
 
     @staticmethod
@@ -121,7 +140,10 @@ class Scope:
         if not ok:
             raise PerspectiveViolation(f"Bloqueado por regra de perspectiva: {reason}")
 
-        if not self.contains(target):
+        # Pertencimento à lista só é exigido pela trava dura por arquivo (opt-in).
+        # No modo efêmero (default), a autorização é o consent gate inline — não uma
+        # allowlist —, então não bloqueamos aqui.
+        if self.enforce_membership and not self.contains(target):
             raise ScopeViolation(
                 f"Alvo fora do escopo autorizado: {target!r}. "
                 "Adicione-o a 'hosts' no scope.yaml (com autorização real)."

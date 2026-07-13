@@ -171,6 +171,12 @@ class PluginSpec:
         return capability in self.metadata.capabilities
 
     def runs_in(self, perspective: Perspective) -> bool:
+        # UNIFIED (modo produto) casa com qualquer plugin: um scan abrangente pode
+        # usar tanto capacidades de recon externo quanto de rede interna, e a
+        # seleção real por alvo é decidida pela estratégia/cascata, não pela
+        # classe pública×privada do host.
+        if perspective is Perspective.UNIFIED:
+            return True
         return perspective in self.metadata.supported_perspectives
 
     def available(self) -> bool:

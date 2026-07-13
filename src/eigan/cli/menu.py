@@ -229,13 +229,35 @@ def configure_ai_provider(
         return
     values[spec.key_env] = cred
 
-    model_hint = "deployment" if spec.name == "azure" else "modelo"
-    default_note = f" (Enter usa o padrão {spec.default_model})" if spec.default_model else ""
-    model = input_fn(f"{model_hint}{default_note}: ").strip()
-    if model:
-        values[spec.model_env] = model
-    elif not spec.default_model:
-        echo(f"Aviso: sem {spec.model_env}, o provedor fica inativo (não fabricamos id).")
+    # Seleção por NÍVEL (baixo/médio/alto) — o usuário não decora id de modelo; o
+    # EIGAN resolve o modelo concreto por provedor. Provedores sem mapa de tier
+    # (Azure/Ollama/OpenRouter/Groq/Together) ainda pedem o id, pois não há um
+    # default que possamos verificar (anti-invenção §3.1).
+    from ..ai.provider import TIERS as _TIERS
+    from ..ai.provider import _TIER_LABELS
+
+    if spec.tier_models:
+        echo("\nNível de IA (o EIGAN escolhe o modelo por você):")
+        for i, tier in enumerate(_TIERS, start=1):
+            echo(f"  {i}. {_TIER_LABELS[tier]}  →  {spec.tier_model(tier)}")
+        raw_t = input_fn("Escolha o nível [2]: ").strip() or "2"
+        tier = (
+            _TIERS[int(raw_t) - 1]
+            if raw_t.isdigit() and 1 <= int(raw_t) <= len(_TIERS)
+            else "medium"
+        )
+        values["EIGAN_AI_TIER"] = tier
+        values[spec.model_env] = ""  # limpa override antigo — deixa o tier resolver
+        echo(
+            f"    Nível '{tier}' → modelo {spec.tier_model(tier)} (troque quando quiser em Configuração)."
+        )
+    else:
+        model_hint = "deployment" if spec.name == "azure" else "modelo"
+        model = input_fn(f"{model_hint} (id exato do provedor): ").strip()
+        if model:
+            values[spec.model_env] = model
+        else:
+            echo(f"Aviso: sem {spec.model_env}, o provedor fica inativo (não fabricamos id).")
     if spec.name == "azure":
         endpoint = input_fn("AZURE_OPENAI_ENDPOINT (https://<resource>.openai.azure.com): ").strip()
         api_ver = input_fn("AZURE_OPENAI_API_VERSION (confirme na doc): ").strip()
@@ -255,13 +277,13 @@ def action_config(
     *, db: str, input_fn: Callable[[str], str] = input, echo: Callable = print
 ) -> None:
     """Mostra o estado da configuração e permite configurar a IA (sem editar YAML)."""
-    from ..ai.provider import list_providers
+    from ..ai.provider import current_tier, list_providers
 
     fc = FeedCache.load()
     ready = [s for s in list_providers() if s.configured()]
     env_state = "presente" if os.path.exists(".env") else "ausente (copie de .env.example)"
     ai_state = (
-        f"{ready[0].label} · modelo={ready[0].model()}"
+        f"{ready[0].label} · nível={current_tier()} · modelo={ready[0].model()}"
         if ready
         else "nenhum provedor — o scan será recusado (configure em Configuração)"
     )

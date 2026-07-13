@@ -57,16 +57,13 @@ def run_wizard(db: str = "eigan.db") -> int:
             click.echo(_NO_PROVIDER_MSG)
             return 3
 
-    click.echo("\nPerspectiva do scan:")
-    click.echo("  external — visão de um atacante na internet (recusa alvos privados).")
-    click.echo("  internal — visão de dentro da rede (recusa IP público).")
-    persp = click.prompt(
-        "Perspectiva",
-        type=click.Choice([p.value for p in Perspective]),
-        default=Perspective.EXTERNAL.value,
-    )
+    # Modo unificado: um só scan avalia alvos públicos E privados e documenta o que
+    # encontrar — sem obrigar a escolher external/internal (esse guardrail estrito
+    # segue em `eigan scan --perspective` para quem quer, mas não é imposto aqui).
+    persp = Perspective.UNIFIED.value
+    click.echo("\nModo: unificado — avalia público e privado; documenta IPs internos que achar.")
 
-    profile = click.prompt("\nPerfil de scan", type=click.Choice(_PROFILES), default="standard")
+    profile = click.prompt("Perfil de scan", type=click.Choice(_PROFILES), default="standard")
 
     ai_detected = _ai_ready()  # True aqui: o gate acima recusa a ausência de provedor
     click.echo("\nIA: provedor configurado — enriquece a análise e as narrativas.")

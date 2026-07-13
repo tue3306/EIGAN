@@ -10,14 +10,18 @@ from __future__ import annotations
 from eigan.perspective import Perspective
 from eigan.policy import ImpactClass, PolicyEngine, ProposedAction, Verdict
 from eigan.policy.engine import ceiling_for_profile
-from eigan.security.onboarding import build_scope
+from eigan.security.scope import Scope
 
 P = Perspective
 IC = ImpactClass
 
 
 def _engine(**kw) -> PolicyEngine:
-    scope = build_scope(None, ["example.com"], P.EXTERNAL)
+    # Trava dura (opt-in) para exercitar a recusa de alvo fora de escopo: no modo
+    # efêmero (default) a autorização é o consent gate e não há bloqueio por lista.
+    scope = Scope(
+        authorized=True, hosts=["example.com"], perspective=P.EXTERNAL, enforce_membership=True
+    )
     return PolicyEngine(scope=scope, perspective=P.EXTERNAL, **kw)
 
 

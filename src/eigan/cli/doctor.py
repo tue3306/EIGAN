@@ -27,12 +27,12 @@ def _detect_ai() -> str | None:
 
     Reflete a seleção real: provedor totalmente configurado (chave + modelo).
     Um provedor com chave mas SEM modelo aparece como pendente — sem fabricar id."""
-    from ..ai.provider import list_providers
+    from ..ai.provider import current_tier, list_providers
 
     ready = [s for s in list_providers() if s.configured()]
     if ready:
         s = ready[0]
-        return f"{s.label} · modelo={s.model()}"
+        return f"{s.label} · nível={current_tier()} · modelo={s.model()}"
     # chave presente mas modelo faltando? sinaliza o que falta (acionável).
     partial = [s for s in list_providers() if s.credential() and not s.model()]
     if partial:

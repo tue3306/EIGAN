@@ -5,10 +5,50 @@ Cobre a interação escopo × perspectiva (público×privado)."""
 import pytest
 
 from eigan.perspective import Perspective, validate_target
+from eigan.security.onboarding import build_scope
 from eigan.security.scope import InvalidTarget, PerspectiveViolation, Scope, ScopeViolation
 
 INTERNAL = Perspective.INTERNAL
 EXTERNAL = Perspective.EXTERNAL
+UNIFIED = Perspective.UNIFIED
+
+
+# ── modo efêmero (default do produto): não bloqueia por lista ────────────────
+
+
+def test_ephemeral_scope_does_not_block_targets():
+    # A fricção que travava scans: uma URL não casava consigo mesma na allowlist.
+    # No modo efêmero o consent gate é a autorização — nada é barrado por lista.
+    scope = build_scope(None, ["https://demo.testfire.net/"], UNIFIED)
+    assert scope.enforce_membership is False
+    scope.enforce("https://demo.testfire.net/", perspective=UNIFIED)  # não levanta
+    # um alvo diferente também não é barrado no modo efêmero
+    scope.enforce("outro-alvo.example", perspective=UNIFIED)
+
+
+def test_ephemeral_scope_still_validates_target_form():
+    # Mesmo sem trava de lista, a forma do alvo (anti argument-injection) é barrada.
+    scope = build_scope(None, ["example.com"], UNIFIED)
+    with pytest.raises(InvalidTarget):
+        scope.enforce("--script=x", perspective=UNIFIED)
+
+
+def test_unified_scope_allows_private_and_public():
+    # UNIFIED documenta o que achar: não recusa nem privado nem público.
+    scope = build_scope(None, ["10.0.0.5"], UNIFIED)
+    scope.enforce("10.0.0.5", perspective=UNIFIED)  # privado: não levanta
+    scope.enforce("8.8.8.8", perspective=UNIFIED)  # público: não levanta
+
+
+def test_hard_lock_from_file_still_enforces_membership(tmp_path):
+    # A trava dura por arquivo (opt-in, times/CI) segue barrando fora da lista.
+    p = tmp_path / "scope.yaml"
+    p.write_text("authorized: true\nperspective: unified\nhosts:\n  - example.com\n")
+    scope = Scope.load(p)
+    assert scope.enforce_membership is True
+    scope.enforce("example.com", perspective=UNIFIED)  # dentro: ok
+    with pytest.raises(ScopeViolation):
+        scope.enforce("fora.example.net", perspective=UNIFIED)
 
 
 def test_blocks_when_not_authorized():

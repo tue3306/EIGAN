@@ -126,11 +126,20 @@ def test_default_provider_anthropic_from_key(monkeypatch):
     assert provider.available() is True
 
 
-def test_default_provider_openai_requires_model(monkeypatch):
+def test_default_provider_openai_uses_tier_model(monkeypatch):
+    # OpenAI resolve o modelo pelo NÍVEL (tier) — ids verificados na API real —,
+    # então não exige mais OPENAI_MODEL. Um id explícito ainda sobrepõe o tier.
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.delenv("EIGAN_AI_TIER", raising=False)  # default: medium
+    monkeypatch.delenv("EIGAN_AI_PROVIDER", raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-oai")
-    assert default_provider() is None  # sem OPENAI_MODEL → não fabricamos um id
-    monkeypatch.setenv("OPENAI_MODEL", "algum-modelo")
-    assert isinstance(default_provider(), OpenAIProvider)
+    prov = default_provider()
+    assert isinstance(prov, OpenAIProvider)
+    assert prov._model == "gpt-5"  # nível medium → gpt-5
+    monkeypatch.setenv("EIGAN_AI_TIER", "low")
+    assert default_provider()._model == "gpt-5-mini"  # nível baixo
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-custom")  # override de power-user vence
+    assert default_provider()._model == "gpt-custom"
 
 
 # --------------------------------------------------------------------------- #

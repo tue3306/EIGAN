@@ -54,9 +54,30 @@ _INTERNAL: tuple[Stage, ...] = (
     # gancho p/ módulos futuros: AD/Windows/Linux/Container assessment.
 )
 
+# UNIFIED (modo produto): une o recon externo com a descoberta de rede num único
+# pipeline canônico. Descobre superfície pública (subdomínio/DNS/web) E hosts/portas/
+# serviços — sem obrigar o usuário a escolher perspectiva. A cascata aprofunda a
+# partir do que aparecer (ex.: porta 445 → SMB; WordPress → wpscan).
+_UNIFIED: tuple[Stage, ...] = (
+    Stage("subdomain", (C.SUBDOMAIN_ENUMERATION,)),
+    Stage("resolve", (C.DNS_RESOLUTION,)),
+    Stage("host-discovery", (C.HOST_DISCOVERY,)),
+    Stage("ports", (C.PORT_DISCOVERY,)),
+    Stage("service-auth", (C.SERVICE_DETECTION,)),
+    Stage("web-probe", (C.WEB_PROBE,)),
+    Stage("screenshot", (C.SCREENSHOT,)),
+    Stage("crawl", (C.WEB_CRAWL,)),
+    Stage("params", (C.PARAM_DISCOVERY,)),
+    Stage("vuln-templates", (C.VULN_TEMPLATE_SCAN,)),
+    Stage("cms", (C.CMS_SCAN,)),
+    Stage("tls", (C.TLS_ASSESSMENT,)),
+    Stage("cloud-api", (C.CLOUD_STORAGE_ENUM,)),
+)
+
 _PIPELINES: dict[Perspective, tuple[Stage, ...]] = {
     Perspective.EXTERNAL: _EXTERNAL,
     Perspective.INTERNAL: _INTERNAL,
+    Perspective.UNIFIED: _UNIFIED,
 }
 
 # Profiles restringem quais estágios rodam (None = todos os da perspectiva).

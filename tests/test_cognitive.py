@@ -35,6 +35,21 @@ from eigan.engine.registry import PluginRegistry
 from eigan.findings.schema import Finding, Severity
 from eigan.perspective import Perspective
 from eigan.security.onboarding import build_scope
+from eigan.security.scope import Scope
+
+
+def _hard_scope(*hosts: str, perspective=None) -> Scope:
+    """Escopo com trava dura (opt-in): exige pertencimento à lista. Usado onde o
+    teste verifica o BLOQUEIO de alvo fora de escopo — no modo efêmero (default) a
+    autorização é o consent gate e não há bloqueio por lista."""
+    from eigan.perspective import Perspective as _P
+
+    return Scope(
+        authorized=True,
+        hosts=list(hosts),
+        perspective=perspective or _P.EXTERNAL,
+        enforce_membership=True,
+    )
 
 C = Capability
 P = Perspective
@@ -437,7 +452,7 @@ def test_engine_scaffold_agent_capability_is_suggested_not_executed():
 
 
 def test_safe_execution_enforces_scope():
-    scope = build_scope(None, ["example.com"], P.EXTERNAL)
+    scope = _hard_scope("example.com", perspective=P.EXTERNAL)  # trava dura opt-in
     ex = SafeExecution(scope)
     spec = _spec("naabu", (C.PORT_DISCOVERY,))
     # alvo fora do escopo autorizado deve ser bloqueado (trava dura §2).
@@ -464,7 +479,7 @@ def test_engine_refuses_out_of_scope_target():
     # DoD: recusa de alvo fora de escopo é um bloqueio real, registrado.
     reg = _engine_registry()
     engine = CognitiveEngine(reg)
-    scope = build_scope(None, ["example.com"], P.EXTERNAL)  # só example.com autorizado
+    scope = _hard_scope("example.com", perspective=P.EXTERNAL)  # trava dura: só example.com
     # objetivo mira um alvo NÃO autorizado → cada execução é recusada pelo escopo.
     goal = Goal.build(GoalKind.ATTACK_SURFACE, ["attacker-controlled.example.net"])
     report = engine.run(goal, scope=scope)

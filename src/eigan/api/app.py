@@ -83,12 +83,30 @@ def health() -> HealthOut:
 @app.get("/api/v1/meta")
 def meta() -> dict:
     """Sinaliza estado da IA (para o widget) e versão. ``ai_enabled`` = provedor
-    FUNCIONAL; ``ai_key_detected`` = chave no ambiente (mesmo sem provedor pronto)."""
+    FUNCIONAL; ``ai_key_detected`` = chave no ambiente (mesmo sem provedor pronto).
+    Expõe também provedor/modelo/nível ativos — a UI mostra qual IA está comandando."""
     return {
         "tool_version": _TOOL_VERSION,
         "ai_enabled": default_provider() is not None,
         "ai_key_detected": any(os.getenv(k) for k in _AI_ENV),
+        **_active_ai_meta(),
     }
+
+
+def _active_ai_meta() -> dict:
+    """Provedor/modelo/nível de IA ativos (para exibição — nunca a chave)."""
+    from ..ai.provider import PROVIDERS, current_tier, default_provider
+
+    prov = default_provider()
+    if prov is None:
+        return {"ai_provider": None, "ai_model": None, "ai_tier": current_tier()}
+    # descobre o spec ativo pelo nome da classe do provedor construído
+    label, model = None, getattr(prov, "_model", None)
+    for spec in PROVIDERS.values():
+        if isinstance(prov, spec.provider_cls):
+            label = spec.label
+            break
+    return {"ai_provider": label, "ai_model": model, "ai_tier": current_tier()}
 
 
 @app.get("/api/v1/setup")
@@ -296,9 +314,9 @@ class ScanRequest(BaseModel):
     """Corpo do POST /scans vindo do wizard. ``authorized`` é o consent gate."""
 
     targets: list[str] = Field(min_length=1)
-    perspective: str = "external"
+    perspective: str = "unified"  # default do produto: público+privado num só scan
     objective: str = "standard"  # quick | standard | deep | ai
-    use_ai: bool = False
+    use_ai: bool = True  # EIGAN é AI-native; a IA comanda o scan por padrão
     authorized: bool = False
     override_perspective: bool = False
 
