@@ -279,6 +279,42 @@ def regen_scan_analysis(scan_id: int) -> dict:
     return {"analysis": _ai_or_http(lambda: _generate_analysis(store, scan_id)), "cached": False}
 
 
+# ── merge/correlação entre scans (ex.: scans simultâneos) ────────────────────
+class MergeRequest(BaseModel):
+    """IDs de scans a correlacionar num relatório unificado (>= 2)."""
+
+    scan_ids: list[int] = Field(min_length=2)
+
+
+def _validate_scan_ids(store: FindingStore, scan_ids: list[int]) -> None:
+    for sid in scan_ids:
+        if not store.get_scan(sid):
+            raise HTTPException(404, f"scan {sid} não encontrado")
+
+
+@app.post("/api/v1/scans/merge")
+def merge_scans_endpoint(req: MergeRequest) -> dict:
+    """Correlaciona vários scans: findings deduplicados entre eles, contagem por
+    severidade e por scan — a superfície unificada de alvos escaneados em paralelo."""
+    from ..analysis.merge import merge_summary
+
+    store = _store()
+    _validate_scan_ids(store, req.scan_ids)
+    return merge_summary(store, req.scan_ids)
+
+
+@app.post("/api/v1/scans/merge/analysis")
+def merge_analysis_endpoint(req: MergeRequest) -> dict:
+    """Análise da IA sobre a superfície UNIFICADA (correlaciona os scans de uma vez)."""
+    from ..ai.conversation import analyze
+    from ..analysis.merge import merge_context
+
+    store = _store()
+    _validate_scan_ids(store, req.scan_ids)
+    ctx = merge_context(store, req.scan_ids)
+    return {"analysis": _ai_or_http(lambda: analyze(ctx))}
+
+
 @app.post("/api/v1/jobs/{job_id}/chat")
 def job_chat(job_id: str, req: ChatRequest) -> dict:
     """Chat sobre um scan EM ANDAMENTO — usa as descobertas emitidas até agora."""

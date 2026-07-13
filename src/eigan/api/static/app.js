@@ -137,6 +137,7 @@ async function aiAnalysisPanel(mount, scanId) {
 const ROUTES = [
   { re: /^#\/new/, view: viewWizard },
   { re: /^#\/job\/(.+)/, view: viewProgress },
+  { re: /^#\/merge\/(.+)/, view: viewMerge },
   { re: /^#\/scan\/(\d+)/, view: viewScanDetail },
   { re: /^#\/scans/, view: viewHistory },
   { re: /^#?\/?$/, view: viewDashboard },
@@ -386,27 +387,71 @@ window.exportReport = (scanId) => {
   window.location.href = `${API}/scans/${scanId}/report?format=${fmt}&style=${style}&classification=${cls}`;
 };
 
-// ── VIEW: Histórico (busca + filtro) ──────────────────────────────────────────
+// ── VIEW: Histórico (busca + filtro + correlação multi-scan) ──────────────────
 async function viewHistory(root) {
   const scans = await api('/scans').catch(() => []);
-  const st = { q: '', status: '' };
-  root.innerHTML = `<div class="between" style="margin-bottom:14px"><h1>Histórico de scans</h1>
-      <button class="btn-primary" onclick="location.hash='#/new'">+ Novo Scan</button></div>
+  const st = { q: '', status: '', sel: new Set() };
+  root.innerHTML = `<div class="between" style="margin-bottom:6px"><h1>Histórico de scans</h1>
+      <div class="row"><button class="btn-ghost" id="hmerge" disabled>🔗 Correlacionar (0)</button>
+      <button class="btn-primary" onclick="location.hash='#/new'">+ Novo Scan</button></div></div>
+    <p class="muted small" style="margin-bottom:12px">Marque 2+ scans (ex.: os que rodaram em paralelo) e clique em <b>Correlacionar</b> para uma visão unificada + análise da IA da superfície inteira.</p>
     <div class="between wrap" style="margin-bottom:10px">
       <div class="search" style="max-width:320px;flex:1"><input type="search" id="hq" placeholder="Buscar por alvo/engajamento/perfil…"></div>
       <select id="hst" style="width:auto"><option value="">todos os status</option><option value="done">concluídos</option><option value="running">em curso</option></select></div>
     <div class="tablewrap"><table>
-      <thead><tr><th>ID</th><th>Alvo</th><th>Perfil</th><th>Status</th><th>Início</th></tr></thead>
+      <thead><tr><th></th><th>ID</th><th>Alvo</th><th>Perfil</th><th>Status</th><th>Início</th></tr></thead>
       <tbody id="hbody"></tbody></table></div>`;
+  const mergeBtn = el('hmerge');
+  const updBtn = () => { mergeBtn.textContent = `🔗 Correlacionar (${st.sel.size})`; mergeBtn.disabled = st.sel.size < 2; };
+  mergeBtn.onclick = () => { if (st.sel.size >= 2) location.hash = '#/merge/' + [...st.sel].join(','); };
   const render = () => {
     const q = st.q.toLowerCase();
     const rows = scans.filter((s) => (!q || (`#${s.id} ${s.engagement || ''} ${s.profile}`).toLowerCase().includes(q))
       && (!st.status || (st.status === 'done' ? s.finished_at : !s.finished_at)));
-    el('hbody').innerHTML = rows.length ? rows.map(scanRow).join('') : '<tr><td colspan="5" class="empty">Nenhum scan.</td></tr>';
+    el('hbody').innerHTML = rows.length ? rows.map((s) => {
+      const stt = s.finished_at ? 'completed' : 'running', ic = s.finished_at ? '✅' : '⏳';
+      return `<tr><td><input type="checkbox" data-id="${s.id}" ${st.sel.has(s.id) ? 'checked' : ''} style="width:auto"></td>
+        <td class="mono clickable" onclick="location.hash='#/scan/${s.id}'">#${s.id}</td>
+        <td class="clickable" onclick="location.hash='#/scan/${s.id}'">${esc(s.engagement || '—')}</td>
+        <td>${esc(s.profile)}</td><td><span class="badge st-${stt}">${ic} ${s.finished_at ? 'concluído' : 'em curso'}</span></td>
+        <td class="mono small">${fmtDate(s.started_at)}</td></tr>`;
+    }).join('') : '<tr><td colspan="6" class="empty">Nenhum scan.</td></tr>';
+    el('hbody').querySelectorAll('input[type=checkbox]').forEach((cb) => (cb.onchange = () => { const id = +cb.dataset.id; cb.checked ? st.sel.add(id) : st.sel.delete(id); updBtn(); }));
   };
   el('hq').addEventListener('input', (e) => { st.q = e.target.value; render(); });
   el('hst').onchange = (e) => { st.status = e.target.value; render(); };
-  render();
+  render(); updBtn();
+}
+
+// ── VIEW: Correlação entre scans (merge) ──────────────────────────────────────
+async function viewMerge(root, idsStr) {
+  const ids = idsStr.split(',').map(Number).filter(Boolean);
+  root.innerHTML = '<div class="empty"><span class="spin"></span> correlacionando scans…</div>';
+  let data;
+  try { data = await apiPost('/scans/merge', { scan_ids: ids }); }
+  catch (e) { root.innerHTML = `<div class="empty">Falha ao correlacionar: <span class="mono">${esc(e.detail || e.status)}</span></div>`; return; }
+  const sev = data.severity || {}, score = securityScore(sev);
+  root.innerHTML = `
+    <div class="between wrap" style="margin-bottom:14px">
+      <div><h1>🔗 Correlação de ${ids.length} scans</h1><p class="sub mono">${esc((data.targets || []).join(', '))}</p></div>
+      <button class="btn-ghost" onclick="location.hash='#/scans'">‹ Histórico</button></div>
+    <div class="cols-3" style="margin-bottom:14px">
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        ${kpi(data.count, 'findings únicos', '🐛')}${kpi(data.correlated, 'correlacionados', '🔗', true)}
+        ${kpi(ids.length, 'scans', '🛰️')}${kpi((sev.critical || 0) + (sev.high || 0), 'críticos/altos', '🔥')}</div>
+      <div class="card"><h2>Severidade (unificada)</h2><div class="chartbox">${donutSVG(sev)}${sevLegend(sev)}</div></div>
+      <div class="card"><h2>Score</h2><div style="text-align:center">${gaugeSVG(score)}</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px"><h2>✨ Correlação da IA (superfície unificada)</h2><div id="mergean"></div></div>
+    <div class="card"><h2 style="margin:0 0 8px">Findings unificados (dedup entre scans)</h2><div id="mftable"></div></div>`;
+  findingsTable(el('mftable'), data.findings || []);
+  const an = el('mergean');
+  an.innerHTML = `<button class="btn-ghost" id="manbtn">✨ Gerar correlação da IA</button>`;
+  el('manbtn').onclick = async () => {
+    an.innerHTML = '<div class="muted small">⏳ a IA está correlacionando os scans…</div>';
+    try { const r = await apiPost('/scans/merge/analysis', { scan_ids: ids }); an.innerHTML = `<div class="ai-analysis">${esc(r.analysis || '').replace(/\n/g, '<br>')}</div>`; }
+    catch (e) { an.innerHTML = `<div class="muted small">${e.status === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Falha ao gerar correlação.'}</div>`; }
+  };
 }
 
 // ── VIEW: Wizard (4 passos) ────────────────────────────────────────────────────
