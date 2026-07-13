@@ -67,6 +67,7 @@ class Capability(str, Enum):
     COMPLIANCE_AUDIT = "compliance_audit"  # mapeável a CIS/NIST
     HARDENING_AUDIT = "hardening_audit"
     IOC_INVENTORY = "ioc_inventory"
+    DEPENDENCY_SCAN = "dependency_scan"  # CVEs em imagens/deps/SBOM (trivy, grype)
 
     # ── roadmap (scaffolded honesto — §B) ────────────────────────────────────
     # Contratos declarados para os módulos ainda NÃO construídos. Plugins com

@@ -95,6 +95,12 @@ def default_agents() -> list[Agent]:
             capabilities=frozenset({C.EXPLOITATION, C.XSS_VALIDATION}),
             built=True,  # tools reais: sqlmap (SQLi), dalfox (XSS) — gated por impacto
         ),
+        Agent(
+            name="supply-chain",
+            description="CVEs de imagens/dependências/SBOM (trivy, grype).",
+            capabilities=frozenset({C.DEPENDENCY_SCAN}),
+            built=True,  # tools reais: trivy, grype (alvo = imagem/repo/filesystem)
+        ),
     ]
 
 

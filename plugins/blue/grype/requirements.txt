@@ -1,0 +1,1 @@
+# grype é um binário de sistema (Go/Anchore) — sem dependências Python.
