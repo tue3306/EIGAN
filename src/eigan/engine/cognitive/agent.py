@@ -65,9 +65,17 @@ def default_agents() -> list[Agent]:
         ),
         Agent(
             name="web",
-            description="Cadeia de aplicação web (crawl, parâmetros, CMS, screenshot).",
-            capabilities=frozenset({C.WEB_CRAWL, C.PARAM_DISCOVERY, C.CMS_SCAN, C.SCREENSHOT}),
-            built=False,
+            description="Cadeia de aplicação web (crawl, conteúdo/parâmetros, CMS, servidor).",
+            capabilities=frozenset(
+                {
+                    C.WEB_CRAWL,
+                    C.PARAM_DISCOVERY,
+                    C.CMS_SCAN,
+                    C.SCREENSHOT,
+                    C.WEB_SERVER_SCAN,
+                }
+            ),
+            built=True,  # tools reais: katana, whatweb, ffuf, gowitness, nikto
         ),
         Agent(
             name="cloud",

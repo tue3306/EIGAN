@@ -54,8 +54,9 @@ class Capability(str, Enum):
     WEB_PROBE = "web_probe"  # fingerprint HTTP/tecnologias/WAF
     SCREENSHOT = "screenshot"
     WEB_CRAWL = "web_crawl"
-    PARAM_DISCOVERY = "param_discovery"
+    PARAM_DISCOVERY = "param_discovery"  # conteúdo/dir/params ocultos (ffuf)
     VULN_TEMPLATE_SCAN = "vuln_template_scan"
+    WEB_SERVER_SCAN = "web_server_scan"  # misconfig/vuln de servidor web (nikto)
     CMS_SCAN = "cms_scan"
     TLS_ASSESSMENT = "tls_assessment"
 

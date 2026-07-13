@@ -69,6 +69,7 @@ _UNIFIED: tuple[Stage, ...] = (
     Stage("crawl", (C.WEB_CRAWL,)),
     Stage("params", (C.PARAM_DISCOVERY,)),
     Stage("vuln-templates", (C.VULN_TEMPLATE_SCAN,)),
+    Stage("web-server", (C.WEB_SERVER_SCAN,)),
     Stage("cms", (C.CMS_SCAN,)),
     Stage("tls", (C.TLS_ASSESSMENT,)),
     Stage("cloud-api", (C.CLOUD_STORAGE_ENUM,)),
