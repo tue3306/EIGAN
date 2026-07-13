@@ -7,6 +7,26 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-13
+
+Foco: **correlação entre scans, observabilidade e mais 7 ferramentas.**
+
+### Added
+- **Merge/correlação ENTRE scans** (`analysis/merge.py`): junta os findings de N
+  scans (ex.: rodados em paralelo), deduplica/correlaciona por fingerprint e ordena
+  por risco. API `POST /scans/merge` e `POST /scans/merge/analysis` (correlação da
+  IA da superfície unificada). No dashboard: marque 2+ scans no Histórico →
+  "🔗 Correlacionar" → visão unificada + análise da IA.
+- **Logging estruturado** (`logging_setup.py`): configuração central, formato texto
+  (terminal) ou **JSON** para SIEM (`EIGAN_LOG_FORMAT=json`), nível por
+  `EIGAN_LOG_LEVEL`. Eventos de scan (`scan_start`/`scan_done`/`scan_blocked`/
+  `scan_failed`) com campos estruturados.
+- **7 ferramentas novas** (runner+parser+testes): **wpscan** (WordPress),
+  **ldapsearch** (LDAP/AD, bind anônimo — agente AD construído), **trivy** e
+  **grype** (CVEs de imagens/deps/SBOM — capacidade `dependency_scan` + agente
+  supply-chain), **gowitness** (screenshot via Chromium), além de amass e
+  LM Studio da 1.1.0. **Arsenal em 18+ ferramentas.**
+
 ## [1.1.0] - 2026-07-13
 
 Foco: **destravar o scan de ponta a ponta, autonomia real da IA e conversação.**
