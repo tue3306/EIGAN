@@ -1,0 +1,2 @@
+# testssl.sh é um script de sistema — instale via apt/git.
+# https://testssl.sh/
