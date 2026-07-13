@@ -7,6 +7,57 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-13
+
+Foco: **destravar o scan de ponta a ponta, autonomia real da IA e conversação.**
+
+### Fixed
+- **`.env` nunca era carregado em runtime** — a chave de IA ficava só no arquivo e
+  o gate AI-native recusava o scan por "falta de provedor". Novo `eigan/envfile.py`
+  (loader sem dependência) ligado nos entrypoints (precedência 12-fator).
+- **Escopo efêmero barrava o próprio alvo** — uma URL (`https://alvo/`) virava
+  padrão de host e não casava consigo mesma → `ScopeViolation`. Modo efêmero passou
+  a **não bloquear por allowlist** (a autorização é o consent gate inline); a trava
+  dura por arquivo (`--scope`) continua opt-in. `Scope` normaliza o host de URLs.
+- **OpenAI GPT-5 quebrava** — a série GPT-5 recusa `max_tokens` (exige
+  `max_completion_tokens`) e modelos de raciocínio retornavam vazio com orçamento
+  baixo. Corrigido + orçamento de 2048 (env `EIGAN_AI_MAX_TOKENS`).
+- **`httpx` do ProjectDiscovery era pulado** quando o `httpx` do Python o sombreava
+  no PATH — o runner agora resolve o binário correto entre todos os candidatos.
+- **CI (Format)** voltou a verde (o escopo `src plugins tests` exigia formatar os
+  testes também).
+
+### Added
+- **Modo unificado (`Perspective.UNIFIED`)** como padrão do produto: um só scan
+  avalia alvos públicos E privados e **documenta** IPs internos que encontrar — sem
+  obrigar a escolher external/internal (guardrail estrito segue opt-in em
+  `--perspective`).
+- **Níveis de IA (`EIGAN_AI_TIER` baixo/médio/alto)** no lugar de digitar o modelo:
+  o EIGAN resolve o modelo por provedor (ids OpenAI/Anthropic verificados); UI,
+  `doctor` e menu mostram provedor · nível · modelo ativos.
+- **Arsenal ampliado de 6 → 14+ ferramentas**: whatweb (CMS/tech), katana (crawl),
+  ffuf (content discovery), sqlmap (SQLi, não-destrutivo), dalfox (XSS), nikto
+  (servidor web), testssl (TLS) — todos com runner+parser+testes. Agentes **web** e
+  **exploitation** construídos (deixam de ser scaffold). Novas capacidades
+  `WEB_SERVER_SCAN` e `XSS_VALIDATION`.
+- **Intensidade de scan (`engine/tuning.py`)**: perfil × perspectiva → opções de
+  ferramenta (rate, timing do nmap, **stealth/evasão**, todas as portas, severidade,
+  profundidade). `deep` = `nmap -T4 -p-`; `stealth` = `-T2 --scan-delay/-f`; externo
+  conservador. nmap ciente de privilégio (liga `-O` só com root).
+- **Conversation Engine** — o operador **fala com a IA durante e depois do scan**
+  (`ai/context.py` + `ai/prompts.py` + `ai/conversation.py`): chat grounded nos
+  findings + **análise estruturada** (resumo/riscos/correlações/falsos-positivos/
+  próximos passos). API `POST /scans/{id}/chat|analysis`, `POST /jobs/{id}/chat`
+  (ao vivo). Painéis de chat e análise no dashboard.
+- **Scans simultâneos** endurecidos (SQLite WAL + busy_timeout); dashboard mostra
+  scans ativos. Pipeline reordenado: ferramentas lentas (nuclei/nikto/testssl) por
+  último — feedback rápido primeiro.
+
+### Removed
+- `scope.example.yaml` (fricção) e artefatos obsoletos (`vulnforge.db`, `build/`).
+
+## [1.0.1-unreleased-prev]
+
 ### Fixed
 - **IA com Ollama local não funcionava de fato** (configurado ≠ funcional): o
   timeout fixo de 30s fazia toda completude local (CPU lenta) estourar e cair
