@@ -91,9 +91,9 @@ def default_agents() -> list[Agent]:
         ),
         Agent(
             name="exploitation",
-            description="Validação/exploração autorizada de vulnerabilidades.",
-            capabilities=frozenset({C.EXPLOITATION}),
-            built=False,
+            description="Validação autorizada de vulnerabilidades (SQLi/XSS).",
+            capabilities=frozenset({C.EXPLOITATION, C.XSS_VALIDATION}),
+            built=True,  # tools reais: sqlmap (SQLi), dalfox (XSS) — gated por impacto
         ),
     ]
 

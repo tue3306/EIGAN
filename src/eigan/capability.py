@@ -77,7 +77,8 @@ class Capability(str, Enum):
     CLOUD_AUDIT = "cloud_audit"  # red
     WIRELESS_AUDIT = "wireless_audit"  # red
     PASSWORD_AUDIT = "password_audit"  # red
-    EXPLOITATION = "exploitation"  # red (autorizada)
+    EXPLOITATION = "exploitation"  # red (autorizada) — validação de SQLi (sqlmap)
+    XSS_VALIDATION = "xss_validation"  # red — validação de XSS refletido/DOM (dalfox)
     SIEM_INGEST = "siem_ingest"  # blue
     DETECTION_RULES = "detection_rules"  # blue
     THREAT_HUNTING = "threat_hunting"  # blue

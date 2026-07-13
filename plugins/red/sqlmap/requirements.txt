@@ -1,0 +1,2 @@
+# sqlmap é um binário de sistema (Python) — instale via apt/pip do sistema.
+# https://sqlmap.org/
