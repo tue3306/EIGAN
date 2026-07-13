@@ -52,6 +52,15 @@ Foco: **destravar o scan de ponta a ponta, autonomia real da IA e conversação.
 - **Scans simultâneos** endurecidos (SQLite WAL + busy_timeout); dashboard mostra
   scans ativos. Pipeline reordenado: ferramentas lentas (nuclei/nikto/testssl) por
   último — feedback rápido primeiro.
+- **Analysis Engine automático** (`analysis/engine.py`): ao FIM do scan a IA
+  analisa o conjunto inteiro (resumo, riscos, correlações, falsos-positivos,
+  próximos passos) e persiste no scan (coluna `ai_analysis`) — o dashboard mostra
+  sozinho, sem clicar. `GET /scans/{id}/analysis`.
+- **Relatório Markdown** (`report/markdown.py`) profissional, com a Análise da IA
+  embutida — formato `md` na API, dashboard e CLI.
+- **Amass** (subdomain enumeration abrangente/OSINT passivo) e **provedor
+  LM Studio** (local, OpenAI-compat) — arsenal em 15+ ferramentas e a lista de
+  provedores do spec completa.
 
 ### Removed
 - `scope.example.yaml` (fricção) e artefatos obsoletos (`vulnforge.db`, `build/`).
