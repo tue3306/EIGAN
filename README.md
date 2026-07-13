@@ -237,6 +237,34 @@ Sem provedor de IA, o scan é **recusado** com uma mensagem que diz como resolve
 ferramenta ([ADR-0012](docs/adr/0012-ai-native-mandatory.md)). Prefere a interface web?
 `python3 eigan.py --serve` sobe o dashboard e abre o navegador.
 
+### 🔐 Privilégios (sudo) — opcional, recomendado para scan de rede
+
+**Você NÃO precisa de `sudo` para usar o EIGAN** — o scan roda como usuário normal (a IA,
+o web recon com `httpx`/`nuclei`/`katana`, o `naabu` em connect scan, tudo funciona sem root).
+O `sudo` só deixa o **`nmap`** mais poderoso, porque algumas técnicas exigem *raw sockets*:
+
+| Com root (`sudo`) | Sem root (usuário normal) |
+|---|---|
+| SYN scan (`-sS`) — mais rápido e discreto | TCP connect scan (`-sT`) — funciona, um pouco mais lento/ruidoso |
+| **Detecção de SO** (`nmap -O`) ligada automaticamente | detecção de SO indisponível (pulada com aviso) |
+| scripts NSE que usam pacote cru | demais scripts NSE rodam normalmente |
+
+Só `nmap` se beneficia de root aqui; `naabu`, `httpx`, `nuclei`, `subfinder`, `dnsx`, `whatweb`,
+`katana`, `testssl` **não precisam**. Duas formas de dar o privilégio:
+
+```bash
+# A) Recomendado (só o nmap ganha o poder; o resto roda sem privilégio):
+sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip "$(command -v nmap)"
+python3 eigan.py           # roda normal; o nmap já faz SYN + OS detection
+
+# B) Simples (a ferramenta toda roda como root — cuidado: arquivos e .env podem
+#    ficar de posse do root):
+sudo -E python3 eigan.py   # -E preserva seu ambiente/.env
+```
+
+O EIGAN **detecta o privilégio em runtime** e liga o `nmap -O` só quando é root — então
+`sudo` de fato entrega mais, sem quebrar o modo sem privilégio.
+
 ## 🧪 Exemplos de uso
 
 O usuário final não precisa da CLI (o menu/dashboard cobre tudo); ela existe para **dev, CI e

@@ -1,12 +1,12 @@
-# SCAFFOLD HONESTO (roadmap) — ver docs/ROADMAP.md.
+# ATIVO — runner + parser + testes implementados (crawler de superfície web).
 name: katana
 category: red
 subcategory: web
 capabilities: [web_crawl]
 supported_perspectives: [external, internal]
 tool: katana
-roadmap: true
-enabled_by_default: false
+roadmap: false
+enabled_by_default: true
 description: >-
   Crawler web moderno (ProjectDiscovery): coleta URLs/endpoints para alimentar
   fuzzing e templates. Disparado após httpx.
