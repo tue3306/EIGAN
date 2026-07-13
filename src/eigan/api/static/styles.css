@@ -210,3 +210,27 @@ label { display: block; font-weight: 600; margin: 4px 0 10px; font-size: 15px; }
   .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   main { padding: 16px 12px 50px; } .brand .name-full { display: none; }
 }
+
+/* ── Chat com a IA (Conversation Engine) + análise ─────────────────────────── */
+.chat { display: flex; flex-direction: column; }
+.chat-log {
+  max-height: 340px; overflow-y: auto; display: flex; flex-direction: column;
+  gap: 8px; padding: 4px 2px;
+}
+.chat-msg {
+  padding: 8px 11px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
+  max-width: 92%; word-wrap: break-word;
+}
+.chat-msg.user { align-self: flex-end; background: var(--accent); color: #fff; }
+.chat-msg.ai { align-self: flex-start; background: var(--bg2); color: var(--text); border: 1px solid var(--border); }
+.chat-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.chip {
+  background: var(--bg2); border: 1px solid var(--border); color: var(--text2);
+  border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+  transition: all .15s;
+}
+.chip:hover { border-color: var(--accent); color: var(--text); }
+.ai-analysis {
+  font-size: 13.5px; line-height: 1.6; color: var(--text);
+  white-space: normal; max-height: 420px; overflow-y: auto;
+}

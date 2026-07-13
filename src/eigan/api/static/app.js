@@ -97,6 +97,36 @@ function scanRow(s) {
     <td class="mono small">${fmtDate(s.started_at)}</td></tr>`;
 }
 
+// ── Chat com a IA (Conversation Engine) — durante e depois do scan ────────────
+const CHAT_SUGGEST = ['Qual o risco mais crítico?', 'Como corrijo o mais grave?', 'Tem exploit público?', 'Quais os próximos passos?'];
+function chatPanel(mount, chatUrl, { placeholder = 'Pergunte à IA sobre este scan…', live = false } = {}) {
+  const history = [];
+  mount.innerHTML = `<div class="chat">
+    <div class="chat-log" id="chatlog"><div class="muted small">${live ? '💬 Converse com a IA enquanto ela escaneia — ela responde com o que já achou.' : '💬 Pergunte sobre os resultados: risco, exploit, correção, priorização.'}</div></div>
+    <div class="chat-suggest">${CHAT_SUGGEST.map((s) => `<button class="chip" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><input type="text" id="chatq" placeholder="${esc(placeholder)}" style="flex:1"><button class="btn-primary" id="chatsend">Enviar</button></div></div>`;
+  const log = el('chatlog');
+  const add = (role, text) => { const d = document.createElement('div'); d.className = 'chat-msg ' + role; d.innerHTML = (role === 'user' ? '🧑 ' : '🤖 ') + esc(text).replace(/\n/g, '<br>'); log.appendChild(d); log.scrollTop = log.scrollHeight; return d; };
+  async function send(q) {
+    q = (q || el('chatq').value).trim(); if (!q) return;
+    el('chatq').value = ''; add('user', q); history.push({ role: 'user', content: q });
+    const wait = add('ai', '⏳ pensando…');
+    try { const r = await apiPost(chatUrl, { question: q, history }); wait.remove(); add('ai', r.answer || '(sem resposta)'); history.push({ role: 'assistant', content: r.answer || '' }); }
+    catch (e) { wait.remove(); add('ai', e.status === 428 ? 'Configure um provedor de IA para conversar (menu → Configuração).' : ('Erro: ' + (e.detail || e.status))); }
+  }
+  el('chatsend').onclick = () => send();
+  el('chatq').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+  mount.querySelectorAll('.chip').forEach((b) => (b.onclick = () => send(b.dataset.q)));
+}
+function aiAnalysisPanel(mount, scanId) {
+  mount.innerHTML = `<button class="btn-ghost" id="anbtn">✨ Gerar análise da IA</button>`;
+  el('anbtn').onclick = async () => {
+    mount.innerHTML = '<div class="muted small">⏳ a IA está correlacionando e priorizando…</div>';
+    try { const r = await apiPost('/scans/' + scanId + '/analysis', {}); mount.innerHTML = `<div class="ai-analysis">${esc(r.analysis || '').replace(/\n/g, '<br>')}</div>`; }
+    catch (e) { mount.innerHTML = `<div class="muted small">${e.status === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Falha: ' + esc(e.detail || e.status)}</div>`; }
+  };
+}
+
 // ── Shell / router ────────────────────────────────────────────────────────────
 const ROUTES = [
   { re: /^#\/new/, view: viewWizard },
@@ -248,6 +278,10 @@ async function viewScanDetail(root, scanId) {
       <div class="card"><h2>Score</h2><div style="text-align:center">${gaugeSVG(score)}
         <div class="muted small">${esc(score.label)}</div></div></div>
     </div>
+    <div class="cols" style="margin-bottom:14px">
+      <div class="card"><h2>✨ Análise da IA</h2><div id="aianalysis"></div></div>
+      <div class="card"><h2>💬 Converse com a IA</h2><div id="aichat"></div></div>
+    </div>
     <div class="card" style="margin-bottom:14px"><div class="between wrap"><h2 style="margin:0">Findings</h2></div>
       <div id="ftable"></div></div>
     <div class="card"><div class="between"><h2 style="margin:0">Inventário de ativos</h2>
@@ -260,6 +294,8 @@ async function viewScanDetail(root, scanId) {
           <td>${Math.round(a.max_risk)}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">Sem ativos.</td></tr>'}</tbody>
       </table></div></div>`;
   findingsTable(el('ftable'), fnd.findings || []);
+  aiAnalysisPanel(el('aianalysis'), scanId);
+  chatPanel(el('aichat'), '/scans/' + scanId + '/chat');
 }
 
 // Tabela de findings: busca instantânea, filtro, ordenação, paginação, drill-down.
@@ -478,8 +514,13 @@ async function viewProgress(root, jobId) {
       <div class="card"><h2>🧠 Raciocínio do agente</h2><div class="timeline" id="reasoning"><div class="muted small">o agente ainda não decidiu nada…</div></div></div>
       <div class="card"><h2>Fases</h2><div id="phases"><div class="muted small">aguardando…</div></div></div>
     </div>
-    <div class="card"><h2>📡 Descobertas em tempo real</h2><div class="feed" id="feed"><div class="empty">aguardando descobertas…</div></div></div>
+    <div class="cols" style="margin-bottom:14px">
+      <div class="card"><h2>📡 Descobertas em tempo real</h2><div class="feed" id="feed"><div class="empty">aguardando descobertas…</div></div></div>
+      <div class="card"><h2>💬 Fale com a IA (ao vivo)</h2><div id="livechat"></div></div>
+    </div>
     <p class="muted small" style="margin-top:14px">O agente decide capacidade a capacidade e justifica cada passo (plano · replan · seleção · execução) — sem caixa-preta. A execução passa pelo gate de escopo; <span class="unv">UNVERIFIED</span> = não confirmado contra fonte oficial.</p>`;
+
+  chatPanel(el('livechat'), '/jobs/' + jobId + '/chat', { live: true });
 
   const timer = setInterval(() => {
     const secs = Math.floor((Date.now() - state.startMs) / 1000);

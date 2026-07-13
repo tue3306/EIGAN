@@ -201,6 +201,80 @@ def scan_compliance(scan_id: int) -> dict:
     return asdict(assess_compliance(findings))
 
 
+# ── conversa com a IA + análise (Conversation Engine) ────────────────────────
+class ChatRequest(BaseModel):
+    """Pergunta do operador sobre um scan + histórico opcional da conversa."""
+
+    question: str = Field(min_length=1)
+    history: list[dict] = Field(default_factory=list)
+
+
+def _scan_context(store: FindingStore, scan_id: int) -> str:
+    from ..ai.context import build_scan_context
+
+    meta_ = store.get_scan(scan_id)
+    if not meta_:
+        raise HTTPException(404, "scan não encontrado")
+    findings = store.get_findings(scan_id)
+    import json as _json
+
+    targets = _json.loads(meta_.get("targets") or "[]")
+    return build_scan_context(
+        findings,
+        engagement=meta_.get("engagement", ""),
+        targets=targets,
+        profile=meta_.get("profile", ""),
+    )
+
+
+def _ai_or_http(fn):
+    """Executa ``fn`` mapeando a ausência de provedor de IA para HTTP 428."""
+    try:
+        return fn()
+    except AIProviderRequired as exc:
+        raise HTTPException(428, str(exc)) from exc
+
+
+@app.post("/api/v1/scans/{scan_id}/chat")
+def scan_chat(scan_id: int, req: ChatRequest) -> dict:
+    """A IA responde uma pergunta sobre o scan (grounded nos findings)."""
+    from ..ai.conversation import answer_question
+
+    context = _scan_context(_store(), scan_id)
+    answer = _ai_or_http(lambda: answer_question(context, req.question, history=req.history))
+    return {"answer": answer}
+
+
+@app.post("/api/v1/scans/{scan_id}/analysis")
+def scan_analysis(scan_id: int) -> dict:
+    """Análise da IA sobre o scan: resumo, riscos, correlações, próximos passos."""
+    from ..ai.conversation import analyze
+
+    context = _scan_context(_store(), scan_id)
+    return {"analysis": _ai_or_http(lambda: analyze(context))}
+
+
+@app.post("/api/v1/jobs/{job_id}/chat")
+def job_chat(job_id: str, req: ChatRequest) -> dict:
+    """Chat sobre um scan EM ANDAMENTO — usa as descobertas emitidas até agora."""
+    from ..ai.context import build_scan_context
+    from ..ai.conversation import answer_question
+
+    job = _job_or_404(job_id)
+    findings = []
+    for ev_ in job.events:
+        if ev_.get("type") == "discovery" and ev_.get("finding"):
+            try:
+                findings.append(Finding.model_validate(ev_["finding"]))
+            except Exception:  # noqa: BLE001 — evento malformado nunca quebra o chat
+                continue
+    context = build_scan_context(
+        findings, engagement=", ".join(job.targets), targets=job.targets, profile=job.profile
+    )
+    answer = _ai_or_http(lambda: answer_question(context, req.question, history=req.history))
+    return {"answer": answer, "status": job.status, "findings_so_far": len(findings)}
+
+
 _REPORT_MEDIA = {
     "pdf": "application/pdf",
     "html": "text/html",
