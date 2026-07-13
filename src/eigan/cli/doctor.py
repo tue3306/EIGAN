@@ -27,14 +27,18 @@ def _detect_ai() -> str | None:
 
     Reflete a seleção real: provedor totalmente configurado (chave + modelo).
     Um provedor com chave mas SEM modelo aparece como pendente — sem fabricar id."""
+    import os
+
     from ..ai.provider import current_tier, list_providers
 
     ready = [s for s in list_providers() if s.configured()]
     if ready:
         s = ready[0]
         return f"{s.label} · nível={current_tier()} · modelo={s.model()}"
-    # chave presente mas modelo faltando? sinaliza o que falta (acionável).
-    partial = [s for s in list_providers() if s.credential() and not s.model()]
+    # chave presente (posta pelo USUÁRIO no env, não um default local) mas modelo
+    # faltando? sinaliza o que falta. Providers com credencial-default (LM Studio)
+    # que o usuário não tocou NÃO contam como "parcial".
+    partial = [s for s in list_providers() if os.getenv(s.key_env) and not s.model()]
     if partial:
         s = partial[0]
         return f"{s.label} — falta definir {s.model_env} (sem fabricar id de modelo)"

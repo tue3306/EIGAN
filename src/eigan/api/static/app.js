@@ -118,13 +118,19 @@ function chatPanel(mount, chatUrl, { placeholder = 'Pergunte à IA sobre este sc
   el('chatq').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
   mount.querySelectorAll('.chip').forEach((b) => (b.onclick = () => send(b.dataset.q)));
 }
-function aiAnalysisPanel(mount, scanId) {
-  mount.innerHTML = `<button class="btn-ghost" id="anbtn">✨ Gerar análise da IA</button>`;
-  el('anbtn').onclick = async () => {
-    mount.innerHTML = '<div class="muted small">⏳ a IA está correlacionando e priorizando…</div>';
-    try { const r = await apiPost('/scans/' + scanId + '/analysis', {}); mount.innerHTML = `<div class="ai-analysis">${esc(r.analysis || '').replace(/\n/g, '<br>')}</div>`; }
-    catch (e) { mount.innerHTML = `<div class="muted small">${e.status === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Falha: ' + esc(e.detail || e.status)}</div>`; }
+async function aiAnalysisPanel(mount, scanId) {
+  const render = (text) => {
+    mount.innerHTML = `<div class="ai-analysis">${esc(text || 'Sem análise ainda.').replace(/\n/g, '<br>')}</div>
+      <button class="btn-ghost" id="anregen" style="margin-top:8px">↻ Regerar análise</button>`;
+    el('anregen').onclick = async () => {
+      mount.innerHTML = '<div class="muted small">⏳ regerando…</div>';
+      try { const r = await apiPost('/scans/' + scanId + '/analysis', {}); render(r.analysis); }
+      catch (e) { render(e.status === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Falha ao regerar.'); }
+    };
   };
+  mount.innerHTML = '<div class="muted small">⏳ a IA correlacionou e concluiu — carregando…</div>';
+  try { const r = await api('/scans/' + scanId + '/analysis'); render(r.analysis); }  // auto (usa a análise do fim do scan)
+  catch (e) { mount.innerHTML = `<div class="muted small">${e === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Análise indisponível.'}</div>`; }
 }
 
 // ── Shell / router ────────────────────────────────────────────────────────────
@@ -264,7 +270,7 @@ async function viewScanDetail(root, scanId) {
         <select id="expClass" style="width:auto" title="Classificação da informação">
           <option value="confidential">Confidencial</option><option value="restricted">Restrito</option>
           <option value="internal">Uso interno</option><option value="public">Público</option></select>
-        <select id="expFmt" style="width:auto"><option value="pdf">PDF</option><option value="html">HTML</option><option value="json">JSON</option><option value="csv">CSV</option><option value="sarif">SARIF</option></select>
+        <select id="expFmt" style="width:auto"><option value="pdf">PDF</option><option value="html">HTML</option><option value="md">Markdown</option><option value="json">JSON</option><option value="csv">CSV</option><option value="sarif">SARIF</option></select>
         <button class="btn-primary" onclick="exportReport(${esc(scanId)})">⬇ Relatório</button>
         <button class="btn-ghost" onclick="location.hash='#/'">‹ Painel</button>
       </div>
@@ -553,7 +559,8 @@ function handleEvent(e, state) {
     state.tools[e.tool] = e.status;
     if (e.status === 'in_progress') { state.currentTool = e.tool; setText('kt', e.tool); }
     else if (state.currentTool === e.tool) { setText('kt', '—'); }
-  } else if (e.type === 'scan_status') setStatus(state, e.status);
+  } else if (e.type === 'analysis') { toast('✨ Análise da IA concluída'); state.analysis = e.text; }
+  else if (e.type === 'scan_status') setStatus(state, e.status);
   else if (e.type === 'analysis_complete') { state.progress = 1; setBar(100); }
   else if (e.type === 'stream_end') {
     setStatus(state, e.status);

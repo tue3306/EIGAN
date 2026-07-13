@@ -61,6 +61,20 @@ def write_report(
 
     if fmt in _MACHINE:
         out_path.write_text(gen.export(findings, fmt, engagement=engagement, targets=targets))
+    elif fmt in ("md", "markdown"):
+        from ..report.markdown import render_markdown
+
+        out_path.write_text(
+            render_markdown(
+                findings,
+                engagement=engagement,
+                targets=targets,
+                scan_type=scan_type,
+                ai_analysis=store.get_analysis(scan_id) or "",
+                tool_version=TOOL_VERSION,
+                feeds_meta=feeds_meta,
+            )
+        )
     elif fmt == "html":
         out_path.write_text(
             gen.render_html(

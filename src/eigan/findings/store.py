@@ -50,7 +50,16 @@ class FindingStore:
             self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA busy_timeout=30000")
         self._conn.executescript(_SCHEMA)
+        self._migrate()
         self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Migrações idempotentes de schema (ADD COLUMN se faltar). Mantém bancos
+        antigos compatíveis sem apagar dados."""
+        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(scans)")}
+        if "ai_analysis" not in cols:
+            # Análise da IA (Analysis Engine) persistida junto do scan.
+            self._conn.execute("ALTER TABLE scans ADD COLUMN ai_analysis TEXT")
 
     def create_scan(self, engagement: str, profile: str, targets: list[str]) -> int:
         cur = self._conn.execute(
@@ -67,6 +76,15 @@ class FindingStore:
             (datetime.now(timezone.utc).isoformat(), scan_id),
         )
         self._conn.commit()
+
+    def set_analysis(self, scan_id: int, analysis: str) -> None:
+        """Grava a análise da IA (Analysis Engine) do scan."""
+        self._conn.execute("UPDATE scans SET ai_analysis=? WHERE id=?", (analysis, scan_id))
+        self._conn.commit()
+
+    def get_analysis(self, scan_id: int) -> str | None:
+        row = self._conn.execute("SELECT ai_analysis FROM scans WHERE id=?", (scan_id,)).fetchone()
+        return row["ai_analysis"] if row and row["ai_analysis"] else None
 
     def add_findings(self, scan_id: int, findings: Iterable[Finding]) -> int:
         n = 0

@@ -30,7 +30,7 @@ from ..findings.store import FindingStore
 from ..security.onboarding import config_dir, terms_accepted
 from . import doctor as doctor_mod
 
-_REPORT_FORMATS = ("html", "pdf", "json", "csv", "sarif")
+_REPORT_FORMATS = ("html", "pdf", "md", "json", "csv", "sarif")
 _REPORT_STYLES = ("technical", "executive")
 _YES = {"s", "sim", "y", "yes"}
 

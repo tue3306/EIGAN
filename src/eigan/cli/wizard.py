@@ -106,7 +106,9 @@ def run_wizard(db: str = "eigan.db") -> int:
 
     if report.scan_id is not None and click.confirm("\nGerar relatório?", default=True):
         fmt = click.prompt(
-            "Formato", type=click.Choice(["pdf", "html", "json", "csv", "sarif"]), default="html"
+            "Formato",
+            type=click.Choice(["pdf", "html", "md", "json", "csv", "sarif"]),
+            default="html",
         )
         style = click.prompt(
             "Modelo", type=click.Choice(["technical", "executive"]), default="executive"

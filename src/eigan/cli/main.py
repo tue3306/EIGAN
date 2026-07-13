@@ -262,7 +262,7 @@ def plan(
 @click.option(
     "--format",
     "fmt",
-    type=click.Choice(["pdf", "html", "json", "csv", "sarif"]),
+    type=click.Choice(["pdf", "html", "md", "json", "csv", "sarif"]),
     default="html",
     show_default=True,
 )

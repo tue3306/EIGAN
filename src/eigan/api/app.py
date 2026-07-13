@@ -245,13 +245,38 @@ def scan_chat(scan_id: int, req: ChatRequest) -> dict:
     return {"answer": answer}
 
 
-@app.post("/api/v1/scans/{scan_id}/analysis")
-def scan_analysis(scan_id: int) -> dict:
-    """Análise da IA sobre o scan: resumo, riscos, correlações, próximos passos."""
+def _generate_analysis(store: FindingStore, scan_id: int) -> str:
+    """Gera a análise da IA e persiste. Propaga AIProviderRequired (→ 428)."""
     from ..ai.conversation import analyze
 
-    context = _scan_context(_store(), scan_id)
-    return {"analysis": _ai_or_http(lambda: analyze(context))}
+    text = analyze(_scan_context(store, scan_id)).strip()
+    if text:
+        store.set_analysis(scan_id, text)
+    return text
+
+
+@app.get("/api/v1/scans/{scan_id}/analysis")
+def get_scan_analysis(scan_id: int) -> dict:
+    """Análise da IA do scan (resumo, riscos, correlações, próximos passos).
+
+    Retorna a análise **automática** gerada no fim do scan; se ainda não houver
+    (scan antigo ou falha no finalize), gera sob demanda e persiste."""
+    store = _store()
+    if not store.get_scan(scan_id):
+        raise HTTPException(404, "scan não encontrado")
+    stored = store.get_analysis(scan_id)
+    if stored:
+        return {"analysis": stored, "cached": True}
+    return {"analysis": _ai_or_http(lambda: _generate_analysis(store, scan_id)), "cached": False}
+
+
+@app.post("/api/v1/scans/{scan_id}/analysis")
+def regen_scan_analysis(scan_id: int) -> dict:
+    """Regera a análise da IA do scan (sobrescreve a armazenada)."""
+    store = _store()
+    if not store.get_scan(scan_id):
+        raise HTTPException(404, "scan não encontrado")
+    return {"analysis": _ai_or_http(lambda: _generate_analysis(store, scan_id)), "cached": False}
 
 
 @app.post("/api/v1/jobs/{job_id}/chat")
@@ -278,6 +303,7 @@ def job_chat(job_id: str, req: ChatRequest) -> dict:
 _REPORT_MEDIA = {
     "pdf": "application/pdf",
     "html": "text/html",
+    "md": "text/markdown",
     "json": "application/json",
     "csv": "text/csv",
     "sarif": "application/json",

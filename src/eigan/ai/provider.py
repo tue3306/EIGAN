@@ -505,9 +505,12 @@ class ProviderSpec:
     # verificar os ids (Anthropic/OpenAI) e como defaults # VERIFICAR (Gemini). Onde
     # está vazio, o provedor continua exigindo <PROVIDER>_MODEL (anti-invenção §3.1).
     tier_models: dict[str, str] = field(default_factory=dict)
+    # Credencial padrão para provedores LOCAIS que não exigem chave real (LM Studio
+    # aceita qualquer string). None → exige a env (nuvem).
+    default_credential: str | None = None
 
     def credential(self) -> str | None:
-        return os.getenv(self.key_env)
+        return os.getenv(self.key_env) or self.default_credential
 
     def model(self) -> str | None:
         """Resolve o modelo: id explícito no env (override) > tier escolhido >
@@ -561,7 +564,17 @@ class ProviderSpec:
 
 PROVIDERS: dict[str, ProviderSpec] = {}
 # Ordem de auto-detecção quando o usuário não escolhe explicitamente.
-_PRIORITY = ["anthropic", "openai", "gemini", "openrouter", "groq", "together", "azure", "ollama"]
+_PRIORITY = [
+    "anthropic",
+    "openai",
+    "gemini",
+    "openrouter",
+    "groq",
+    "together",
+    "azure",
+    "ollama",
+    "lmstudio",
+]
 
 
 def register(spec: ProviderSpec) -> None:
@@ -667,6 +680,19 @@ for _spec in (
         external=False,
         timeout=_LOCAL_TIMEOUT,  # inferência local na CPU é lenta — timeout generoso
         scan_fit="Roda 100% local: nada sai da máquina (sem redaction externa). Privacidade máxima.",
+    ),
+    ProviderSpec(
+        "lmstudio",
+        "LM Studio (local, OpenAI-compat)",
+        OpenAIProvider,  # LM Studio expõe a API OpenAI (usa max_completion_tokens)
+        "LMSTUDIO_API_KEY",
+        "LMSTUDIO_MODEL",
+        base_url_env="LMSTUDIO_BASE_URL",
+        default_base_url="http://localhost:1234/v1",
+        default_credential="lm-studio",  # servidor local aceita qualquer chave
+        external=False,  # local: nada sai da máquina (sem redaction)
+        timeout=_LOCAL_TIMEOUT,
+        scan_fit="Roda 100% local via LM Studio; exige LMSTUDIO_MODEL (o modelo carregado).",
     ),
 ):
     register(_spec)
