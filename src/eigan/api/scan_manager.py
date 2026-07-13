@@ -27,9 +27,12 @@ from ..engine.feeds import FeedCache
 from ..engine.risk import RiskScorer
 from ..findings.store import FindingStore
 from ..engine.registry import PluginRegistry
+from ..logging_setup import get_logger
 from ..perspective import Perspective, validate_target
 from ..security.onboarding import build_scope
 from ..security.scope import ScopeViolation
+
+log = get_logger("scan")
 
 # perfis expostos pela UI → perfil interno do pipeline (engine/pipeline.py).
 OBJECTIVE_PROFILE = {
@@ -217,6 +220,17 @@ class ScanManager:
     def _run(self, job: ScanJob, perspective: Perspective, profile: str, override: bool) -> None:
         job.status = "running"
         sink = _JobSink(job)
+        log.info(
+            "scan iniciado",
+            extra={
+                "event": "scan_start",
+                "job": job.id,
+                "targets": ",".join(job.targets),
+                "perspective": perspective.value,
+                "profile": profile,
+                "use_ai": job.use_ai,
+            },
+        )
         try:
             scope = build_scope(None, job.targets, perspective)
             feeds = FeedCache.load()
@@ -252,14 +266,31 @@ class ScanManager:
                     sink.emit({"type": "analysis", "scan_id": report.scan_id, "text": text})
             store.close()
             job.status = "completed"
+            log.info(
+                "scan concluído",
+                extra={
+                    "event": "scan_done",
+                    "job": job.id,
+                    "scan_id": report.scan_id,
+                    "findings": len(report.findings),
+                },
+            )
         except ScanCancelled:
             job.status = "cancelled"
+            log.info("scan cancelado", extra={"event": "scan_cancelled", "job": job.id})
             job.append(ev.scan_status(job.scan_id, "cancelled", "cancelado pelo usuário"))
         except ScopeViolation as exc:
             job.status = "failed"
             job.error = str(exc)
+            log.warning(
+                "scan bloqueado por escopo",
+                extra={"event": "scan_blocked", "job": job.id, "reason": str(exc)},
+            )
             job.append(ev.scan_status(job.scan_id, "failed", f"bloqueado: {exc}"))
         except Exception as exc:  # noqa: BLE001 — erro de scan não derruba a API
             job.status = "failed"
+            log.error(
+                "scan falhou", extra={"event": "scan_failed", "job": job.id, "error": str(exc)}
+            )
             job.error = str(exc)
             job.append(ev.scan_status(job.scan_id, "failed", str(exc)))

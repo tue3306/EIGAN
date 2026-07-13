@@ -41,8 +41,10 @@ def cli(ctx: click.Context) -> None:
     # comando — sem isso a chave ficava só no arquivo e o scan era recusado por
     # "falta de provedor". O ambiente real vence (override=False).
     from ..envfile import load_dotenv
+    from ..logging_setup import configure_logging
 
     load_dotenv()
+    configure_logging()  # logging estruturado (texto ou JSON via EIGAN_LOG_FORMAT)
     if ctx.invoked_subcommand is None:
         from .menu import run_frontend
 
