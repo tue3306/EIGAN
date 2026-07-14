@@ -191,7 +191,6 @@ def test_dashboard_omits_token_when_exposed(client, monkeypatch):
 
 # ── endpoints Purple / remediação (contrato HTTP) — PROMPT 8 ──────────────────
 def _seed_blue_scan(db_path: str, technique: str = "T1190") -> int:
-    import os
 
     from eigan.findings.schema import Finding, Severity
     from eigan.findings.store import FindingStore
@@ -246,7 +245,8 @@ def test_remediation_returns_cached_without_ai(client):
     c, sid = client
     store = FindingStore(os.environ["EIGAN_DB"])
     store.set_remediation(
-        sid, '{"items":[{"title":"Corrigir SQLi","what":"x","how":"y","priority":"P1"}],"summary":"s"}'
+        sid,
+        '{"items":[{"title":"Corrigir SQLi","what":"x","how":"y","priority":"P1"}],"summary":"s"}',
     )
     store.close()
     r = c.get(f"/api/v1/scans/{sid}/remediation")
