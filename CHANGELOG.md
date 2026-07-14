@@ -12,6 +12,20 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Added (gestão de chaves de FERRAMENTA — ADR-0013)
+- **Credenciais de ferramenta declarativas** (`engine/credentials.py`): cada plugin
+  declara no `metadata.yaml` as chaves que usa (`credentials:`) e o regime de
+  licenciamento (`licensing: free|api_key|paid`). O `requires_credentials` — antes
+  metadata morta — virou **vivo** (derivado das credenciais obrigatórias).
+- **`doctor` mostra o estado por ferramenta:** chave configurada / ausente →
+  resultado **PARCIAL** (com URL para obter) / obrigatória FALTANDO / 💳 paga-GUI
+  não automatizada. `wpscan` (WPSCAN_API_TOKEN) e `subfinder` (Shodan/Censys/
+  VirusTotal/SecurityTrails) declarados; `burp` como scaffold pago honesto (§3.6).
+- **Menu → Configuração → "chaves de ferramenta":** grava no `.env` (chmod 600,
+  nunca ecoa a chave) e gera/atualiza o `~/.config/subfinder/provider-config.yaml`.
+- **Aviso de cobertura na timeline:** o scan emite `[cobertura] <tool>: PARCIAL …`
+  quando uma chave opcional falta — auditável, sem inventar o que não foi coletado.
+
 ### Added (Blue real · Purple real · Red exposição · remediação por IA)
 - **Blue team REAL** (era 100% scaffold): plugin `log-analysis` nativo em Python
   detecta ataques em logs (força-bruta SSH/T1110, ataques web/T1190, varredura/

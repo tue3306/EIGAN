@@ -110,6 +110,63 @@ def test_doctor_gather_and_verdict(monkeypatch):
     assert level == "ok"
 
 
+def test_doctor_renders_tool_credential_state(monkeypatch):
+    # ADR-0013: doctor mostra, por ferramenta, o estado da chave (parcial se falta).
+    from eigan.engine.credentials import Licensing, ToolCredential
+
+    monkeypatch.delenv("WPSCAN_API_TOKEN", raising=False)
+    spec = PluginSpec(
+        metadata=PluginMetadata(
+            name="wpscan",
+            category=Category.RED,
+            capabilities=(Capability.CMS_SCAN,),
+            supported_perspectives=(Perspective.EXTERNAL,),
+            tool="wpscan",
+            licensing=Licensing.API_KEY,
+            credentials=(
+                ToolCredential(
+                    env="WPSCAN_API_TOKEN",
+                    label="WPScan API Token",
+                    obtain_url="https://wpscan.com/api",
+                    degrades="sem token, CVEs não consultadas",
+                ),
+            ),
+        ),
+        runner=_AvailablePlugin(),
+    )
+    rep = doctor.gather(registry=PluginRegistry([spec]), feeds=FeedCache())
+    out: list[str] = []
+    doctor.render(rep, echo=out.append, secho=lambda *a, **k: out.append(a[0] if a else ""))
+    text = "\n".join(out)
+    assert "WPScan API Token" in text and "PARCIAL" in text and "wpscan.com/api" in text
+    # com a chave presente → "configurada", sem aviso de parcial
+    monkeypatch.setenv("WPSCAN_API_TOKEN", "tok")
+    rep2 = doctor.gather(registry=PluginRegistry([spec]), feeds=FeedCache())
+    out2: list[str] = []
+    doctor.render(rep2, echo=out2.append, secho=lambda *a, **k: out2.append(a[0] if a else ""))
+    assert "configurada" in "\n".join(out2)
+
+
+def test_doctor_marks_paid_tool_not_automated():
+    from eigan.engine.credentials import Licensing
+
+    spec = PluginSpec(
+        metadata=PluginMetadata(
+            name="burp",
+            category=Category.RED,
+            capabilities=(Capability.WEB_SERVER_SCAN,),
+            supported_perspectives=(Perspective.EXTERNAL,),
+            tool="burpsuite",
+            licensing=Licensing.PAID,
+            roadmap=True,
+        ),
+    )
+    rep = doctor.gather(registry=PluginRegistry([spec]), feeds=FeedCache())
+    out: list[str] = []
+    doctor.render(rep, echo=out.append, secho=lambda *a, **k: out.append(a[0] if a else ""))
+    assert "não automatizada" in "\n".join(out)
+
+
 def test_doctor_verdict_warns_without_ai_provider(monkeypatch):
     # AI-native (§3.4/ADR-0012): sem provedor, o doctor AVISA (o scan seria recusado).
     for k in _AI_ENV:

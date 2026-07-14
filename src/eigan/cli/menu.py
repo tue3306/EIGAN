@@ -267,6 +267,113 @@ def configure_ai_provider(
     echo("    A chave nunca é exibida. Rode 'Doctor' para confirmar o provedor ativo.")
 
 
+def _subfinder_provider_config_path() -> str:
+    """Caminho do provider-config do subfinder (default do próprio subfinder)."""
+    base = os.getenv("SUBFINDER_CONFIG_DIR") or os.path.join(
+        os.path.expanduser("~"), ".config", "subfinder"
+    )
+    return os.path.join(base, "provider-config.yaml")
+
+
+def _write_subfinder_provider_config(providers: dict[str, str]) -> str:
+    """Grava/atualiza ~/.config/subfinder/provider-config.yaml a partir das chaves.
+
+    Preserva provedores já presentes que não gerenciamos. Cada provedor vira uma
+    lista com a chave (formato que o subfinder espera). Retorna o caminho gravado."""
+    import yaml
+
+    path = _subfinder_provider_config_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    data: dict[str, object] = {}
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                loaded = yaml.safe_load(fh)
+            if isinstance(loaded, dict):
+                data = loaded
+        except (OSError, yaml.YAMLError):
+            data = {}
+    for provider, key in providers.items():
+        if key:
+            data[provider] = [key]
+    with open(path, "w", encoding="utf-8") as fh:
+        yaml.safe_dump(data, fh, default_flow_style=False, sort_keys=True)
+    os.chmod(path, 0o600)  # chaves são sensíveis
+    return path
+
+
+def configure_tool_keys(*, input_fn: Callable[[str], str] = input, echo: Callable = print) -> None:
+    """Setup de **chaves de FERRAMENTA** (wpscan, subfinder, …) — análogo ao da IA.
+
+    Muitas ferramentas rendem mais (ou só rendem) com uma chave: sem
+    ``WPSCAN_API_TOKEN`` as CVEs de WordPress não são consultadas; sem as fontes
+    OSINT o subfinder acha uma fração dos subdomínios. Ferramentas PAGAS/GUI (Burp)
+    são listadas mas NÃO automatizadas (§3.6). Grava em ``.env`` (chmod 600, nunca
+    ecoa a chave) e, para o subfinder, gera o provider-config."""
+    from ..engine.credentials import Licensing
+    from ..engine.registry import PluginRegistry
+
+    reg = PluginRegistry.discover()
+    with_creds = sorted(
+        (s for s in reg.all() if s.metadata.credentials),
+        key=lambda s: s.name,
+    )
+    if not with_creds:
+        echo("Nenhuma ferramenta declara credenciais.")
+        return
+
+    echo("\nFerramentas que usam chave (estado atual):")
+    for i, s in enumerate(with_creds, start=1):
+        paid = " [PAGA/GUI — não automatizada]" if s.metadata.licensing is Licensing.PAID else ""
+        states = s.credential_states()
+        configured = sum(1 for cs in states if cs.present)
+        echo(f"  {i:>2}. {s.name}{paid} — {configured}/{len(states)} chave(s) configurada(s)")
+        desc_lines = s.metadata.description.strip().splitlines()
+        if desc_lines:
+            echo(f"      {desc_lines[0]}")
+    echo("   0. Voltar")
+    raw = input_fn("\nConfigurar chaves de qual ferramenta? [0]: ").strip() or "0"
+    if not raw.isdigit() or int(raw) == 0 or int(raw) > len(with_creds):
+        return
+    spec = with_creds[int(raw) - 1]
+
+    if spec.metadata.licensing is Licensing.PAID:
+        echo(
+            f"\n{spec.name} é uma ferramenta PAGA/GUI — o EIGAN não a automatiza (§3.6). "
+            "Ela é declarada apenas para transparência de cobertura. Nada a configurar aqui."
+        )
+        return
+
+    env_values: dict[str, str] = {}
+    provider_keys: dict[str, str] = {}
+    for cred in spec.metadata.credentials:
+        prompt = f"{cred.label}"
+        if cred.obtain_url:
+            echo(f"  ({cred.label} — obtenha em {cred.obtain_url})")
+        req = "obrigatória" if cred.required else "opcional (Enter para pular)"
+        value = input_fn(f"{prompt} [{req}]: ").strip()
+        if not value:
+            continue
+        env_values[cred.env] = value
+        if cred.provider:  # ferramenta que lê arquivo de config próprio (subfinder)
+            provider_keys[cred.provider] = value
+
+    if not env_values:
+        echo("Nenhuma chave informada — nada foi alterado.")
+        return
+
+    _upsert_env(env_values)
+    for k, v in env_values.items():
+        os.environ[k] = v
+    echo(
+        f"\n[✔] {len(env_values)} chave(s) de {spec.name} gravada(s) em .env (chmod 600, não ecoadas)."
+    )
+    if provider_keys:
+        path = _write_subfinder_provider_config(provider_keys)
+        echo(f"[✔] provider-config do subfinder atualizado: {path}")
+    echo("    Rode 'Doctor' para confirmar o estado das chaves.")
+
+
 def action_config(
     *, db: str, input_fn: Callable[[str], str] = input, echo: Callable = print
 ) -> None:
@@ -292,8 +399,15 @@ def action_config(
     echo(f"  Diretório conf : {config_dir()}")
     if input_fn("\nConfigurar um provedor de IA agora? [s/N]: ").strip().lower() in _YES:
         configure_ai_provider(input_fn=input_fn, echo=echo)
+    elif (
+        input_fn("Configurar chaves de FERRAMENTA (wpscan/subfinder/…)? [s/N]: ").strip().lower()
+        in _YES
+    ):
+        configure_tool_keys(input_fn=input_fn, echo=echo)
     else:
-        echo("Para ajustar manualmente: edite .env (chaves de IA / DATABASE_URL) ou config/*.yaml.")
+        echo(
+            "Para ajustar manualmente: edite .env (chaves de IA/ferramenta / DATABASE_URL) ou config/*.yaml."
+        )
 
 
 def action_doctor(

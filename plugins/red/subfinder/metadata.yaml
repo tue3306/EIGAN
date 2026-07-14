@@ -13,7 +13,35 @@ description: >-
 version_source: "subfinder -version  # VERIFICAR"
 license: VERIFICAR          # provável MIT (ProjectDiscovery) — confirmar na fonte
 commercial_use: verify
-requires_credentials: false
+licensing: api_key
+# subfinder lê estas fontes de ~/.config/subfinder/provider-config.yaml. Sem elas,
+# roda só com fontes públicas anônimas → acha uma FRAÇÃO dos subdomínios. O menu
+# "Chaves de ferramentas" gera/atualiza esse arquivo a partir das env vars abaixo.
+credentials:
+  - env: SHODAN_API_KEY
+    label: Shodan
+    provider: shodan
+    required: false
+    obtain_url: "https://account.shodan.io/"
+    degrades: "sem Shodan, menos subdomínios via DNS/infra passiva"
+  - env: CENSYS_API_KEY
+    label: Censys (formato APIID:SECRET)
+    provider: censys
+    required: false
+    obtain_url: "https://search.censys.io/account/api"
+    degrades: "sem Censys, menos subdomínios via certificados/infra"
+  - env: VIRUSTOTAL_API_KEY
+    label: VirusTotal
+    provider: virustotal
+    required: false
+    obtain_url: "https://www.virustotal.com/gui/my-apikey"
+    degrades: "sem VirusTotal, menos subdomínios via relações passivas"
+  - env: SECURITYTRAILS_API_KEY
+    label: SecurityTrails
+    provider: securitytrails
+    required: false
+    obtain_url: "https://securitytrails.com/app/account/credentials"
+    degrades: "sem SecurityTrails, menos subdomínios via DNS histórico"
 chained_after: []
 enabled_by_default: true
 install_hint: "https://github.com/projectdiscovery/subfinder#installation"

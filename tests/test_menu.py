@@ -138,7 +138,8 @@ def test_action_history_rejects_unknown_id(tmp_path):
 def test_action_config_reports_state(tmp_path, monkeypatch):
     monkeypatch.setenv("EIGAN_CONFIG_DIR", str(tmp_path))
     out: list[str] = []
-    menu.action_config(db="x.db", input_fn=_feeder(["N"]), echo=out.append)
+    # duas perguntas [s/N]: provedor de IA, depois chaves de ferramenta
+    menu.action_config(db="x.db", input_fn=_feeder(["N", "N"]), echo=out.append)
     text = "\n".join(out)
     assert "Configuração atual" in text
     assert "Banco de dados" in text
@@ -175,6 +176,85 @@ def test_configure_ai_provider_skip_writes_no_env_and_warns_scan_refused(tmp_pat
     joined = "\n".join(out).lower()
     assert "scan exige um provedor" in joined
     assert "sem ia" not in joined  # não promete mais "modo determinístico sem IA"
+
+
+# --------------------------------------------------------------------------- #
+# Chaves de FERRAMENTA (ADR-0013)
+# --------------------------------------------------------------------------- #
+def test_configure_tool_keys_wpscan_writes_env_without_leaking(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("WPSCAN_API_TOKEN", raising=False)
+    out: list[str] = []
+    # descobre o índice do wpscan na lista (ordenada por nome) de tools com credencial
+    from eigan.engine.registry import PluginRegistry
+
+    with_creds = sorted(
+        (s for s in PluginRegistry.discover().all() if s.metadata.credentials),
+        key=lambda s: s.name,
+    )
+    idx = [s.name for s in with_creds].index("wpscan") + 1
+    menu.configure_tool_keys(input_fn=_feeder([str(idx), "tok-secreto-wpscan"]), echo=out.append)
+    env = (tmp_path / ".env").read_text()
+    assert "WPSCAN_API_TOKEN=tok-secreto-wpscan" in env
+    assert "tok-secreto-wpscan" not in "\n".join(out)  # nunca ecoada
+    assert os.environ["WPSCAN_API_TOKEN"] == "tok-secreto-wpscan"
+
+
+def test_configure_tool_keys_paid_tool_is_not_configurable(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    out: list[str] = []
+    from eigan.engine.registry import PluginRegistry
+
+    with_creds = sorted(
+        (s for s in PluginRegistry.discover().all() if s.metadata.credentials),
+        key=lambda s: s.name,
+    )
+    idx = [s.name for s in with_creds].index("burp") + 1
+    menu.configure_tool_keys(input_fn=_feeder([str(idx)]), echo=out.append)
+    joined = "\n".join(out).lower()
+    assert "não a automatiza" in joined
+    assert not (tmp_path / ".env").exists()  # nada gravado para ferramenta paga
+
+
+def test_subfinder_provider_config_written_and_merged(tmp_path, monkeypatch):
+    import yaml
+
+    cfg_dir = tmp_path / "subfinder"
+    monkeypatch.setenv("SUBFINDER_CONFIG_DIR", str(cfg_dir))
+    # pré-existe um provedor que NÃO gerenciamos → deve ser preservado
+    cfg_dir.mkdir()
+    (cfg_dir / "provider-config.yaml").write_text("github:\n  - ghkey\n")
+    path = menu._write_subfinder_provider_config({"shodan": "shodan-key", "censys": "id:secret"})
+    data = yaml.safe_load((cfg_dir / "provider-config.yaml").read_text())
+    assert data["shodan"] == ["shodan-key"]
+    assert data["censys"] == ["id:secret"]
+    assert data["github"] == ["ghkey"]  # preservado
+    assert (os.stat(path).st_mode & 0o777) == 0o600  # chaves protegidas
+
+
+def test_configure_tool_keys_subfinder_generates_provider_config(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cfg_dir = tmp_path / "sf"
+    monkeypatch.setenv("SUBFINDER_CONFIG_DIR", str(cfg_dir))
+    for e in ("SHODAN_API_KEY", "CENSYS_API_KEY", "VIRUSTOTAL_API_KEY", "SECURITYTRAILS_API_KEY"):
+        monkeypatch.delenv(e, raising=False)
+    out: list[str] = []
+    from eigan.engine.registry import PluginRegistry
+
+    with_creds = sorted(
+        (s for s in PluginRegistry.discover().all() if s.metadata.credentials),
+        key=lambda s: s.name,
+    )
+    idx = [s.name for s in with_creds].index("subfinder") + 1
+    # responde só Shodan; pula as outras 3 (Enter)
+    menu.configure_tool_keys(
+        input_fn=_feeder([str(idx), "shodan-secret", "", "", ""]), echo=out.append
+    )
+    import yaml
+
+    data = yaml.safe_load((cfg_dir / "provider-config.yaml").read_text())
+    assert data["shodan"] == ["shodan-secret"]
+    assert "shodan-secret" not in "\n".join(out)
 
 
 # --------------------------------------------------------------------------- #

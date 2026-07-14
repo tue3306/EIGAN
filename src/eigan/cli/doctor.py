@@ -17,6 +17,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Callable
 
+from ..engine.credentials import CredentialState
 from ..engine.feeds import FeedCache
 from ..engine.registry import PluginRegistry
 from ..report.pdf_support import pdf_status
@@ -79,6 +80,8 @@ class ToolStatus:
     roadmap: bool = False
     tool: str = ""  # binário subjacente (usado por `doctor --install`)
     impact_class: str = ""  # classe de destrutividade (Policy Engine, ADR-0011)
+    licensing: str = "free"  # free | api_key | paid (ADR-0013)
+    credentials: list[CredentialState] = field(default_factory=list)
 
 
 @dataclass
@@ -146,6 +149,8 @@ def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = Non
             roadmap=s.metadata.roadmap,
             tool=s.metadata.tool,
             impact_class=s.metadata.impact_class.value,
+            licensing=s.metadata.licensing.value,
+            credentials=s.credential_states(),
         )
         for s in sorted(reg.all(), key=lambda s: s.name)
     ]
@@ -191,12 +196,26 @@ def render(report: DoctorReport, echo, secho) -> None:
         mark = ok if t.available else no
         impact = f" ⟨{t.impact_class}⟩" if t.impact_class else ""
         gate = " ⚠ requer aprovação humana" if t.impact_class in _gated else ""
-        line = f"  [{mark}] {t.name:10}{impact} — {t.capabilities}{gate}"
+        lic = " 💳 PAGA/GUI — não automatizada" if t.licensing == "paid" else ""
+        line = f"  [{mark}] {t.name:10}{impact} — {t.capabilities}{gate}{lic}"
         if t.degraded:
             line += "  (DEGRADADO)"
         echo(line)
         if not t.available and t.install_hint:
             echo(f"          instalar: {t.install_hint}")
+        for cs in t.credentials:
+            if cs.present:
+                echo(f"          🔑 {cs.credential.label}: configurada")
+            elif cs.missing_required:
+                echo(
+                    f"          🔑 {cs.credential.label}: FALTANDO (obrigatória) — "
+                    f"{cs.credential.obtain_url or 'ver docs'}"
+                )
+            else:  # opcional ausente → cobertura parcial
+                echo(
+                    f"          🔑 {cs.credential.label}: ausente → resultado PARCIAL — "
+                    f"obtenha em {cs.credential.obtain_url or 'ver docs'}"
+                )
 
     if report.agents:
         echo("\nAgentes cognitivos (Planner goal-driven — ADR-0007):")

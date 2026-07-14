@@ -237,6 +237,22 @@ Sem provedor de IA, o scan é **recusado** com uma mensagem que diz como resolve
 ferramenta ([ADR-0012](docs/adr/0012-ai-native-mandatory.md)). Prefere a interface web?
 `python3 eigan.py --serve` sobe o dashboard e abre o navegador.
 
+### 🔑 Chaves de ferramenta — cobertura completa (opcional)
+
+Além da chave de IA (obrigatória), **algumas ferramentas rendem muito mais com uma chave de
+API** — sem ela rodam com **cobertura parcial**, e o EIGAN avisa o que ficou de fora (nunca
+finge cobertura, §3.1). Configure em **menu → Configuração → chaves de ferramenta** (grava no
+`.env`, chmod 600, sem exibir a chave) ou veja o estado com **`eigan doctor`**:
+
+| Ferramenta | Chave | Sem a chave |
+|---|---|---|
+| `wpscan` | `WPSCAN_API_TOKEN` ([obter](https://wpscan.com/api)) | enumera WordPress, mas **não consulta CVEs** de plugins/temas |
+| `subfinder` | Shodan · Censys · VirusTotal · SecurityTrails | acha só uma **fração** dos subdomínios (o setup gera o `provider-config.yaml`) |
+
+Ferramentas **pagas/GUI** (ex.: Burp Suite Pro) aparecem no `doctor` como *💳 paga — não
+automatizada*: são declaradas para transparência de cobertura, nunca fingindo rodar (§3.6).
+Ver [ADR-0013](docs/adr/0013-tool-credential-management.md).
+
 ### 🔐 Privilégios (sudo) — opcional, recomendado para scan de rede
 
 **Você NÃO precisa de `sudo` para usar o EIGAN** — o scan roda como usuário normal (a IA,

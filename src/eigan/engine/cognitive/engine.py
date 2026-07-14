@@ -390,6 +390,11 @@ class CognitiveEngine:
     ) -> tuple[list[Finding], float]:
         findings: list[Finding] = []
         started = time.monotonic()
+        # Cobertura parcial (§3.1): se a ferramenta declara chaves opcionais e elas
+        # faltam, avisa na timeline o que NÃO será coletado — sem fingir cobertura.
+        coverage = spec.coverage_note()
+        if coverage:
+            emitter.emit(ev.log(f"[cobertura] {coverage}"))
         for target in goal.targets:
             emitter.emit(ev.tool_execution(spec.name, target, "in_progress"))
             try:

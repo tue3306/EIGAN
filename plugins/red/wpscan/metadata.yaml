@@ -11,7 +11,15 @@ description: >-
   Scanner dedicado de WordPress: plugins/temas/usuários e vulnerabilidades
   conhecidas. Requer WordPress detectado (por httpx/whatweb) — cascata.
 install_hint: "sudo apt install wpscan  ·  https://wpscan.com/"
-requires_credentials: false
+licensing: api_key
+credentials:
+  - env: WPSCAN_API_TOKEN
+    label: WPScan API Token
+    required: false
+    obtain_url: "https://wpscan.com/api"
+    degrades: >-
+      sem o token, a enumeração (versão/plugins/temas/usuários) roda, mas as CVEs
+      conhecidas de plugins/temas NÃO são consultadas no feed da WPScan
 impact_class: active_safe
 selection:
   speed: low
