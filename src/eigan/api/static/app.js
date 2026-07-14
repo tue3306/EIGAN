@@ -354,7 +354,7 @@ function findingsTable(mount, findings) {
   function filtered() {
     const q = st.q.toLowerCase();
     let rows = findings.filter((f) => (!st.sev || f.severity === st.sev)
-      && (!q || (f.title + ' ' + f.affected_asset + ' ' + (f.cwe || '') + ' ' + (f.owasp || '') + ' ' + f.source_tool).toLowerCase().includes(q)));
+      && (!q || (f.title + ' ' + f.affected_asset + ' ' + (f.cwe || '') + ' ' + (f.owasp || '') + ' ' + (f.attack_technique || '') + ' ' + f.source_tool).toLowerCase().includes(q)));
     const keyFn = { risk: riskOf, sev: (f) => SEV.length - SEV.indexOf(f.severity), title: (f) => f.title.toLowerCase(), asset: (f) => f.affected_asset.toLowerCase() }[st.key];
     rows.sort((a, b) => { const A = keyFn(a), B = keyFn(b); return (A < B ? -1 : A > B ? 1 : 0) * st.dir; });
     return rows;
@@ -385,7 +385,7 @@ function findingsTable(mount, findings) {
     const open = st.open.has(f._i);
     const r = f.risk;
     return `<tr class="clickable" data-i="${f._i}"><td>${sevPill(f.severity)}</td>
-      <td><b>${r ? Math.round(r.score) : '—'}</b></td><td>${esc(f.title)}${f.ai_generated ? ' <span class="tag ai">IA</span>' : ''}</td>
+      <td><b>${r ? Math.round(r.score) : '—'}</b></td><td>${esc(f.title)}${f.ai_generated ? ' <span class="tag ai">IA</span>' : ''}${f.attack_technique ? ` <span class="tag atk">${esc(f.attack_technique)}</span>` : ''}</td>
       <td class="mono small">${esc(f.affected_asset)}</td><td>${esc(f.perspective)}</td>
       <td class="small">${esc(f.cwe || '—')}</td><td>${kevCell(r)}</td><td class="small">${esc(f.source_tool)}</td></tr>
       ${open ? `<tr class="expand-row"><td colspan="8">${detailHtml(f)}</td></tr>` : ''}`;
