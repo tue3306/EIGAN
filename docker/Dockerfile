@@ -22,5 +22,8 @@ RUN useradd -m eigan
 USER eigan
 
 EXPOSE 8000
+# Exposto na rede (--expose → 0.0.0.0): a API EXIGE o token do EIGAN (ADR-0014).
+# Defina EIGAN_API_TOKEN no ambiente do container (docker-compose/`-e`); se ausente,
+# o EIGAN gera um e o imprime no log de inicialização. Sem token, toda /api/v1 → 401.
 ENTRYPOINT ["eigan"]
-CMD ["serve", "--host", "0.0.0.0"]
+CMD ["serve", "--expose"]

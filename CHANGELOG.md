@@ -12,6 +12,17 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Security (autenticação da API/dashboard — ADR-0014)
+- **Token obrigatório na API:** todo `/api/v1` (exceto `/health`) e o WebSocket
+  exigem o token do EIGAN (`Authorization: Bearer …`/`X-EIGAN-Token`/`?token=`).
+  Gerado em `~/.config/eigan/api_token` (chmod 600) ou via `EIGAN_API_TOKEN`.
+  Antes: **nenhuma auth** — qualquer um na porta disparava scans e lia findings.
+- **Bind seguro por padrão:** `serve` liga em `127.0.0.1`; `serve --expose` (e o
+  Docker) liga em `0.0.0.0`, imprime o token e passa a exigi-lo. Dashboard injeta
+  o token só em modo local (loopback); exposto, o operador o fornece.
+- **Consent auditado:** `POST /scans` registra a concessão no log estruturado
+  (cliente/alvos/perspectiva). Gates `authorized` (403) e AI-native (428) mantidos.
+
 ### Added (gestão de chaves de FERRAMENTA — ADR-0013)
 - **Credenciais de ferramenta declarativas** (`engine/credentials.py`): cada plugin
   declara no `metadata.yaml` as chaves que usa (`credentials:`) e o regime de

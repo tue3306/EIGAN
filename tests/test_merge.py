@@ -70,7 +70,8 @@ def test_merge_endpoint_validates_and_returns(tmp_path, monkeypatch):
     store, s1, s2 = _store_two_scans(tmp_path)
     store.close()
     monkeypatch.setenv("EIGAN_DB", str(tmp_path / "m.db"))
-    c = TestClient(app_mod.app)
+    monkeypatch.setenv("EIGAN_API_TOKEN", "test-token")
+    c = TestClient(app_mod.app, headers={"Authorization": "Bearer test-token"})
     r = c.post("/api/v1/scans/merge", json={"scan_ids": [s1, s2]})
     assert r.status_code == 200 and r.json()["count"] == 3
     # scan inexistente → 404

@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("EIGAN_DB", str(tmp_path / "api.db"))
+    monkeypatch.setenv("EIGAN_API_TOKEN", "test-token")
     # EIGAN é AI-native (§3.4/ADR-0012): um provedor precisa existir para o scan
     # rodar. Uma chave de teste satisfaz o gate; como use_ai=False nestes testes,
     # nenhuma chamada de rede acontece (execução determinística do substrato).
@@ -33,7 +34,7 @@ def client(tmp_path, monkeypatch):
     # eventos, WebSocket), não ferramentas reais. Assim o scan conclui na hora e
     # de forma determinística mesmo em hosts com nmap/naabu instalados (Kali).
     app_mod._manager = ScanManager(str(tmp_path / "api.db"), registry=PluginRegistry([]))
-    return TestClient(app_mod.app)
+    return TestClient(app_mod.app, headers={"Authorization": "Bearer test-token"})
 
 
 def _wait(client, job_id, timeout=8.0):
@@ -140,7 +141,7 @@ def test_websocket_streams_until_end(client):
         },
     ).json()
     types = []
-    with client.websocket_connect(f"/ws/scans/{job['id']}/progress") as ws:
+    with client.websocket_connect(f"/ws/scans/{job['id']}/progress?token=test-token") as ws:
         for _ in range(60):
             e = ws.receive_json()
             types.append(e["type"])

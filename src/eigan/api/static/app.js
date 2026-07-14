@@ -5,9 +5,25 @@
 
 // ── Helpers de API ───────────────────────────────────────────────────────────
 const API = '/api/v1';
-const api = (p) => fetch(API + p).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
+// Token do EIGAN (ADR-0014): injetado pelo servidor em modo local; em modo exposto
+// o operador cola o token (guardado em localStorage). Enviado em todo request.
+let TOKEN = (typeof window.__EIGAN_TOKEN__ === 'string' && window.__EIGAN_TOKEN__) ||
+  localStorage.getItem('eigan_token') || '';
+function ensureToken() {
+  if (TOKEN) return TOKEN;
+  const t = (window.prompt('Token do EIGAN (veja o log do `serve --expose`):') || '').trim();
+  if (t) { TOKEN = t; localStorage.setItem('eigan_token', t); }
+  return TOKEN;
+}
+const authHeaders = (extra) => {
+  const h = Object.assign({}, extra || {});
+  if (TOKEN) h['Authorization'] = 'Bearer ' + TOKEN;
+  return h;
+};
+const withTok = (url) => TOKEN ? url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN) : url;
+const api = (p) => fetch(API + p, { headers: authHeaders() }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
 const apiPost = (p, body) =>
-  fetch(API + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+  fetch(API + p, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body || {}) })
     .then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw { status: r.status, detail: d.detail || r.statusText }; return d; });
 
 const el = (id) => document.getElementById(id);
@@ -205,6 +221,7 @@ async function router() {
 
 async function boot() {
   Theme.init();
+  ensureToken();  // modo local: já injetado; exposto: pede uma vez e guarda
   try {
     const m = await api('/meta');
     el('ver').textContent = 'v' + m.tool_version;
@@ -424,7 +441,7 @@ function findingsTable(mount, findings) {
 window.exportReport = (scanId) => {
   const fmt = el('expFmt').value, style = el('expStyle').value, cls = el('expClass').value;
   toast('Gerando relatório ' + fmt.toUpperCase() + '…');
-  window.location.href = `${API}/scans/${scanId}/report?format=${fmt}&style=${style}&classification=${cls}`;
+  window.location.href = withTok(`${API}/scans/${scanId}/report?format=${fmt}&style=${style}&classification=${cls}`);
 };
 
 // ── VIEW: Histórico (busca + filtro + correlação multi-scan) ──────────────────
@@ -704,7 +721,7 @@ async function viewProgress(root, jobId) {
   }, 1000);
 
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${location.host}/ws/scans/${jobId}/progress`);
+  const ws = new WebSocket(withTok(`${proto}://${location.host}/ws/scans/${jobId}/progress`));
   let closed = false;
   ws.onmessage = (m) => handleEvent(JSON.parse(m.data), state);
   ws.onerror = () => !closed && pollFallback(jobId, state);

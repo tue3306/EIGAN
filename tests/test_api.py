@@ -36,9 +36,10 @@ def client(tmp_path, monkeypatch):
     store.finish_scan(sid)
     store.close()
     monkeypatch.setenv("EIGAN_DB", str(db))
+    monkeypatch.setenv("EIGAN_API_TOKEN", "test-token")
     from eigan.api.app import app
 
-    return TestClient(app), sid
+    return TestClient(app, headers={"Authorization": "Bearer test-token"}), sid
 
 
 def test_health_and_meta(client):
@@ -125,3 +126,64 @@ def test_dashboard_html(client):
 def test_scan_404(client):
     c, _ = client
     assert c.get("/api/v1/scans/9999/findings").status_code == 404
+
+
+# ── autenticação da API (ADR-0014) ───────────────────────────────────────────
+def test_api_requires_token(client):
+    """Sem token → 401 em toda /api/v1 (exceto /health)."""
+    c, sid = client
+    # cliente sem o header default
+    from fastapi.testclient import TestClient
+
+    from eigan.api.app import app
+
+    anon = TestClient(app)
+    assert anon.get("/api/v1/scans").status_code == 401
+    assert anon.get(f"/api/v1/scans/{sid}/findings").status_code == 401
+    assert (
+        anon.post("/api/v1/scans", json={"targets": ["x"], "authorized": True}).status_code == 401
+    )
+
+
+def test_health_is_public(client):
+    from fastapi.testclient import TestClient
+
+    from eigan.api.app import app
+
+    anon = TestClient(app)
+    r = anon.get("/api/v1/health")
+    assert r.status_code == 200 and r.json()["status"] == "ok"
+
+
+def test_wrong_token_rejected(client):
+    from fastapi.testclient import TestClient
+
+    from eigan.api.app import app
+
+    bad = TestClient(app, headers={"Authorization": "Bearer errado"})
+    assert bad.get("/api/v1/scans").status_code == 401
+
+
+def test_valid_token_accepted(client):
+    c, _ = client
+    assert c.get("/api/v1/scans").status_code == 200
+
+
+def test_dashboard_injects_token_when_local(client):
+    """Modo loopback: o dashboard injeta o token para o SPA (uso local sem fricção)."""
+    c, _ = client
+    from eigan.api.app import app
+
+    app.state.exposed = False
+    r = c.get("/")
+    assert "__EIGAN_TOKEN__" in r.text
+
+
+def test_dashboard_omits_token_when_exposed(client, monkeypatch):
+    """Modo exposto: o dashboard NÃO injeta o token (o operador fornece)."""
+    c, _ = client
+    from eigan.api.app import app
+
+    monkeypatch.setattr(app.state, "exposed", True)
+    r = c.get("/")
+    assert "__EIGAN_TOKEN__" not in r.text

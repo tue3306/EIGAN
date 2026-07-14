@@ -489,9 +489,27 @@ def serve_app(
     ``open_path`` é um fragmento anexado à URL base ao abrir o navegador — ex.:
     ``"/#/scan/7"`` leva direto ao scan recém-concluído (deep-link do SPA).
     """
+    from ..security import apitoken
+
     os.environ["EIGAN_DB"] = db
+    # Bind seguro (ADR-0014): loopback = não exposto (dashboard injeta o token para
+    # uso local). Qualquer outro host = exposto na rede → o dashboard não injeta e o
+    # operador precisa do EIGAN_API_TOKEN. Sinaliza via env para o app (reimport-safe).
+    exposed = not apitoken.is_loopback(host)
+    os.environ["EIGAN_EXPOSE"] = "true" if exposed else "false"
     url = f"http://{host}:{port}"
     echo(f"EIGAN — dashboard: {url}   ·   API: {url}/api/v1   ·   docs: {url}/docs")
+    if exposed:
+        token = apitoken.load_or_create_token()
+        echo("")
+        echo("⚠ EXPOSTO NA REDE (0.0.0.0/host público). A API exige o token do EIGAN.")
+        if os.getenv("EIGAN_API_TOKEN"):
+            echo("  Token: definido via EIGAN_API_TOKEN (não exibido).")
+        else:
+            echo(f"  Token (guarde com cuidado): {token}")
+        echo(
+            "  Envie em cada chamada: Authorization: Bearer <token>  (ou ?token=… p/ download/WS)."
+        )
     if open_browser:
         echo("Abrindo o navegador assim que o servidor subir…")
         _open_when_ready(host, port, url + open_path)

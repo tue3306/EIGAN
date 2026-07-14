@@ -13,8 +13,8 @@ import os
 from dataclasses import asdict
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -25,6 +25,7 @@ from ..analysis.compliance import assess_compliance
 from ..analysis.inventory import build_inventory, summarize
 from ..findings.schema import Finding, Severity
 from ..findings.store import FindingStore
+from ..security import apitoken
 from .scan_manager import ScanManager
 
 app = FastAPI(
@@ -33,8 +34,45 @@ app = FastAPI(
     description="Plataforma modular de operações de segurança (uso autorizado).",
 )
 
+# Modo de exposição (ADR-0014): False = bind loopback (mesma máquina), o dashboard
+# recebe o token injetado para uso local sem fricção. True = exposto na rede
+# (0.0.0.0 via `serve --expose`/Docker); o dashboard NÃO injeta o token (o operador
+# fornece EIGAN_API_TOKEN). Setado pelo `serve`; default lê o ambiente.
+app.state.exposed = os.getenv("EIGAN_EXPOSE", "").strip().lower() in {"1", "true", "yes"}
+
 _AI_ENV = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "OLLAMA_HOST")
 _TOOL_VERSION = __version__
+
+# Rotas públicas (sem token): health e o próprio dashboard/estáticos. Todo o resto
+# de /api/v1 e o WebSocket exigem o token (ADR-0014).
+_PUBLIC_API_PATHS = frozenset({"/api/v1/health"})
+
+
+def _extract_token(request: Request) -> str | None:
+    """Token do request: header Authorization: Bearer, X-EIGAN-Token, ou ?token=.
+
+    O query param existe para downloads/navegações que não setam header (ex.: o
+    link de relatório) e para o WebSocket — aceitável num alvo local."""
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    header = request.headers.get("x-eigan-token")
+    if header:
+        return header.strip()
+    return request.query_params.get("token")
+
+
+@app.middleware("http")
+async def _auth_middleware(request: Request, call_next):
+    """Exige o token do EIGAN em todo /api/v1 (exceto /health). §2/§4/ADR-0014."""
+    path = request.url.path
+    if path.startswith("/api/v1") and path not in _PUBLIC_API_PATHS:
+        if not apitoken.token_matches(_extract_token(request)):
+            return JSONResponse(
+                {"detail": "não autorizado: forneça o token do EIGAN (Authorization: Bearer …)"},
+                status_code=401,
+            )
+    return await call_next(request)
 
 
 def _db_path() -> str:
@@ -550,10 +588,24 @@ class ScanRequest(BaseModel):
 
 
 @app.post("/api/v1/scans", status_code=202)
-def start_scan(req: ScanRequest) -> dict:
+def start_scan(req: ScanRequest, request: Request) -> dict:
     """Inicia um scan em background. Retorna o ``job_id`` para acompanhar o progresso.
 
-    Recusa (403) sem afirmação de autorização — o consent gate é preservado."""
+    Recusa (403) sem afirmação de autorização — o consent gate é preservado. A
+    concessão de consent é **auditada** no log estruturado (quem/quando/alvos)."""
+    from ..logging_setup import get_logger
+
+    client_host = request.client.host if request.client else "?"
+    if req.authorized:
+        get_logger("consent").info(
+            "consent concedido para scan ativo",
+            extra={
+                "client": client_host,
+                "targets": ",".join(req.targets)[:200],
+                "perspective": req.perspective,
+                "objective": req.objective,
+            },
+        )
     try:
         job = manager().start(
             targets=req.targets,
@@ -618,6 +670,11 @@ async def scan_progress_ws(websocket: WebSocket, job_id: str) -> None:
 
     Faz replay do histórico ao conectar e depois entrega eventos novos conforme
     chegam ao buffer do job (ponte thread→async por polling curto do buffer)."""
+    # Auth do WS (ADR-0014): o token vem por ?token= (o browser não seta header no
+    # handshake). Recusa antes do accept quando inválido (1008 = policy violation).
+    if not apitoken.token_matches(websocket.query_params.get("token")):
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
     job = manager().get(job_id)
     if job is None:
@@ -648,12 +705,27 @@ _STATIC_DIR = Path(__file__).parent / "static"
 @app.get("/", response_class=HTMLResponse)
 def dashboard() -> str:
     index = _STATIC_DIR / "index.html"
-    if index.exists():
-        return index.read_text()
-    return (
-        "<h1>EIGAN</h1><p>API ativa. Veja <a href='/docs'>/docs</a> e "
-        "<code>/api/v1/scans</code>.</p>"
-    )
+    if not index.exists():
+        return (
+            "<h1>EIGAN</h1><p>API ativa. Veja <a href='/docs'>/docs</a> e "
+            "<code>/api/v1/scans</code>.</p>"
+        )
+    html = index.read_text()
+    # Modo local (loopback): injeta o token para o SPA usar sem fricção. Cross-origin
+    # não consegue LER este HTML (same-origin policy), então o token não vaza para uma
+    # página maliciosa. Exposto: NÃO injeta — o operador cola EIGAN_API_TOKEN (ADR-0014).
+    if not app.state.exposed:
+        token = apitoken.load_or_create_token()
+        inject = f"<script>window.__EIGAN_TOKEN__={_json_str(token)};</script>"
+        html = html.replace("</head>", inject + "</head>", 1)
+    return html
+
+
+def _json_str(value: str) -> str:
+    """Serializa uma string para embutir com segurança em <script> (escapa </)."""
+    import json
+
+    return json.dumps(value).replace("</", "<\\/")
 
 
 # assets estáticos (css/js/componentes). Montado por último para não capturar /api.

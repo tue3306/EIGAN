@@ -524,15 +524,26 @@ def _narrate_diff(result) -> str:
 @click.option("--port", default=8000, type=int, show_default=True)
 @click.option("--db", default="eigan.db", show_default=True)
 @click.option(
+    "--expose",
+    is_flag=True,
+    default=False,
+    help="Expor na rede (0.0.0.0). Exige e imprime o token do EIGAN. Sem isto: só loopback.",
+)
+@click.option(
     "--open/--no-open",
     "open_browser",
     default=None,
     help="Abrir o navegador no dashboard (padrão: sim em terminal interativo).",
 )
-def serve(host, port, db, open_browser):
-    """Sobe a API + dashboard, imprime a URL e (opcional) abre o navegador."""
+def serve(host, port, db, expose, open_browser):
+    """Sobe a API + dashboard, imprime a URL e (opcional) abre o navegador.
+
+    Por segurança (ADR-0014) o bind é loopback (127.0.0.1) por padrão. Use
+    ``--expose`` para ouvir em 0.0.0.0 — aí a API exige o token do EIGAN."""
     from .menu import serve_app
 
+    if expose and host in ("127.0.0.1", "localhost", "::1"):
+        host = "0.0.0.0"
     if open_browser is None:
         open_browser = sys.stdout.isatty()
     serve_app(host=host, port=port, db=db, open_browser=open_browser, echo=click.echo)
