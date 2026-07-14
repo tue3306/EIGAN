@@ -7,11 +7,37 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
-> ⚠️ **Versão reiniciada para `0.0.0` (pré-alfa).** As tags `1.x` anteriores
-> superestimavam a maturidade: o Red team não era comandado pela IA na CLI/wizard,
-> o Blue team é só scaffold e não há Purple real, e o dashboard precisa de trabalho.
-> O versionamento só volta a subir quando Red **e** Blue **e** Purple rodarem de
-> ponta a ponta. Honestidade acima de número de versão (§3.1).
+> ⚠️ **Versão em `0.0.0` (pré-alfa).** As tags/releases `1.x` anteriores foram
+> removidas — superestimavam a maturidade. Nesta série, **Red, Blue e Purple
+> passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
+> conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
+
+### Added (Blue real · Purple real · Red exposição · remediação por IA)
+- **Blue team REAL** (era 100% scaffold): plugin `log-analysis` nativo em Python
+  detecta ataques em logs (força-bruta SSH/T1110, ataques web/T1190, varredura/
+  T1595, sudo/T1548) citando as linhas reais; agente `blue-detection` (built) e
+  comando **`eigan blue <logs>`** (dispara análise + remediação da IA).
+- **Purple team REAL** (não existia): `analysis/purple.py` correlaciona técnicas
+  ATT&CK atacadas (Red) × detectadas (Blue) → matriz de cobertura, **pontos cegos**
+  (atacado sem detecção) e % de cobertura, no nível da família de técnica.
+  `POST /api/v1/purple`, narrativa da IA e **view Purple no dashboard** (nav própria).
+- **Red — exposição/"dados vazados":** capability `secrets_exposure` + plugin
+  `exposure` (nativo) sonda `.git`/`.env`/backups/`.aws`/chaves privadas/`server-
+  status`/`phpinfo` e segredos embutidos (AWS/Google/Slack/GitHub keys) — grounded,
+  segredos mascarados, CWE + ATT&CK (T1552/T1592); roda na cascata e no pipeline.
+- **Plano de remediação por IA** ("o que arrumar e como", priorizado) no **dashboard**
+  e nos **relatórios PDF/HTML/Markdown**: `ai/remediation.py` (JSON estruturado +
+  fallback), auto ao fim do scan + `GET/POST /api/v1/scans/{id}/remediation`.
+- **Catálogo ATT&CK** ampliado (T1110/T1078/T1548/T1552/T1592) e badge de técnica
+  na tabela de findings do dashboard.
+
+### Fixed (crítico — geração da IA voltava VAZIA no GPT-5)
+- **O GPT-5 (série de raciocínio) gastava TODO o `max_completion_tokens` (2048)
+  raciocinando e devolvia conteúdo vazio** em tarefas de geração rica (análise/
+  remediação) — a IA parecia "sem lógica". Correção: `OpenAIProvider` envia
+  `reasoning_effort` baixo (env `EIGAN_OPENAI_REASONING_EFFORT`) para modelos de
+  raciocínio + teto subido para 4096. Verificado ao vivo: 22s→VAZIO vira 10s→saída
+  completa.
 
 ### Fixed (crítico — a IA volta a comandar o Red team)
 - **`eigan scan` e o wizard rodavam um pipeline FIXO sem IA.** O `execute_scan`

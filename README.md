@@ -357,20 +357,23 @@ Os diretórios principais têm o seu próprio `README.md`; o **mapa do código-f
 
 ## 🗺️ Roadmap
 
-**Já funciona hoje (pré-alfa `0.0.0`):** núcleo agêntico (a IA comanda o scan fim a fim) · Recon Red real (8
-plugins) · cascata adaptativa · perspectivas Outside-In/Inside-Out · Risk Engine (CVSS/EPSS/KEV)
-· correlação + inventário + ATT&CK · **relatórios corporativos** em 5 formatos (classificação +
-masking + score) · **dashboard SOC** (tema claro/escuro, tempo real) · multi-provedor de IA (com
-`doctor --probe-ai`) · "baixa e roda" · Policy Engine (Fase 0).
+**Já funciona hoje (pré-alfa `0.0.0`):** núcleo agêntico (a IA comanda o scan fim a fim) · Recon Red
+real (arsenal 18+) + **exposição/segredos vazados** (`.git`/`.env`/backups/chaves, mascarados) ·
+cascata adaptativa · perspectivas Outside-In/Inside-Out · Risk Engine (CVSS/EPSS/KEV) · correlação +
+inventário + ATT&CK · **Blue real** (`eigan blue` — detecção em logs mapeada a ATT&CK) · **Purple
+real** (correlação ataque×detecção + pontos cegos, na CLI/API/dashboard) · **plano de remediação por
+IA** (o que/como arrumar, no dashboard e nos PDFs) · **relatórios corporativos** em 5 formatos ·
+**dashboard SOC** (tema claro/escuro, tempo real) · multi-provedor de IA (com `doctor --probe-ai`) ·
+"baixa e roda" · Policy Engine (Fase 0).
 
 **Próximo (scaffold honesto → real):**
 
-- 🔴 **Red** — Web (whatweb/wpscan/katana/feroxbuster), TLS (testssl), SQLi (sqlmap, *gated*),
-  Windows/AD, Cloud.
-- 🔵 **Blue** / 🟣 **Purple** — log-analysis, threat-hunting, detection/control validation.
+- 🔴 **Red** — Windows/AD, Cloud (buckets/APIs), password-audit.
+- 🔵 **Blue** — SIEM ingest, threat-hunting, incident-response, malware-analysis.
+- 🟣 **Purple** — control/detection validation (attack simulation), purple loop contínuo.
 - ⚙️ **Policy Engine — Fase 3**: submeter cada *tool-call* ao `vet()` (arbitragem por
   `ImpactClass`, HITL) no loop de execução ([ADR-0011](docs/adr/0011-policy-guardrail-engine.md)).
-- 🧠 Memória de longo prazo, attack paths, purple loop.
+- 🧠 Memória de longo prazo, attack paths.
 
 Visão completa e faseada em [docs/ROADMAP.md](docs/ROADMAP.md). Itens comerciais são **apenas
 documentados** ([docs/roadmap/commercial.md](docs/roadmap/commercial.md)), sem código.
