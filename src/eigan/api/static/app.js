@@ -458,11 +458,12 @@ async function viewMerge(root, idsStr) {
 // Perspectiva é 'unified' por padrão: um só scan avalia público E privado e
 // documenta o que achar (sem obrigar o usuário a escolher external/internal).
 const wiz = { step: 1, targets: '', perspective: 'unified', objective: 'standard', use_ai: true, authorized: false };
+// Perfis = amplitude/velocidade. A IA comanda o scan em TODOS eles (planeja e
+// aprofunda conforme descobre) — por isso não há um perfil "IA" à parte.
 const OBJECTIVES = [
-  { id: 'quick', t: '🎯 Rápido (5–15 min)', d: 'Portscanning + identificação de serviço. Cobertura ~60%.' },
-  { id: 'standard', t: '🔍 Padrão (30–60 min)', d: 'Portscan + service detection + templates de vuln. Cobertura ~85%.', reco: true },
-  { id: 'deep', t: '🔬 Profundo (1–4 h)', d: 'Tudo acima + varredura ativa + validação (gated).' },
-  { id: 'ai', t: '🤖 Deixe a IA decidir', d: 'A IA orquestra a estratégia sobre o pipeline determinístico.' },
+  { id: 'quick', t: '🎯 Rápido', d: 'Portas + serviços + web essencial. Poucos minutos, superfície principal.' },
+  { id: 'standard', t: '🔍 Padrão', d: 'Portas + serviços + templates de vulnerabilidade + cadeia web. Equilíbrio profundidade × tempo.', reco: true },
+  { id: 'deep', t: '🔬 Profundo', d: 'Tudo acima + varredura ativa e validação autorizada (gated). Mais demorado.' },
 ];
 function viewWizard(root) { wiz.step = 1; renderWizard(root); }
 function renderWizard(root) {
@@ -488,6 +489,7 @@ function stepObjective(s) {
   s.innerHTML = `<label>O que você quer descobrir?</label>
     ${OBJECTIVES.map((o) => `<div class="choice ${wiz.objective === o.id ? 'sel' : ''}" onclick="wizObj('${o.id}')">
       <div class="t">${o.t}${o.reco ? '<span class="reco">RECOMENDADO</span>' : ''}</div><div class="d">${o.d}</div></div>`).join('')}
+    <p class="muted small" style="margin-top:8px">🤖 Em qualquer perfil, a IA comanda o scan — planeja as capacidades e aprofunda conforme descobre.</p>
     ${navButtons(true, 'Próximo ›', 'wizToStep3', !!wiz.objective)}`;
 }
 function stepAdvanced(s) {
@@ -563,7 +565,7 @@ async function viewProgress(root, jobId) {
       <div class="progressbar"><span id="pbar" style="width:4%"></span></div></div>
     <div class="cols" style="margin-bottom:14px">
       <div class="card"><h2>🧠 Raciocínio do agente</h2><div class="timeline" id="reasoning"><div class="muted small">o agente ainda não decidiu nada…</div></div></div>
-      <div class="card"><h2>Fases</h2><div id="phases"><div class="muted small">aguardando…</div></div></div>
+      <div class="card"><h2>🛠️ Ferramentas &amp; capacidades</h2><div id="phases"><div class="muted small">aguardando o agente disparar…</div></div></div>
     </div>
     <div class="cols" style="margin-bottom:14px">
       <div class="card"><h2>📡 Descobertas em tempo real</h2><div class="feed" id="feed"><div class="empty">aguardando descobertas…</div></div></div>
@@ -601,15 +603,26 @@ function handleEvent(e, state) {
     setText('kc', (state.sev.critical || 0) + (state.sev.high || 0));
   } else if (e.type === 'log') { state.reasoning.push(e); renderReasoning(state); }
   else if (e.type === 'tool_execution') {
+    const prev = state.tools[e.tool];
     state.tools[e.tool] = e.status;
     if (e.status === 'in_progress') { state.currentTool = e.tool; setText('kt', e.tool); }
     else if (state.currentTool === e.tool) { setText('kt', '—'); }
+    // A barra avança a cada ferramenta concluída (o CognitiveEngine emite
+    // tool_execution, não phase_*): aproximação assintótica que sempre se move
+    // sem saber o total do plano antecipadamente.
+    if (prev !== e.status && (e.status === 'completed' || e.status === 'failed' || e.status === 'skipped')) {
+      state.progress = Math.min(0.95, state.progress + (0.95 - state.progress) * 0.28);
+      setBar(Math.round(state.progress * 100));
+    }
+    renderTools(state);
   } else if (e.type === 'analysis') { toast('✨ Análise da IA concluída'); state.analysis = e.text; }
   else if (e.type === 'scan_status') setStatus(state, e.status);
   else if (e.type === 'analysis_complete') { state.progress = 1; setBar(100); }
   else if (e.type === 'stream_end') {
     setStatus(state, e.status);
-    if (state.discoveries.length && state.scanId) setTimeout(() => (location.hash = '#/scan/' + state.scanId), 1000);
+    // Ao terminar, leva ao detalhe do scan mesmo sem findings (antes ficava preso
+    // na tela de progresso quando o scan não achava nada).
+    if (state.scanId) setTimeout(() => (location.hash = '#/scan/' + state.scanId), 1200);
   }
   if (e.scan_id) state.scanId = e.scan_id;
 }
@@ -629,6 +642,18 @@ function renderPhases(state) {
     const s = state.phases[p], ic = s === 'done' ? '✅' : '⏳';
     return `<div class="phase ${s}"><span class="ic">${ic}</span><span>${esc(PHASE_LABELS[p] || p)}</span></div>`;
   }).join('') : '<div class="muted small">aguardando…</div>';
+}
+// Painel de ferramentas dirigido por tool_execution (o que o CognitiveEngine emite).
+const _TOOL_ICON = { completed: '✅', failed: '⚠️', skipped: '⤳', in_progress: '⏳', queued: '·' };
+function renderTools(state) {
+  const box = el('phases'); if (!box) return;
+  const entries = Object.entries(state.tools);
+  box.innerHTML = entries.length ? entries.map(([tool, status]) => {
+    const cls = status === 'in_progress' ? 'active' : status === 'completed' ? 'done' : '';
+    return `<div class="phase ${cls}"><span class="ic">${_TOOL_ICON[status] || '•'}</span>
+      <span class="mono">${esc(tool)}</span>
+      <span class="muted small" style="margin-left:auto">${esc(status)}</span></div>`;
+  }).join('') : '<div class="muted small">aguardando o agente disparar…</div>';
 }
 function bumpBar(state) {
   const done = STAGE_ORDER.filter((p) => state.phases[p] === 'done').length;

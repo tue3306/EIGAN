@@ -27,6 +27,17 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   pede `json_mode=True` e tenta 2×. Verificado ao vivo: GPT-5 passou a devolver JSON
   válido e a IA de fato comanda o plano.
 
+### Fixed (dashboard — progresso ao vivo estava quebrado)
+- **A barra de progresso travava em 4% e o painel "Fases" ficava vazio** o scan
+  inteiro: o dashboard escutava eventos `phase_*` do Orchestrator antigo, mas o
+  `CognitiveEngine` (que a API roda) emite `tool_execution`. Agora a barra avança
+  a cada ferramenta concluída e o painel mostra as **ferramentas & capacidades**
+  reais (subfinder ✅, dnsx ✅, nmap ⏳…). Ao terminar, leva ao detalhe do scan
+  mesmo com 0 findings (antes ficava preso na tela de progresso).
+- **Percentuais de cobertura inventados** ("~60%/~85%") removidos do wizard web
+  (anti-invenção §3.1); a opção enganosa "IA decide" saiu (a IA comanda **todos**
+  os perfis) e o wizard passa a dizer isso.
+
 ### Added
 - **Wizard abre o dashboard direto no scan concluído.** Ao final de um "Novo Scan"
   o assistente oferece subir o dashboard já no deep-link `#/scan/<id>` (fecha a
