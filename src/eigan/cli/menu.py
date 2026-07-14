@@ -52,13 +52,15 @@ def banner() -> str:
 
 
 _ITEMS: tuple[tuple[str, str, str], ...] = (
-    ("1", "Novo Scan", "assistente guiado: alvo → perspectiva → scan → relatório"),
-    ("2", "Dashboard", "abre a interface web (API + dashboard) no navegador"),
-    ("3", "Histórico", "scans anteriores, findings e geração de relatório"),
-    ("4", "Configuração", "IA, banco de dados, feeds de risco e .env"),
-    ("5", "Doctor", "diagnóstico do ambiente (Python, ferramentas, IA, feeds)"),
-    ("6", "Atualizar Ferramentas", "feed de risco (CISA KEV) e checagem de ferramentas"),
-    ("7", "Sair", ""),
+    ("1", "Novo Scan (Red)", "assistente guiado: alvo → perspectiva → scan → relatório"),
+    ("2", "Análise Blue (logs)", "detecta ataques em logs e mapeia MITRE ATT&CK"),
+    ("3", "Correlação Purple", "ataque×detecção: cobertura e pontos cegos"),
+    ("4", "Dashboard", "abre a interface web (API + dashboard) no navegador"),
+    ("5", "Histórico", "scans anteriores, findings e geração de relatório"),
+    ("6", "Configuração", "IA, chaves de ferramenta, banco, feeds e .env"),
+    ("7", "Doctor", "diagnóstico do ambiente (Python, ferramentas, IA, feeds)"),
+    ("8", "Atualizar Ferramentas", "feed de risco (CISA KEV) e checagem de ferramentas"),
+    ("9", "Sair", ""),
 )
 
 
@@ -165,6 +167,84 @@ def _generate_report(
         echo(f"Não foi possível gerar {fmt}: {exc}")
         return
     echo(f"Relatório gerado: {path}")
+
+
+def action_blue(*, db: str, input_fn: Callable[[str], str] = input, echo: Callable = print) -> None:
+    """Análise defensiva (Blue) de logs — detecta ataques e mapeia MITRE ATT&CK."""
+    from ..ai.provider import AIProviderRequired, require_provider
+    from ..engine.blue import run_log_analysis
+    from ..engine.risk import RiskScorer
+
+    raw = input_fn("Caminho(s) de log (arquivo/pasta, separados por espaço): ").strip()
+    paths = [p for p in raw.split() if p]
+    if not paths:
+        echo("Nenhum caminho informado.")
+        return
+    missing = [p for p in paths if not os.path.exists(p)]
+    if missing:
+        echo(f"Caminho(s) inexistente(s): {', '.join(missing)}")
+        return
+    try:
+        provider = require_provider()
+    except AIProviderRequired as exc:
+        echo(str(exc))
+        return
+    store = FindingStore(db)
+    try:
+        echo(f"Analisando {len(paths)} fonte(s) de log…")
+        report = run_log_analysis(
+            paths, store=store, risk=RiskScorer(FeedCache.load(), online=False), provider=provider
+        )
+    finally:
+        store.close()
+    echo(f"\nBlue #{report.scan_id}: {len(report.findings)} detecção(ões).")
+    for f in report.findings[:20]:
+        echo(f"  [{f.severity.value.upper():8}] {f.title}  ATT&CK={f.attack_technique or '—'}")
+
+
+def action_purple(
+    *, db: str, input_fn: Callable[[str], str] = input, echo: Callable = print
+) -> None:
+    """Correlação Purple: técnicas ATT&CK atacadas (Red) × detectadas (Blue)."""
+    from ..analysis.purple import DEFAULT_DETECTION_TOOLS, correlate_findings
+    from ..capability import Category
+    from ..engine.registry import PluginRegistry
+
+    store = FindingStore(db)
+    scans = store.list_scans()
+    if not scans:
+        echo("Nenhum scan ainda. Rode um scan Red e uma análise Blue primeiro.")
+        store.close()
+        return
+    echo("\nScans disponíveis:")
+    for s in scans[:20]:
+        echo(f"  #{s['id']}  {s['profile']:16}  {', '.join(json.loads(s['targets']))[:36]}")
+    raw = input_fn("\nIDs dos scans a correlacionar (ex.: 1 2): ").strip()
+    ids = [int(x) for x in raw.split() if x.isdigit()]
+    if not ids:
+        echo("Nenhum id válido informado.")
+        store.close()
+        return
+    findings = []
+    for sid in ids:
+        findings.extend(store.get_findings(sid))
+    store.close()
+    tools = set(DEFAULT_DETECTION_TOOLS)
+    try:
+        tools |= {
+            s.name for s in PluginRegistry.discover().all() if s.metadata.category == Category.BLUE
+        }
+    except Exception:  # noqa: BLE001
+        pass
+    report = correlate_findings(findings, detection_tools=frozenset(tools))
+    echo(
+        f"\nPurple — cobertura {report.coverage_pct:.0f}% "
+        f"({len(report.covered)} coberta(s) / {len(report.gaps)} ponto(s) cego(s))"
+    )
+    if report.gaps:
+        echo("  PONTOS CEGOS (atacado sem detecção):")
+        for t in report.gaps:
+            echo(f"    ✗ {t}")
 
 
 def _upsert_env(values: dict[str, str], path: str = ".env") -> None:
@@ -529,13 +609,15 @@ def serve_app(
 # --------------------------------------------------------------------------- #
 _DISPATCH: dict[str, Callable[..., None]] = {
     "1": action_new_scan,
-    "2": action_dashboard,
-    "3": action_history,
-    "4": action_config,
-    "5": action_doctor,
-    "6": action_update_tools,
+    "2": action_blue,
+    "3": action_purple,
+    "4": action_dashboard,
+    "5": action_history,
+    "6": action_config,
+    "7": action_doctor,
+    "8": action_update_tools,
 }
-_QUIT = {"7", "0", "q", "sair", "quit", "exit"}
+_QUIT = {"9", "0", "q", "sair", "quit", "exit"}
 
 
 def run_menu(
@@ -547,7 +629,7 @@ def run_menu(
         echo("")
         echo(render_menu())
         try:
-            choice = input_fn("\nEscolha uma opção [1-7]: ").strip().lower()
+            choice = input_fn("\nEscolha uma opção [1-9]: ").strip().lower()
         except EOFError:
             echo("")
             return 0
@@ -556,7 +638,7 @@ def run_menu(
             return 0
         action = _DISPATCH.get(choice)
         if action is None:
-            echo("Opção inválida — digite um número de 1 a 7.")
+            echo("Opção inválida — digite um número de 1 a 9.")
             continue
         try:
             action(db=db, input_fn=input_fn, echo=echo)

@@ -71,7 +71,7 @@ def test_run_menu_dispatches_then_quits(monkeypatch):
     called = []
     monkeypatch.setitem(menu._DISPATCH, "5", lambda **_: called.append("acao"))
     out: list[str] = []
-    rc = menu.run_menu(db=":memory:", input_fn=_feeder(["5", "7"]), echo=out.append)
+    rc = menu.run_menu(db=":memory:", input_fn=_feeder(["5", "9"]), echo=out.append)
     assert rc == 0
     assert called == ["acao"]
     assert any("Até logo" in line for line in out)
@@ -79,7 +79,7 @@ def test_run_menu_dispatches_then_quits(monkeypatch):
 
 def test_run_menu_rejects_invalid_option():
     out: list[str] = []
-    rc = menu.run_menu(db=":memory:", input_fn=_feeder(["99", "7"]), echo=out.append)
+    rc = menu.run_menu(db=":memory:", input_fn=_feeder(["99", "9"]), echo=out.append)
     assert rc == 0
     assert any("inválida" in line for line in out)
 
@@ -95,7 +95,7 @@ def test_run_menu_swallows_action_errors(monkeypatch):
 
     monkeypatch.setitem(menu._DISPATCH, "5", boom)
     out: list[str] = []
-    menu.run_menu(db=":memory:", input_fn=_feeder(["5", "7"]), echo=out.append)
+    menu.run_menu(db=":memory:", input_fn=_feeder(["5", "9"]), echo=out.append)
     # Menu resiliente: erro acionável, nunca stack trace cru (CLAUDE.md §13).
     assert any("Erro:" in line and "falha simulada" in line for line in out)
 

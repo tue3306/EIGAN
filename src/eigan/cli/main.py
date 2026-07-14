@@ -149,6 +149,75 @@ def scan(
 
 
 @cli.command()
+@click.argument("scan_ids", nargs=-1, required=True, type=int)
+@click.option("--db", default="eigan.db", show_default=True)
+@click.option("--ai", is_flag=True, help="Narrativa da IA priorizando os pontos cegos.")
+def purple(scan_ids, db, ai):
+    """Correlação Purple: técnicas ATT&CK atacadas (Red) × detectadas (Blue).
+
+    Ex.: `eigan purple 1 2` (um scan Red e um Blue). Mostra a % de cobertura e os
+    PONTOS CEGOS (técnica atacada SEM detecção) — onde a defesa está cega.
+    """
+    from ..analysis.purple import (
+        DEFAULT_DETECTION_TOOLS,
+        correlate_findings,
+        purple_context,
+    )
+    from ..capability import Category
+    from ..engine.registry import PluginRegistry
+
+    store = FindingStore(db)
+    try:
+        findings = []
+        for sid in scan_ids:
+            if store.get_scan(sid) is None:
+                click.secho(f"Scan #{sid} não encontrado.", fg="red", err=True)
+                sys.exit(2)
+            findings.extend(store.get_findings(sid))
+    finally:
+        store.close()
+
+    tools = set(DEFAULT_DETECTION_TOOLS)
+    try:
+        tools |= {
+            s.name for s in PluginRegistry.discover().all() if s.metadata.category == Category.BLUE
+        }
+    except Exception:  # noqa: BLE001 — registry indisponível não quebra a correlação
+        pass
+    report = correlate_findings(findings, detection_tools=frozenset(tools))
+
+    click.secho(
+        f"\nPurple — cobertura {report.coverage_pct:.0f}% "
+        f"({len(report.covered)} coberta(s) / {len(report.gaps)} ponto(s) cego(s))",
+        fg="green" if not report.gaps else "yellow",
+        bold=True,
+    )
+    click.echo(
+        f"  Red: {report.red_findings} finding(s), {report.red_techniques} técnica(s)  ·  "
+        f"Blue: {report.blue_findings} detecção(ões), {report.blue_techniques} técnica(s)"
+    )
+    if report.gaps:
+        click.secho("\n  PONTOS CEGOS (atacado sem detecção):", fg="red")
+        for t in report.gaps:
+            click.echo(f"    ✗ {t}")
+    if report.covered:
+        click.secho("\n  Cobertas (atacado E detectado):", fg="green")
+        for t in report.covered:
+            click.echo(f"    ✔ {t}")
+    if ai:
+        from ..ai.conversation import purple_analysis
+        from ..ai.provider import AIProviderRequired, require_provider
+
+        try:
+            require_provider()
+        except AIProviderRequired as exc:
+            click.secho(str(exc), fg="red", err=True)
+            sys.exit(3)
+        click.secho("\nNarrativa da IA (priorização dos pontos cegos):", fg="cyan")
+        click.echo(purple_analysis(purple_context(report)))
+
+
+@cli.command()
 @click.argument("paths", nargs=-1, required=True, type=click.Path(exists=True))
 @click.option("--db", default="eigan.db", show_default=True)
 @click.option("--online-enrich", is_flag=True, help="Buscar EPSS (FIRST.org) p/ CVEs, se houver.")

@@ -161,3 +161,28 @@ def test_findings_and_assets_endpoints(client):
 
 def test_unknown_job_is_404(client):
     assert client.get("/api/v1/jobs/job-999").status_code == 404
+
+
+def test_blue_endpoint_analyzes_uploaded_logs(client):
+    # ADR-0020: o cliente ENVIA o conteúdo do log (não um caminho no servidor).
+    auth = "\n".join(
+        [f"sshd[{i}]: Failed password for root from 203.0.113.9 port 5{i} ssh2" for i in range(8)]
+    )
+    r = client.post(
+        "/api/v1/blue",
+        json={"logs": [{"name": "auth.log", "content": auth}], "ai": False},
+    )
+    assert r.status_code == 202
+    body = r.json()
+    assert body["detections"] >= 1 and body["scan_id"] is not None
+    assert any("T1110" in (f.get("attack_technique") or "") for f in body["findings"])
+
+
+def test_blue_endpoint_requires_token(client):
+    from fastapi.testclient import TestClient
+
+    from eigan.api.app import app
+
+    anon = TestClient(app)
+    r = anon.post("/api/v1/blue", json={"logs": [{"content": "x"}], "ai": False})
+    assert r.status_code == 401  # auth obrigatória (ADR-0014)

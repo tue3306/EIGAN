@@ -279,3 +279,46 @@ def test_pdf_status_returns_bool_and_detail():
     ok, detail = pdf_status()
     assert isinstance(ok, bool)
     assert isinstance(detail, str) and detail
+
+
+def test_cli_purple_command_smoke(tmp_path):
+    """`eigan purple` correlaciona scans persistidos e mostra cobertura/pontos cegos."""
+    from click.testing import CliRunner
+
+    from eigan.cli.main import cli
+    from eigan.findings.schema import Finding, Severity
+    from eigan.findings.store import FindingStore
+
+    db = str(tmp_path / "p.db")
+    store = FindingStore(db)
+    red = store.create_scan("red", "external/quick", ["h"])
+    store.add_findings(
+        red,
+        [
+            Finding(
+                title="Brute force web",
+                severity=Severity.HIGH,
+                affected_asset="h",
+                source_tool="nuclei",
+                attack_technique="T1110",
+            )
+        ],
+    )
+    store.finish_scan(red)
+    store.close()
+
+    result = CliRunner().invoke(cli, ["purple", str(red), "--db", db])
+    assert result.exit_code == 0
+    assert "Purple" in result.output and "cobertura" in result.output.lower()
+    # T1110 atacado sem detecção → é um ponto cego
+    assert "cego" in result.output.lower()
+
+
+def test_cli_purple_unknown_scan_errors(tmp_path):
+    from click.testing import CliRunner
+
+    from eigan.cli.main import cli
+
+    result = CliRunner().invoke(cli, ["purple", "999", "--db", str(tmp_path / "x.db")])
+    assert result.exit_code == 2
+    assert "não encontrado" in result.output

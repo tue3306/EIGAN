@@ -445,6 +445,75 @@ def purple_endpoint(req: PurpleRequest) -> dict:
     return out
 
 
+class BlueLogItem(BaseModel):
+    """Um arquivo de log ENVIADO pelo cliente (conteúdo, não caminho no servidor)."""
+
+    name: str = "log"
+    content: str = Field(min_length=1, max_length=8_000_000)  # teto de 8 MB por arquivo
+
+
+class BlueRequest(BaseModel):
+    logs: list[BlueLogItem] = Field(min_length=1, max_length=20)
+    ai: bool = True
+
+
+@app.post("/api/v1/blue", status_code=202)
+def blue_endpoint(req: BlueRequest) -> dict:
+    """Análise defensiva (Blue) de LOGS enviados pelo cliente (upload por conteúdo).
+
+    SEGURANÇA (§4/§5/ADR-0020): o cliente envia o CONTEÚDO do log, não um caminho —
+    a API **nunca** lê o filesystem do servidor por caminho arbitrário (sem path
+    traversal / leitura de arquivo local). O conteúdo é gravado num diretório
+    temporário isolado, analisado e apagado."""
+    import shutil
+    import tempfile
+    from pathlib import Path as _Path
+
+    from ..ai.provider import AIProviderRequired, require_provider
+    from ..engine.blue import run_log_analysis
+    from ..engine.feeds import FeedCache
+    from ..engine.risk import RiskScorer
+
+    try:
+        provider = require_provider() if req.ai else None
+    except AIProviderRequired as exc:
+        raise HTTPException(428, str(exc)) from exc
+
+    tmpdir = tempfile.mkdtemp(prefix="eigan-blue-")
+    try:
+        paths: list[str] = []
+        for i, item in enumerate(req.logs):
+            # nome saneado: só o basename, nunca componentes de caminho do cliente.
+            safe = _Path(item.name or f"log{i}").name or f"log{i}"
+            p = _Path(tmpdir) / f"{i}_{safe}"
+            p.write_text(item.content, encoding="utf-8", errors="replace")
+            paths.append(str(p))
+        store = _store()
+        risk = RiskScorer(FeedCache.load(), online=False)
+        try:
+            report = run_log_analysis(paths, store=store, risk=risk, provider=provider)
+        finally:
+            store.close()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)  # nunca deixa log do cliente no disco
+
+    return {
+        "scan_id": report.scan_id,
+        "detections": len(report.findings),
+        "sources": len(report.sources),
+        "ai_analysis": bool(report.analysis),
+        "findings": [
+            {
+                "title": f.title,
+                "severity": f.severity.value,
+                "attack_technique": f.attack_technique,
+                "affected_asset": f.affected_asset,
+            }
+            for f in report.findings
+        ],
+    }
+
+
 @app.post("/api/v1/jobs/{job_id}/chat")
 def job_chat(job_id: str, req: ChatRequest) -> dict:
     """Chat sobre um scan EM ANDAMENTO — usa as descobertas emitidas até agora."""

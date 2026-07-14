@@ -61,12 +61,26 @@ def test_context_neutralizes_poisoned_finding():
     assert "obey me now" in ctx or "obey me" in ctx
 
 
-def test_planner_summary_wraps_and_flags(caplog):
+def test_planner_summary_wraps_and_flags():
+    import logging
+
     from eigan.engine.cognitive.planner import _summarize_findings
 
-    with caplog.at_level("WARNING"):
+    # handler direto no logger do planner: robusto contra a config de logging global
+    # (propagate) que outros testes possam ter aplicado.
+    logger = logging.getLogger("eigan.cognitive.planner")
+    records: list[logging.LogRecord] = []
+    handler = logging.Handler()
+    handler.emit = records.append  # type: ignore[method-assign]
+    logger.addHandler(handler)
+    old_level = logger.level
+    logger.setLevel(logging.WARNING)
+    try:
         out = _summarize_findings(_poisoned_findings())
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(old_level)
     assert "NÃO-CONFIÁVEL" in out  # marcado como dado
     assert "\n" in out  # o wrapper tem quebras, mas cada finding é uma linha só
     # detecção logada (sinal útil de possível manipulação)
-    assert any("prompt-injection" in r.message for r in caplog.records)
+    assert any("prompt-injection" in r.getMessage() for r in records)

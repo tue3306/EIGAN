@@ -12,6 +12,14 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Added (Blue/Purple acessíveis no produto — ADR-0020)
+- **Menu** ganhou "Análise Blue (logs)" e "Correlação Purple" (era Red-only).
+- **CLI** `eigan purple <scan_ids...> [--ai]`: correlaciona Red×Blue, mostra
+  cobertura e pontos cegos (só existia via API).
+- **API** `POST /api/v1/blue`: análise de logs por **upload de conteúdo** (não
+  caminho no servidor) — sem leitura de FS arbitrário (§4/§5), tempdir isolado e
+  apagado, nome saneado; auth (ADR-0014) + gate AI-native preservados.
+
 ### Added (wordlists de verdade — SecLists, ADR-0019)
 - **Resolvedor central de wordlists** (`engine/wordlists.py`): detecta SecLists
   (ou `EIGAN_WORDLIST_DIR`) e escolhe por objetivo (content/params/dns) e tamanho
