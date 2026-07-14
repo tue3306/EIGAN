@@ -149,6 +149,66 @@ def scan(
 
 
 @cli.command()
+@click.argument("paths", nargs=-1, required=True, type=click.Path(exists=True))
+@click.option("--db", default="eigan.db", show_default=True)
+@click.option("--online-enrich", is_flag=True, help="Buscar EPSS (FIRST.org) p/ CVEs, se houver.")
+@click.option(
+    "--fail-on",
+    type=click.Choice([s.value for s in Severity]),
+    default=None,
+    help="Sai !=0 se houver detecção >= esta severidade (gate de CI).",
+)
+def blue(paths, db, online_enrich, fail_on):
+    """Análise defensiva (Blue) de LOGS — detecta ataques e mapeia MITRE ATT&CK.
+
+    Ex.: `eigan blue /var/log/auth.log /var/log/nginx/`. ALVO = arquivo ou
+    diretório de logs (SSH/PAM, acesso web CLF/Combined, sudo). As detecções
+    entram no mesmo dashboard/relatórios do Red e alimentam a correlação Purple.
+    AI-native (§3.4): exige um provedor — a IA analisa e prioriza as detecções.
+    """
+    from ..ai.provider import AIProviderRequired, require_provider
+    from ..engine.blue import run_log_analysis
+    from ..engine.risk import RiskScorer
+
+    try:
+        provider = require_provider()
+    except AIProviderRequired as exc:
+        click.secho(str(exc), fg="red", err=True)
+        sys.exit(3)
+
+    feeds = FeedCache.load()
+    risk = RiskScorer(feeds, online=online_enrich)
+    store = FindingStore(db)
+    click.echo(f"  Analisando {len(paths)} fonte(s) de log…")
+    try:
+        report = run_log_analysis(list(paths), store=store, risk=risk, provider=provider)
+    finally:
+        store.close()
+
+    click.secho(
+        f"\nBlue #{report.scan_id}: {len(report.findings)} detecção(ões) "
+        f"em {len(report.sources)} fonte(s) de log",
+        fg="green",
+    )
+    for f in report.findings:
+        click.echo(
+            f"  [{f.severity.value.upper():8}] {f.title}  "
+            f"ATT&CK={f.attack_technique or '—'}  ({f.affected_asset})"
+        )
+    if report.analysis:
+        click.echo(
+            "\nAnálise + plano de remediação da IA gerados. "
+            "Veja no dashboard (`eigan serve`) ou gere o relatório (`eigan report`)."
+        )
+    if fail_on:
+        threshold = Severity(fail_on).rank
+        worst = max((f.severity.rank for f in report.findings), default=-1)
+        if worst >= threshold:
+            click.secho(f"Gate CI: detecção >= {fail_on} encontrada.", fg="red", err=True)
+            sys.exit(1)
+
+
+@cli.command()
 @click.argument("targets", nargs=-1)
 @click.option(
     "--goal",

@@ -101,6 +101,12 @@ def default_agents() -> list[Agent]:
             capabilities=frozenset({C.DEPENDENCY_SCAN}),
             built=True,  # tools reais: trivy, grype (alvo = imagem/repo/filesystem)
         ),
+        Agent(
+            name="blue-detection",
+            description="Detecção defensiva sobre logs (SSH/web/sudo) mapeada a ATT&CK.",
+            capabilities=frozenset({C.LOG_ANALYSIS}),
+            built=True,  # tool real: log-analysis (nativo; alvo = arquivo/dir de log)
+        ),
     ]
 
 
