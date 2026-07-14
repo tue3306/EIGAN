@@ -10,9 +10,13 @@ de segredos/PII é aplicada pela camada de provedor antes de sair para a nuvem.
 
 from __future__ import annotations
 
+import logging
 from collections import Counter
 
 from ..findings.schema import Finding, Severity
+from .sanitize import has_injection_marker, neutralize, wrap_untrusted
+
+log = logging.getLogger("eigan.ai.context")
 
 _SEV_ORDER = [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO]
 
@@ -47,8 +51,16 @@ def build_scan_context(
         )
     counts = severity_counts(findings)
     tools = sorted({f.source_tool for f in findings})
-    assets = sorted({f.affected_asset for f in findings})[:20]
+    # Ativos e títulos vêm do ALVO → neutralizados antes de ir ao LLM (ADR-0016).
+    assets = [neutralize(a) for a in sorted({f.affected_asset for f in findings})[:20]]
     ranked = sorted(findings, key=lambda f: (_risk(f), f.severity.rank), reverse=True)
+    if any(
+        has_injection_marker(f.title) or has_injection_marker(f.affected_asset) for f in findings
+    ):
+        log.warning(
+            "contexto do scan contém finding com padrão de prompt-injection — "
+            "neutralizado e marcado como DADO (o grounding impede manipulação real)"
+        )
 
     lines: list[str] = [
         f"ALVO(S): {', '.join(targets or []) or '—'}",
@@ -73,9 +85,11 @@ def build_scan_context(
             if x
         )
         lines.append(
-            f"  {i}. [{f.severity.value.upper()}] (risco {risk}) {f.title} "
-            f"@ {f.affected_asset} — via {f.source_tool}" + (f"  [{extra}]" if extra else "")
+            f"  {i}. [{f.severity.value.upper()}] (risco {risk}) {neutralize(f.title)} "
+            f"@ {neutralize(f.affected_asset)} — via {f.source_tool}"
+            + (f"  [{extra}]" if extra else "")
         )
     if len(ranked) > max_findings:
         lines.append(f"  … (+{len(ranked) - max_findings} findings de menor risco omitidos)")
-    return "\n".join(lines)
+    # O bloco inteiro de findings é marcado como DADO não-confiável do alvo.
+    return wrap_untrusted("\n".join(lines))
