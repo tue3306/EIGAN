@@ -234,3 +234,9 @@ label { display: block; font-weight: 600; margin: 4px 0 10px; font-size: 15px; }
   font-size: 13.5px; line-height: 1.6; color: var(--text);
   white-space: normal; max-height: 420px; overflow-y: auto;
 }
+/* Plano de remediação (IA) — o que arrumar e como */
+.rem-summary { font-size: 13.5px; line-height: 1.55; color: var(--text); margin: 0 0 12px; }
+.rem-table { width: 100%; }
+.rem-table td { vertical-align: top; font-size: 12.5px; line-height: 1.5; }
+.rem-table th:first-child, .rem-table td:first-child { white-space: nowrap; }
+.rem-table td:nth-child(3), .rem-table td:nth-child(4) { min-width: 190px; }

@@ -20,6 +20,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, pass_context, select_autoescape
 
 from ..ai.provider import Enricher
+from ..ai.remediation import RemediationPlan
 from ..analysis.attack import map_attack
 from ..analysis.inventory import build_inventory, summarize
 from ..engine.correlation import AssetCorrelation, correlate_assets
@@ -49,6 +50,15 @@ _TOC_EXECUTIVE = [
     (5, "Cobertura MITRE ATT&CK"),
     (6, "Recomendações"),
 ]
+
+
+def _toc_with_remediation(
+    base: list[tuple[int, str]], plan: RemediationPlan | None
+) -> list[tuple[int, str]]:
+    """Acrescenta a seção 'Plano de remediação (IA)' ao índice só quando há plano."""
+    if plan is None or plan.is_empty():
+        return base
+    return [*base, (base[-1][0] + 1, "Plano de remediação (IA)")]
 
 
 def _dataset_hash(findings: list[Finding]) -> str:
@@ -151,6 +161,7 @@ class ReportGenerator:
         classification: str | Classification = "confidential",
         mask_sensitive: bool = True,
         scan_type: str = "",
+        ai_remediation: RemediationPlan | None = None,
     ) -> str:
         if style == "executive":
             return self.render_executive_html(
@@ -161,6 +172,7 @@ class ReportGenerator:
                 classification=classification,
                 mask_sensitive=mask_sensitive,
                 scan_type=scan_type,
+                ai_remediation=ai_remediation,
             )
         ctx = self._corporate_ctx(
             findings,
@@ -189,7 +201,8 @@ class ReportGenerator:
                 "kev_count": kev_count,
                 "attack": map_attack(findings),
                 "recommendations": self._recommendations(findings),
-                "toc": _TOC_TECHNICAL,
+                "ai_remediation": ai_remediation,
+                "toc": _toc_with_remediation(_TOC_TECHNICAL, ai_remediation),
             }
         )
         return self._env.get_template("report.html.j2").render(**ctx)
@@ -205,6 +218,7 @@ class ReportGenerator:
         classification: str | Classification = "confidential",
         mask_sensitive: bool = True,
         scan_type: str = "",
+        ai_remediation: RemediationPlan | None = None,
     ) -> str:
         correlations = correlate_assets(findings)
         ctx = self._corporate_ctx(
@@ -236,7 +250,8 @@ class ReportGenerator:
                 "executive_ai": ai,
                 "attack": map_attack(findings),  # Purple: cobertura ATT&CK + gap
                 "inventory_summary": summarize(inventory),  # Blue: números do inventário
-                "toc": _TOC_EXECUTIVE,
+                "ai_remediation": ai_remediation,
+                "toc": _toc_with_remediation(_TOC_EXECUTIVE, ai_remediation),
             }
         )
         return self._env.get_template("executive.html.j2").render(**ctx)
@@ -307,6 +322,7 @@ class ReportGenerator:
         classification: str | Classification = "confidential",
         mask_sensitive: bool = True,
         scan_type: str = "",
+        ai_remediation: RemediationPlan | None = None,
     ) -> Path:
         html = self.render_html(
             findings,
@@ -317,6 +333,7 @@ class ReportGenerator:
             classification=classification,
             mask_sensitive=mask_sensitive,
             scan_type=scan_type,
+            ai_remediation=ai_remediation,
         )
         out = Path(out_path)
         # PDF é opcional (§12): ImportError = extra ausente; OSError = libs

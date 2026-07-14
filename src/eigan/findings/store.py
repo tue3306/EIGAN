@@ -63,6 +63,9 @@ class FindingStore:
         if "ai_analysis" not in cols:
             # Análise da IA (Analysis Engine) persistida junto do scan.
             self._conn.execute("ALTER TABLE scans ADD COLUMN ai_analysis TEXT")
+        if "ai_remediation" not in cols:
+            # Plano de remediação da IA (o que arrumar + como) — JSON estruturado.
+            self._conn.execute("ALTER TABLE scans ADD COLUMN ai_remediation TEXT")
 
     def create_scan(self, engagement: str, profile: str, targets: list[str]) -> int:
         cur = self._conn.execute(
@@ -88,6 +91,19 @@ class FindingStore:
     def get_analysis(self, scan_id: int) -> str | None:
         row = self._conn.execute("SELECT ai_analysis FROM scans WHERE id=?", (scan_id,)).fetchone()
         return row["ai_analysis"] if row and row["ai_analysis"] else None
+
+    def set_remediation(self, scan_id: int, remediation_json: str) -> None:
+        """Grava o plano de remediação da IA (JSON estruturado) do scan."""
+        self._conn.execute(
+            "UPDATE scans SET ai_remediation=? WHERE id=?", (remediation_json, scan_id)
+        )
+        self._conn.commit()
+
+    def get_remediation(self, scan_id: int) -> str | None:
+        row = self._conn.execute(
+            "SELECT ai_remediation FROM scans WHERE id=?", (scan_id,)
+        ).fetchone()
+        return row["ai_remediation"] if row and row["ai_remediation"] else None
 
     def add_findings(self, scan_id: int, findings: Iterable[Finding]) -> int:
         n = 0

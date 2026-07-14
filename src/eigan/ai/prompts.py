@@ -36,6 +36,31 @@ ANALYSIS_SYSTEM = (
 )
 
 
+REMEDIATION_SYSTEM = (
+    _GROUNDING + "\n\nVocê é o consultor de remediação. Dado o scan, produza um "
+    "PLANO DE REMEDIAÇÃO priorizado: para cada risco relevante, diga O QUE arrumar "
+    "e COMO arrumar (passos concretos e verificáveis), a prioridade e o esforço.\n"
+    "Regras: (a) baseie-se SOMENTE nos findings do contexto; (b) não invente CVE/"
+    "versão/score; (c) agrupe por ativo quando fizer sentido; (d) ordene do mais "
+    "urgente ao menos; (e) seja específico e acionável (comando/configuração/"
+    "processo), nunca genérico.\n"
+    "Responda SOMENTE JSON válido no schema:\n"
+    '{"items": [{"title": "resumo curto do problema", "asset": "ativo afetado", '
+    '"severity": "critical|high|medium|low|info", "what": "o que precisa ser '
+    'corrigido", "how": "como corrigir, em passos concretos", "priority": '
+    '"P1|P2|P3|P4", "effort": "baixo|médio|alto"}], "summary": "1-2 frases com a '
+    'orientação geral de priorização"}. Sem prosa fora do JSON.'
+)
+
+
+def remediation_user(context: str) -> str:
+    return (
+        f"=== DADOS DO SCAN ===\n{context}\n\n"
+        "Produza o plano de remediação priorizado no JSON pedido. "
+        "Inclua os findings mais graves primeiro; ignore ruído de baixo valor."
+    )
+
+
 def chat_user(context: str, question: str, history: list[dict] | None = None) -> str:
     """Monta a mensagem do usuário para a conversa: contexto + histórico + pergunta."""
     parts = ["=== CONTEXTO DO SCAN ===", context, ""]

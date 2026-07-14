@@ -259,11 +259,17 @@ class ScanManager:
             # num scan vazio). Persistida com o scan; degrada sem quebrar.
             if report.scan_id is not None and report.findings:
                 sink.emit(ev.log("[análise] IA correlacionando os achados e concluindo…"))
-                from ..analysis.engine import analyze_and_store
+                from ..analysis.engine import analyze_and_store, remediate_and_store
 
                 text = analyze_and_store(store, report.scan_id, provider=completion)
                 if text:
                     sink.emit({"type": "analysis", "scan_id": report.scan_id, "text": text})
+                # Plano de remediação da IA (o que arrumar + como): auto, ao fim do
+                # scan — o operador não precisa clicar. Degrada sem quebrar.
+                sink.emit(ev.log("[remediação] IA montando o plano de correção priorizado…"))
+                rem = remediate_and_store(store, report.scan_id, provider=completion)
+                if rem:
+                    sink.emit({"type": "remediation", "scan_id": report.scan_id})
             store.close()
             job.status = "completed"
             log.info(

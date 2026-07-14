@@ -59,6 +59,16 @@ def write_report(
     gen, enricher = build_generator(use_ai=use_ai, feeds_meta=feeds_meta)
     out_path = Path(out or f"report_scan_{scan_id}_{style}.{fmt}")
 
+    # Plano de remediação da IA (o que arrumar + como): reusa o gerado ao fim do
+    # scan (web) ou gera sob demanda quando --ai (1 chamada, barata). Degrada sem
+    # quebrar — formatos de máquina (json/csv/sarif) são serialização pura.
+    ai_remediation = _load_remediation(store, scan_id) if fmt not in _MACHINE else None
+    if ai_remediation is None and use_ai and fmt not in _MACHINE:
+        from ..analysis.engine import remediate_and_store
+
+        remediate_and_store(store, scan_id)  # nunca levanta; persiste se houver
+        ai_remediation = _load_remediation(store, scan_id)
+
     if fmt in _MACHINE:
         out_path.write_text(gen.export(findings, fmt, engagement=engagement, targets=targets))
     elif fmt in ("md", "markdown"):
@@ -71,6 +81,7 @@ def write_report(
                 targets=targets,
                 scan_type=scan_type,
                 ai_analysis=store.get_analysis(scan_id) or "",
+                ai_remediation=ai_remediation,
                 tool_version=TOOL_VERSION,
                 feeds_meta=feeds_meta,
             )
@@ -85,6 +96,7 @@ def write_report(
                 classification=classification,
                 mask_sensitive=mask,
                 scan_type=scan_type,
+                ai_remediation=ai_remediation,
             )
         )
     else:  # pdf
@@ -97,5 +109,13 @@ def write_report(
             classification=classification,
             mask_sensitive=mask,
             scan_type=scan_type,
+            ai_remediation=ai_remediation,
         )
     return out_path, enricher.ai_enabled
+
+
+def _load_remediation(store: FindingStore, scan_id: int):
+    """Plano de remediação já persistido para o scan (ou ``None``)."""
+    from ..ai.remediation import plan_from_json
+
+    return plan_from_json(store.get_remediation(scan_id))

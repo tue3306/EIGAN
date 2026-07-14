@@ -9,9 +9,13 @@ IA** é injetada quando existe (Analysis Engine).
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from ..ai.context import severity_counts
 from ..findings.schema import Finding, Severity
+
+if TYPE_CHECKING:
+    from ..ai.remediation import RemediationPlan
 
 _SEV_EMOJI = {
     Severity.CRITICAL: "🔴",
@@ -58,6 +62,7 @@ def render_markdown(
     targets: list[str] | None = None,
     scan_type: str = "",
     ai_analysis: str = "",
+    ai_remediation: "RemediationPlan | None" = None,
     tool_version: str = "",
     feeds_meta: dict | None = None,
 ) -> str:
@@ -143,6 +148,34 @@ def render_markdown(
             if f.evidence:
                 L.append(f"- **Evidência:** `{f.evidence[:200].strip()}`")
             L.append("")
+
+    # Plano de remediação da IA (o que arrumar + como)
+    if ai_remediation is not None and not ai_remediation.is_empty():
+        L.append("## Plano de remediação priorizado (IA)")
+        L.append("")
+        L.append(
+            "> Sugestões geradas por IA (*o que corrigir e como*), priorizadas por risco. "
+            "Grounded nos achados; revise antes de aplicar."
+        )
+        L.append("")
+        if ai_remediation.summary.strip():
+            L.append(ai_remediation.summary.strip())
+            L.append("")
+        if ai_remediation.items:
+            L.append("| Prio. | Problema / Ativo | O que corrigir | Como corrigir | Esforço |")
+            L.append("|-------|------------------|----------------|---------------|---------|")
+            for it in ai_remediation.items:
+                asset = f" (`{it.asset}`)" if it.asset else ""
+                title = (it.title or "—").replace("|", "\\|")
+                what = (it.what or "—").replace("|", "\\|")
+                how = (it.how or "—").replace("|", "\\|")
+                L.append(
+                    f"| {it.priority or '—'} | {title}{asset} | {what} | {how} | "
+                    f"{it.effort or '—'} |"
+                )
+        elif ai_remediation.text.strip():
+            L.append(ai_remediation.text.strip())
+        L.append("")
 
     L.append("## Recomendações e próximos passos")
     L.append("")

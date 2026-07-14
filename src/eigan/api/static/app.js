@@ -133,6 +133,41 @@ async function aiAnalysisPanel(mount, scanId) {
   catch (e) { mount.innerHTML = `<div class="muted small">${e === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Análise indisponível.'}</div>`; }
 }
 
+const PRIO_CLASS = { P1: 's-critical', P2: 's-high', P3: 's-medium', P4: 's-low' };
+function remediationHTML(plan) {
+  if (!plan || (!plan.items || !plan.items.length) && !plan.summary && !plan.text)
+    return '<div class="muted small">Sem plano de remediação (nenhum achado acionável ou IA indisponível).</div>';
+  let h = '';
+  if (plan.summary) h += `<p class="rem-summary">${esc(plan.summary).replace(/\n/g, '<br>')}</p>`;
+  if (plan.items && plan.items.length) {
+    h += `<div class="tablewrap"><table class="rem-table">
+      <thead><tr><th>Prio.</th><th>Problema / Ativo</th><th>O que corrigir</th><th>Como corrigir</th><th>Esforço</th></tr></thead>
+      <tbody>${plan.items.map((it) => `<tr>
+        <td><span class="pill ${PRIO_CLASS[(it.priority || '').toUpperCase()] || 's-info'}">${esc(it.priority || '—')}</span></td>
+        <td><strong>${esc(it.title || '—')}</strong>${it.asset ? `<br><span class="mono small">${esc(it.asset)}</span>` : ''}</td>
+        <td>${esc(it.what || '—').replace(/\n/g, '<br>')}</td>
+        <td>${esc(it.how || '—').replace(/\n/g, '<br>')}</td>
+        <td>${esc(it.effort || '—')}</td></tr>`).join('')}</tbody></table></div>`;
+  } else if (plan.text) {
+    h += `<div class="ai-analysis">${esc(plan.text).replace(/\n/g, '<br>')}</div>`;
+  }
+  return h;
+}
+async function aiRemediationPanel(mount, scanId) {
+  const render = (plan) => {
+    mount.innerHTML = remediationHTML(plan) +
+      `<button class="btn-ghost" id="remregen" style="margin-top:8px">↻ Regerar plano</button>`;
+    el('remregen').onclick = async () => {
+      mount.innerHTML = '<div class="muted small">⏳ a IA está remontando o plano…</div>';
+      try { const r = await apiPost('/scans/' + scanId + '/remediation', {}); render(r.remediation); }
+      catch (e) { mount.innerHTML = `<div class="muted small">${e.status === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Falha ao regerar.'}</div>`; }
+    };
+  };
+  mount.innerHTML = '<div class="muted small">⏳ a IA está montando o plano de correção priorizado…</div>';
+  try { const r = await api('/scans/' + scanId + '/remediation'); render(r.remediation); }
+  catch (e) { mount.innerHTML = `<div class="muted small">${e === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Plano de remediação indisponível.'}</div>`; }
+}
+
 // ── Shell / router ────────────────────────────────────────────────────────────
 const ROUTES = [
   { re: /^#\/new/, view: viewWizard },
@@ -289,6 +324,8 @@ async function viewScanDetail(root, scanId) {
       <div class="card"><h2>✨ Análise da IA</h2><div id="aianalysis"></div></div>
       <div class="card"><h2>💬 Converse com a IA</h2><div id="aichat"></div></div>
     </div>
+    <div class="card" style="margin-bottom:14px"><h2>🛠️ Plano de remediação (IA) — o que arrumar e como</h2>
+      <div id="airemediation"></div></div>
     <div class="card" style="margin-bottom:14px"><div class="between wrap"><h2 style="margin:0">Findings</h2></div>
       <div id="ftable"></div></div>
     <div class="card"><div class="between"><h2 style="margin:0">Inventário de ativos</h2>
@@ -302,6 +339,7 @@ async function viewScanDetail(root, scanId) {
       </table></div></div>`;
   findingsTable(el('ftable'), fnd.findings || []);
   aiAnalysisPanel(el('aianalysis'), scanId);
+  aiRemediationPanel(el('airemediation'), scanId);
   chatPanel(el('aichat'), '/scans/' + scanId + '/chat');
 }
 

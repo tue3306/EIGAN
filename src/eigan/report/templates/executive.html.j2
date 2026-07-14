@@ -83,4 +83,28 @@
   <h2>6. Recomendações</h2>
   <ol>{% for rec in recommendations %}<li>{{ rec }}</li>{% endfor %}</ol>
 
+  {% if ai_remediation %}
+  <h2>7. Plano de remediação priorizado (IA)</h2>
+  <p class="muted small">Sugestões geradas por IA — <em>o que corrigir e como</em>, priorizado.
+     Grounded nos achados; revise antes de aplicar.</p>
+  {% if ai_remediation.summary %}<p>{{ ai_remediation.summary }}</p>{% endif %}
+  {% if ai_remediation.items %}
+  <table>
+    <thead><tr><th>Prio.</th><th>Problema / Ativo</th><th>O que corrigir</th>
+      <th>Como corrigir</th><th>Esforço</th></tr></thead>
+    <tbody>
+    {% for it in ai_remediation.items %}
+      <tr>
+        <td>{{ it.priority or "—" }}</td>
+        <td><strong>{{ it.title }}</strong>{% if it.asset %}<br><span class="mono small">{{ it.asset }}</span>{% endif %}</td>
+        <td>{{ it.what }}</td>
+        <td>{{ it.how }}</td>
+        <td>{{ it.effort or "—" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% elif ai_remediation.text %}<p>{{ ai_remediation.text }}</p>{% endif %}
+  {% endif %}
+
 {% endblock %}

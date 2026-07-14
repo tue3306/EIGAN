@@ -123,9 +123,12 @@ _DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"  # verificado (claude-api skill)
 _ANTHROPIC_VERSION = "2023-06-01"
 # Orçamento de saída generoso: modelos de raciocínio (GPT-5, o-series) gastam
 # tokens "pensando" que contam contra este teto — com pouco, retornariam vazio e
-# a IA pareceria "configurada mas não funciona". 2048 cobre raciocínio + narrativa
-# curta com folga. Ajustável por env EIGAN_AI_MAX_TOKENS.
-_MAX_TOKENS = 2048
+# a IA pareceria "configurada mas não funciona" (foi um bug real: 2048 era
+# integralmente consumido pelo raciocínio do GPT-5 em tarefas de geração rica —
+# remediação/análise — devolvendo conteúdo vazio). 4096 + `reasoning_effort` baixo
+# (ver `_openai_reasoning_effort`) cobrem raciocínio + narrativa com folga.
+# Ajustável por env EIGAN_AI_MAX_TOKENS.
+_MAX_TOKENS = 4096
 _TIMEOUT = 60.0  # provedores de nuvem (rede)
 
 
@@ -137,6 +140,28 @@ def _max_tokens() -> int:
         except ValueError:
             pass
     return _MAX_TOKENS
+
+
+# Modelos de raciocínio da OpenAI aceitam `reasoning_effort` (minimal|low|medium|
+# high). Sem ele, o GPT-5 usa esforço "medium" por padrão e pode gastar TODO o
+# `max_completion_tokens` só raciocinando → conteúdo vazio. Verificado ao vivo:
+# `low` corta o raciocínio (192 tok) e devolve a saída completa em ~10s (vs. 22s
+# e VAZIO no default). Só se aplica a modelos de raciocínio (gpt-5*, o1/o3/o4*).
+_OPENAI_REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+
+
+def _openai_reasoning_effort(model: str) -> str | None:
+    """`reasoning_effort` a enviar para ``model`` (ou None se não se aplica).
+
+    Default ``low`` (bom equilíbrio custo/qualidade em geração estruturada);
+    ajustável por env ``EIGAN_OPENAI_REASONING_EFFORT`` (``none`` desliga)."""
+    m = (model or "").strip().lower()
+    if not any(m.startswith(p) for p in _OPENAI_REASONING_PREFIXES):
+        return None
+    eff = (os.getenv("EIGAN_OPENAI_REASONING_EFFORT") or "low").strip().lower()
+    if eff in ("none", "off", ""):
+        return None
+    return eff if eff in ("minimal", "low", "medium", "high") else "low"
 
 
 # ── Tiers de qualidade (baixo/médio/alto) ──────────────────────────────────── #
@@ -351,6 +376,7 @@ class _OpenAICompatProvider(_HTTPProvider):
         # a palavra "JSON", exigência da API). Elimina o JSON malformado do GPT-5.
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
+        payload.update(self._extra_payload())
         data = self._post(
             f"{self._base_url}/chat/completions",
             headers=self._auth_headers(),
@@ -359,12 +385,22 @@ class _OpenAICompatProvider(_HTTPProvider):
         msg = data["choices"][0].get("message", {})
         return str(msg.get("content") or "")
 
+    def _extra_payload(self) -> dict[str, Any]:
+        """Campos extras específicos do provedor (hook). Base: nenhum."""
+        return {}
+
 
 class OpenAIProvider(_OpenAICompatProvider):
     default_base_url = "https://api.openai.com/v1"
     # A API nativa da OpenAI (gpt-4o em diante e toda a série GPT-5) usa
     # ``max_completion_tokens``; ``max_tokens`` retorna HTTP 400 nos modelos novos.
     token_param = "max_completion_tokens"
+
+    def _extra_payload(self) -> dict[str, Any]:
+        # Modelos de raciocínio (GPT-5, o-series): envia `reasoning_effort` baixo
+        # para não gastar todo o orçamento raciocinando e devolver vazio (§3.4).
+        eff = _openai_reasoning_effort(self._model)
+        return {"reasoning_effort": eff} if eff else {}
 
 
 class OpenRouterProvider(_OpenAICompatProvider):

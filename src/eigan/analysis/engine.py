@@ -68,3 +68,55 @@ def analyze_and_store(
     if text:
         store.set_analysis(scan_id, text)
     return text
+
+
+def remediate_scan(
+    findings: list[Finding],
+    *,
+    engagement: str = "",
+    targets: list[str] | None = None,
+    profile: str = "",
+    provider: CompletionPort | None = None,
+):
+    """Plano de remediação da IA (o que arrumar + como) sobre os findings do scan."""
+    from ..ai.remediation import remediation_plan
+
+    context = build_scan_context(
+        findings, engagement=engagement, targets=targets or [], profile=profile
+    )
+    return remediation_plan(context, provider=provider)
+
+
+def remediate_and_store(
+    store: "FindingStore", scan_id: int, *, provider: CompletionPort | None = None
+) -> str | None:
+    """Gera o plano de remediação da IA para ``scan_id`` e persiste (JSON). Nunca
+    levanta — retorna o JSON do plano ou ``None`` (sem findings / falha logada)."""
+    from ..ai.remediation import plan_to_json
+
+    meta = store.get_scan(scan_id)
+    if not meta:
+        return None
+    findings = store.get_findings(scan_id)
+    if not findings:
+        return None
+    try:
+        targets = json.loads(meta.get("targets") or "[]")
+    except (json.JSONDecodeError, TypeError):
+        targets = []
+    try:
+        plan = remediate_scan(
+            findings,
+            engagement=meta.get("engagement", ""),
+            targets=targets,
+            profile=meta.get("profile", ""),
+            provider=provider,
+        )
+    except Exception as exc:  # noqa: BLE001 — falha de IA nunca derruba o scan
+        log.warning("Remediation Engine falhou para o scan %s: %s", scan_id, exc)
+        return None
+    if plan.is_empty():
+        return None
+    blob = plan_to_json(plan)
+    store.set_remediation(scan_id, blob)
+    return blob

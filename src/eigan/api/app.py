@@ -279,6 +279,54 @@ def regen_scan_analysis(scan_id: int) -> dict:
     return {"analysis": _ai_or_http(lambda: _generate_analysis(store, scan_id)), "cached": False}
 
 
+def _remediation_dict(store: FindingStore, scan_id: int) -> dict:
+    """Gera (ou regenera) o plano de remediação e devolve como dict serializável."""
+    import json as _json
+
+    from ..ai.remediation import plan_to_json
+    from ..analysis.engine import remediate_scan
+
+    meta_ = store.get_scan(scan_id)
+    assert meta_ is not None  # chamador valida antes
+    findings = store.get_findings(scan_id)
+    targets = _json.loads(meta_.get("targets") or "[]")
+    plan = remediate_scan(
+        findings,
+        engagement=meta_.get("engagement", ""),
+        targets=targets,
+        profile=meta_.get("profile", ""),
+    )
+    if not plan.is_empty():
+        store.set_remediation(scan_id, plan_to_json(plan))
+    return plan.model_dump()
+
+
+@app.get("/api/v1/scans/{scan_id}/remediation")
+def get_scan_remediation(scan_id: int) -> dict:
+    """Plano de remediação da IA (o que arrumar + como, priorizado).
+
+    Retorna o plano **automático** gerado ao fim do scan; se ainda não houver,
+    gera sob demanda e persiste (grounded nos findings; §3.1)."""
+    from ..ai.remediation import plan_from_json
+
+    store = _store()
+    if not store.get_scan(scan_id):
+        raise HTTPException(404, "scan não encontrado")
+    stored = plan_from_json(store.get_remediation(scan_id))
+    if stored is not None:
+        return {"remediation": stored.model_dump(), "cached": True}
+    return {"remediation": _ai_or_http(lambda: _remediation_dict(store, scan_id)), "cached": False}
+
+
+@app.post("/api/v1/scans/{scan_id}/remediation")
+def regen_scan_remediation(scan_id: int) -> dict:
+    """Regera o plano de remediação da IA (sobrescreve o armazenado)."""
+    store = _store()
+    if not store.get_scan(scan_id):
+        raise HTTPException(404, "scan não encontrado")
+    return {"remediation": _ai_or_http(lambda: _remediation_dict(store, scan_id)), "cached": False}
+
+
 # ── merge/correlação entre scans (ex.: scans simultâneos) ────────────────────
 class MergeRequest(BaseModel):
     """IDs de scans a correlacionar num relatório unificado (>= 2)."""
