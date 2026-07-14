@@ -12,6 +12,17 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Security (Policy Engine ligado no loop — ADR-0011 Fase 3)
+- **A política arbitra CADA ação ativa** antes de tocar a rede (§7): o
+  `CognitiveEngine` submete cada ferramenta×alvo ao `PolicyEngine.vet()` →
+  executar / aprovação humana (HITL) / recusar por `ImpactClass`. Antes o `vet()`
+  existia mas NÃO estava ligado (só o gate de escopo rodava).
+- **HITL:** aprovação delegada a um `ApprovalPort` — CLI pergunta ao operador
+  (`--yes` auto-aprova), API auto-aprova sob o consent do engajamento e audita.
+  `exploit_validation` (sqlmap/dalfox) sempre gated (allow_exploit + HITL); tetos
+  por perfil: standard/deep autônomo até `active_intrusive`, quick conservador.
+  Vereditos auditáveis na timeline (`[política] …`) e nas decisões.
+
 ### Added (expansão de alvos dirigida por descoberta — ADR-0018)
 - **O agente agora escaneia o que a recon descobre** (furo central corrigido): o
   engine só escaneava os alvos ORIGINAIS. Agora subdomínios/IPs/hosts descobertos

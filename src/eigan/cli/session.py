@@ -36,6 +36,30 @@ class ScanOutcome:
     feeds_meta: dict
 
 
+class _CliApprover:
+    """Aprovação humana (HITL) na CLI (ADR-0011): pergunta ao operador quando a
+    política marca uma ação como NEEDS_APPROVAL. ``--yes`` (assume_yes) auto-aprova
+    (o consent não-interativo já autorizou o engajamento)."""
+
+    _YES = {"s", "sim", "y", "yes"}
+
+    def __init__(self, assume_yes: bool, input_fn, echo) -> None:
+        self._yes = assume_yes
+        self._input = input_fn
+        self._echo = echo
+
+    def approve(self, action) -> bool:
+        if self._yes:
+            return True
+        prompt = (
+            f"[HITL] Aprovar {action.tool} ({action.impact_class.value}) → {action.target}? [s/N]: "
+        )
+        try:
+            return self._input(prompt).strip().lower() in self._YES
+        except (EOFError, KeyboardInterrupt):
+            return False
+
+
 class _ProgressSink:
     """Adapta os eventos do :class:`CognitiveEngine` para o callback textual do
     CLI/wizard — o operador vê a IA **raciocinar** (plano/replan) e as ferramentas
@@ -133,8 +157,13 @@ def plan_scan(
     feeds = FeedCache.load()
     risk = RiskScorer(feeds, online=online_enrich)
     store = FindingStore(db)
-    engine = CognitiveEngine(registry, risk=risk, store=store, completion=completion)
-    report = engine.run(goal, scope=scope, override_perspective=override_perspective)
+    approver = _CliApprover(assume_yes, input_fn, echo)
+    engine = CognitiveEngine(
+        registry, risk=risk, store=store, completion=completion, approver=approver
+    )
+    report = engine.run(
+        goal, scope=scope, override_perspective=override_perspective, allow_exploit=True
+    )
     return PlanOutcome(
         goal=goal,
         planner_name=report.planner_name,
@@ -210,11 +239,15 @@ def execute_scan(
     risk = RiskScorer(feeds, online=online_enrich)
     store = FindingStore(db)
     registry = PluginRegistry.discover()
-    engine = CognitiveEngine(registry, risk=risk, store=store, completion=completion)
+    approver = _CliApprover(assume_yes, input_fn, echo)
+    engine = CognitiveEngine(
+        registry, risk=risk, store=store, completion=completion, approver=approver
+    )
     report = engine.run(
         goal,
         scope=scope,
         override_perspective=override_perspective,
+        allow_exploit=True,
         sink=_ProgressSink(progress),
     )
     return ScanOutcome(report=report, feeds_meta=feeds_meta(feeds))

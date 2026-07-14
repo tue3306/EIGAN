@@ -239,7 +239,17 @@ class ScanManager:
             # EIGAN: a IA comanda o scan (AgenticPlanner) quando disponível; senão
             # o loop determinístico. A cascata declarativa é o piso de segurança.
             completion = _ai_completion(job.use_ai)
-            engine = CognitiveEngine(self._registry, risk=risk, store=store, completion=completion)
+            # Policy Engine (ADR-0011): sob o consent do engajamento, ações HITL são
+            # auto-aprovadas (e auditadas na timeline); exploit exige allow_exploit.
+            from ..policy.engine import AutoApprove
+
+            engine = CognitiveEngine(
+                self._registry,
+                risk=risk,
+                store=store,
+                completion=completion,
+                approver=AutoApprove(),
+            )
             goal = Goal.build(
                 _GOAL_BY_PERSPECTIVE.get(perspective, GoalKind.ATTACK_SURFACE),
                 job.targets,
@@ -253,7 +263,16 @@ class ScanManager:
             from ..engine.tuning import tool_options
 
             opts = tool_options(profile, perspective)
-            report = engine.run(goal, scope=scope, override_perspective=override, sink=sink, **opts)
+            # allow_exploit=True: o consent do engajamento autoriza validação de
+            # exploração (sqlmap/dalfox não-destrutivos); a política ainda a gate via HITL.
+            report = engine.run(
+                goal,
+                scope=scope,
+                override_perspective=override,
+                allow_exploit=True,
+                sink=sink,
+                **opts,
+            )
             # Analysis Engine (auto): a IA analisa o scan inteiro e conclui — o
             # usuário não precisa clicar. Só roda quando há achados (nada a analisar
             # num scan vazio). Persistida com o scan; degrada sem quebrar.

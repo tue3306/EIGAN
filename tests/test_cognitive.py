@@ -485,8 +485,10 @@ def test_engine_refuses_out_of_scope_target():
     # objetivo mira um alvo NÃO autorizado → cada execução é recusada pelo escopo.
     goal = Goal.build(GoalKind.ATTACK_SURFACE, ["attacker-controlled.example.net"])
     report = engine.run(goal, scope=scope)
-    skipped = [d for d in report.decisions if d.action == "skipped"]
-    assert skipped and all("fora de escopo" in d.detail for d in skipped)
+    # o Policy Engine (ADR-0011) recusa antes de tocar a rede: ação 'rejected'
+    # (o gate de escopo é a 1ª regra do vet). Fica registrado com o motivo.
+    blocked = [d for d in report.decisions if d.action in ("rejected", "skipped")]
+    assert blocked and all("fora de escopo" in d.detail for d in blocked)
     assert not report.findings  # nada rodou contra o alvo não autorizado
 
 
@@ -612,3 +614,68 @@ def test_target_expansion_cap_prevents_explosion():
     engine.run(goal, scope=scope, execution=port)
     scanned_hosts = {t for _, t in port.calls}
     assert "app.example.com" not in scanned_hosts
+
+
+# --------------------------------------------------------------------------- #
+# Policy Engine no loop (ADR-0011 Fase 3): vet() por ação
+# --------------------------------------------------------------------------- #
+from eigan.policy.impact import ImpactClass as _IC  # noqa: E402
+
+
+def _intrusive_registry():
+    # naabu (active_safe) + um scanner active_intrusive (vuln_template_scan está na
+    # estratégia ATTACK_SURFACE e roteia ao agente recon, built). quick → teto active_safe.
+    naabu = _spec(
+        "naabu", (C.PORT_DISCOVERY,), findings=[_finding("Porta 443", "example.com:443", "naabu")]
+    )
+    nuclei = _spec(
+        "nuclei",
+        (C.VULN_TEMPLATE_SCAN,),
+        findings=[_finding("CVE detectado", "example.com", "nuclei")],
+    )
+    object.__setattr__(nuclei.metadata, "impact_class", _IC.ACTIVE_INTRUSIVE)
+    return PluginRegistry([naabu, nuclei])
+
+
+class _YesApprover:
+    def __init__(self):
+        self.asked = []
+
+    def approve(self, action):
+        self.asked.append((action.tool, action.impact_class.value))
+        return True
+
+
+def test_policy_blocks_intrusive_without_approver():
+    # perfil quick (teto active_safe) + sem aprovador → active_intrusive é bloqueada.
+    reg = _intrusive_registry()
+    engine = CognitiveEngine(reg)  # approver=None
+    scope = build_scope(None, ["example.com"], P.EXTERNAL)
+    goal = Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"], profile="quick")
+    report = engine.run(goal, scope=scope)
+    actions = {(d.tool, d.action) for d in report.decisions}
+    assert ("nuclei", "blocked") in actions  # HITL sem aprovador → bloqueada
+    # passiva/active_safe (naabu) roda normalmente
+    assert any(d.tool == "naabu" and d.action == "executed" for d in report.decisions)
+
+
+def test_policy_approver_authorizes_intrusive():
+    reg = _intrusive_registry()
+    approver = _YesApprover()
+    engine = CognitiveEngine(reg, approver=approver)
+    scope = build_scope(None, ["example.com"], P.EXTERNAL)
+    goal = Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"], profile="quick")
+    report = engine.run(goal, scope=scope, allow_exploit=True)
+    # o aprovador foi consultado para a ação intrusiva e ela rodou
+    assert ("nuclei", "active_intrusive") in approver.asked
+    assert any(d.tool == "nuclei" and d.action == "executed" for d in report.decisions)
+
+
+def test_policy_standard_profile_runs_intrusive_autonomously():
+    # perfil standard eleva o teto p/ active_intrusive → roda sem HITL (após consent).
+    reg = _intrusive_registry()
+    engine = CognitiveEngine(reg)  # sem aprovador — mas standard não precisa p/ intrusiva
+    scope = build_scope(None, ["example.com"], P.EXTERNAL)
+    goal = Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"], profile="standard")
+    report = engine.run(goal, scope=scope)
+    assert any(d.tool == "nuclei" and d.action == "executed" for d in report.decisions)

@@ -28,6 +28,12 @@ from ...findings.dedup import deduplicate
 from ...findings.schema import Finding
 from ...findings.store import FindingStore
 from ...perspective import Perspective
+from ...policy.engine import (
+    PolicyEngine,
+    ProposedAction,
+    Verdict,
+    ceiling_for_profile,
+)
 from ...security.scope import Scope, ScopeViolation
 from .. import events as ev
 from ..cascade import CascadeGraph
@@ -56,6 +62,16 @@ class ExecutionPort(Protocol):
     def execute(
         self, spec: PluginSpec, target: str, perspective: Perspective, **opts
     ) -> list[Finding]: ...
+
+
+class ApprovalPort(Protocol):
+    """Aprovação humana (HITL) de uma ação que a política marcou NEEDS_APPROVAL.
+
+    Retorna ``True`` para autorizar a execução, ``False`` para pular. O CLI pergunta
+    ao operador (a menos que ``--yes``); a API auto-aprova sob o consent do
+    engajamento (e audita). Ausente (``None``) ⇒ ação HITL é **bloqueada** (seguro)."""
+
+    def approve(self, action: ProposedAction) -> bool: ...
 
 
 @dataclass
@@ -151,7 +167,11 @@ class CognitiveEngine:
         risk: Optional[RiskScorer] = None,
         store: Optional[FindingStore] = None,
         completion: Optional[CompletionPort] = None,
+        approver: Optional[ApprovalPort] = None,
     ) -> None:
+        # Aprovador HITL (ADR-0011 Fase 3): chamado quando a política pede aprovação
+        # humana. None ⇒ ações HITL são bloqueadas (seguro por padrão).
+        self._approver = approver
         self._registry = registry if registry is not None else PluginRegistry.discover()
         self._graph = CascadeGraph.from_registry(self._registry)
         self._agents = agents if agents is not None else AgentRegistry.default()
@@ -229,13 +249,24 @@ class CognitiveEngine:
         scope: Scope,
         execution: Optional[ExecutionPort] = None,
         override_perspective: bool = False,
+        allow_exploit: bool = False,
         sink: Optional[EventSink] = None,
         **tool_opts,
     ) -> CognitiveReport:
         """Executa o loop cognitivo. O chamador deve ter passado pelo consent gate
         (autorização) antes; aqui o escopo é revalidado por alvo (defesa em
-        profundidade)."""
+        profundidade) e **cada ação ativa passa pelo Policy Engine** (ADR-0011)."""
         emitter: EventSink = sink if sink is not None else NullSink()
+        # Policy Engine (ADR-0011 Fase 3): arbitra CADA ação ativa antes de tocar a
+        # rede — executar / aprovação humana (HITL) / recusar por ImpactClass. O teto
+        # autônomo vem do perfil; exploit_validation exige allow_exploit + HITL.
+        policy = PolicyEngine(
+            scope=scope,
+            perspective=goal.perspective,
+            allow_exploit=allow_exploit,
+            auto_approve_ceiling=ceiling_for_profile(goal.profile),
+            override_perspective=override_perspective,
+        )
         exec_port: ExecutionPort = (
             execution
             if execution is not None
@@ -367,6 +398,8 @@ class CognitiveEngine:
                 emitter,
                 tool_opts,
                 list(working_targets),  # snapshot: escaneia o working-set atual
+                policy,
+                step.capability.value,
             )
             state.absorb(Feedback(step.capability, choice.tool, step_findings, duration))
             # Expansão de alvos dirigida por descoberta (ADR-0018): os hosts/IPs/
@@ -425,6 +458,8 @@ class CognitiveEngine:
         emitter: EventSink,
         tool_opts: dict,
         targets: list[str],
+        policy: PolicyEngine,
+        capability: str,
     ) -> tuple[list[Finding], float]:
         findings: list[Finding] = []
         started = time.monotonic()
@@ -436,6 +471,10 @@ class CognitiveEngine:
         # Escaneia o working-set (alvos originais + descobertos), não só os originais
         # (ADR-0018: expansão dirigida por descoberta).
         for target in targets:
+            # Policy Engine (ADR-0011): arbitra ESTA ação (ferramenta×alvo) antes de
+            # tocar a rede — executar / HITL / recusar por ImpactClass.
+            if not self._vet_action(spec, target, capability, policy, emitter, decisions, step_no):
+                continue  # recusada ou HITL não aprovada — pulada (auditada), nunca roda
             emitter.emit(ev.tool_execution(spec.name, target, "in_progress"))
             try:
                 produced = exec_port.execute(spec, target, persp, **tool_opts)
@@ -472,6 +511,58 @@ class CognitiveEngine:
             else:
                 emitter.emit(ev.tool_execution(spec.name, target, "completed", 100))
         return findings, time.monotonic() - started
+
+    def _vet_action(
+        self,
+        spec: PluginSpec,
+        target: str,
+        capability: str,
+        policy: PolicyEngine,
+        emitter: EventSink,
+        decisions: list[DecisionEntry],
+        step_no: int,
+    ) -> bool:
+        """Submete a ação ao Policy Engine (ADR-0011). Retorna True se pode rodar.
+
+        EXECUTE → roda. NEEDS_APPROVAL → pede ao aprovador HITL (None ⇒ bloqueia).
+        REJECT → recusa. Todo veredito é auditável (timeline + DecisionEntry)."""
+        action = ProposedAction(
+            tool=spec.name,
+            target=target,
+            capability=capability,
+            impact_class=spec.metadata.impact_class,
+        )
+        decision = policy.vet(action)
+        if decision.verdict is Verdict.EXECUTE:
+            return True
+        if decision.verdict is Verdict.NEEDS_APPROVAL:
+            approved = self._approver is not None and self._approver.approve(action)
+            verb = "aprovada (HITL)" if approved else "bloqueada (HITL — sem aprovação)"
+            emitter.emit(ev.log(f"[política] {spec.name} → {target}: {verb} ← {decision.reason}"))
+            decisions.append(
+                DecisionEntry(
+                    step=step_no,
+                    capability=capability,
+                    agent="",
+                    action="approved" if approved else "blocked",
+                    tool=spec.name,
+                    detail=f"HITL: {decision.reason}",
+                )
+            )
+            return approved
+        # REJECT
+        emitter.emit(ev.log(f"[política] {spec.name} → {target}: RECUSADA ← {decision.reason}"))
+        decisions.append(
+            DecisionEntry(
+                step=step_no,
+                capability=capability,
+                agent="",
+                action="rejected",
+                tool=spec.name,
+                detail=f"política: {decision.reason}",
+            )
+        )
+        return False
 
     def _expand_targets(
         self,

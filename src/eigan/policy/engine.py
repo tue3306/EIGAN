@@ -5,10 +5,12 @@ sem passar por aqui**. A IA propõe uma :class:`ProposedAction`; o motor devolve
 :class:`Verdict` — EXECUTE / NEEDS_APPROVAL (HITL) / REJECT — com motivo logado.
 Nada nisto depende de IA: é política pura, testável como *policy-as-code*.
 
-Estado (ADR-0011, honesto §3.6): a **trava dura de escopo/autorização** (passo 1
-de :meth:`_decide`, via :meth:`Scope.enforce`) já roda em todo o caminho de
-execução; submeter cada tool-call ao :meth:`vet` completo (arbitragem por
-``ImpactClass``) é a **Fase 3** do roadmap — ainda não está no caminho quente.
+Estado (ADR-0011 Fase 3 — IMPLEMENTADA): o :meth:`vet` completo roda no caminho
+quente. O ``CognitiveEngine._vet_action`` submete CADA ação (ferramenta×alvo) ao
+:meth:`vet` ANTES de tocar a rede — executar / aprovação humana (HITL) / recusar
+por ``ImpactClass``. A aprovação HITL é delegada a um ``ApprovalPort`` (o CLI
+pergunta ao operador; a API auto-aprova sob o consent e audita). Todo veredito
+entra na timeline auditável.
 
 Ordem de decisão (a primeira que casar vence):
 
@@ -142,12 +144,25 @@ class PolicyEngine:
 # Teto autônomo por perfil de scan. Perfis mais agressivos elevam o teto, mas
 # exploit/state-changing continuam gated independentemente do perfil.
 CEILING_BY_PROFILE: dict[str, ImpactClass] = {
-    "quick": ImpactClass.ACTIVE_SAFE,
-    "standard": ImpactClass.ACTIVE_SAFE,
-    "deep": ImpactClass.ACTIVE_SAFE,
-    "aggressive": ImpactClass.ACTIVE_INTRUSIVE,  # ainda exige HITL p/ exploit+
+    "quick": ImpactClass.ACTIVE_SAFE,  # conservador: intrusivo pede HITL
+    "standard": ImpactClass.ACTIVE_INTRUSIVE,  # após consent, enum/fuzzing é autônomo
+    "deep": ImpactClass.ACTIVE_INTRUSIVE,
+    "aggressive": ImpactClass.ACTIVE_INTRUSIVE,  # exploit/state-changing SEMPRE gated
 }
 
 
 def ceiling_for_profile(profile: str) -> ImpactClass:
     return CEILING_BY_PROFILE.get(profile.strip().lower(), ImpactClass.ACTIVE_SAFE)
+
+
+@dataclass
+class AutoApprove:
+    """Aprovador HITL que autoriza automaticamente — para fluxos já consentidos.
+
+    O consent gate do engajamento (CLI ``--yes`` / a autorização do POST /scans)
+    já é a autorização humana; este aprovador a estende às ações HITL, mantendo o
+    veredito da política **auditado** na timeline. Um deploy mais estrito troca por
+    um aprovador que bloqueia ou pergunta (interativo/endpoint)."""
+
+    def approve(self, action: "ProposedAction") -> bool:  # noqa: F821 — forward ref
+        return True

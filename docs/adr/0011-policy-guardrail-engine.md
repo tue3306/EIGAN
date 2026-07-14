@@ -45,10 +45,17 @@ do envelope — a IA **não pode contorná-lo** (é código determinístico, nã
 
 - **Fase 0 entregue e testada** (`tests/test_policy.py`): recusa fora de escopo,
   HITL em exploit, `STATE_CHANGING` proibido, teto por perfil, escopo antes da classe.
-- **Integração viva:** `metadata.impact_class` + exibição no `doctor`. A ligação
-  ao **loop de execução** (o `Decision Agent` submetendo cada tool-call ao `vet()`)
-  é a **Fase 3** do roadmap — declarada honestamente, ainda não no caminho quente.
-- Fila de **aprovações HITL** na API/dashboard: roadmap (Fase 7).
+- **Fase 3 IMPLEMENTADA (2026-07-14):** o `vet()` está ligado no loop —
+  `CognitiveEngine._vet_action` submete CADA ação (ferramenta×alvo) ao Policy
+  Engine ANTES de tocar a rede: executar / HITL / recusar por `ImpactClass`. A
+  aprovação HITL é delegada a um `ApprovalPort` (`_CliApprover` pergunta ao operador,
+  `--yes` auto-aprova; `AutoApprove` na API sob o consent do engajamento). Tetos por
+  perfil ajustados: `standard`/`deep` → `active_intrusive` autônomo (após consent),
+  `quick` conservador; `exploit_validation` sempre gated (allow_exploit + HITL).
+  Todo veredito entra na timeline (`[política] …`) e nas `DecisionEntry`
+  (`rejected`/`blocked`/`approved`). Testado em `tests/test_cognitive.py`.
+- **Fila de aprovações HITL assíncrona** na API/dashboard (endpoint de aprovação em
+  vez de auto-aprovar): roadmap (Fase 7).
 
 ## Como validar
 
