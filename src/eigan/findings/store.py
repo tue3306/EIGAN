@@ -66,22 +66,67 @@ class FindingStore:
         if "ai_remediation" not in cols:
             # Plano de remediação da IA (o que arrumar + como) — JSON estruturado.
             self._conn.execute("ALTER TABLE scans ADD COLUMN ai_remediation TEXT")
+        if "status" not in cols:
+            # Ciclo de vida do scan (ADR-0017): running|completed|failed|cancelled|
+            # partial. Bancos antigos (com finished_at) viram 'completed' se já
+            # terminaram, senão 'running'. Persistência incremental depende disso.
+            self._conn.execute("ALTER TABLE scans ADD COLUMN status TEXT")
+            self._conn.execute(
+                "UPDATE scans SET status = CASE WHEN finished_at IS NOT NULL "
+                "THEN 'completed' ELSE 'running' END WHERE status IS NULL"
+            )
+        if "executed_capabilities" not in cols:
+            # Capacidades já executadas (JSON) — base para retomada de scan parcial.
+            self._conn.execute("ALTER TABLE scans ADD COLUMN executed_capabilities TEXT")
 
     def create_scan(self, engagement: str, profile: str, targets: list[str]) -> int:
         cur = self._conn.execute(
-            "INSERT INTO scans(engagement, profile, targets, started_at) VALUES (?,?,?,?)",
+            "INSERT INTO scans(engagement, profile, targets, started_at, status) "
+            "VALUES (?,?,?,?,'running')",
             (engagement, profile, json.dumps(targets), datetime.now(timezone.utc).isoformat()),
         )
         self._conn.commit()
         assert cur.lastrowid is not None  # garantido após INSERT bem-sucedido
         return int(cur.lastrowid)
 
-    def finish_scan(self, scan_id: int) -> None:
+    def finish_scan(self, scan_id: int, status: str = "completed") -> None:
+        """Marca o scan como terminado com um ``status`` do ciclo de vida (ADR-0017)."""
         self._conn.execute(
-            "UPDATE scans SET finished_at=? WHERE id=?",
-            (datetime.now(timezone.utc).isoformat(), scan_id),
+            "UPDATE scans SET finished_at=?, status=? WHERE id=?",
+            (datetime.now(timezone.utc).isoformat(), status, scan_id),
         )
         self._conn.commit()
+
+    def set_status(self, scan_id: int, status: str) -> None:
+        """Atualiza só o status (ex.: 'running'→'partial') sem marcar finished_at."""
+        self._conn.execute("UPDATE scans SET status=? WHERE id=?", (status, scan_id))
+        self._conn.commit()
+
+    def set_executed_capabilities(self, scan_id: int, capabilities: list[str]) -> None:
+        """Persiste as capacidades já executadas (para retomada de scan parcial)."""
+        self._conn.execute(
+            "UPDATE scans SET executed_capabilities=? WHERE id=?",
+            (json.dumps(sorted(capabilities)), scan_id),
+        )
+        self._conn.commit()
+
+    def get_executed_capabilities(self, scan_id: int) -> list[str]:
+        row = self._conn.execute(
+            "SELECT executed_capabilities FROM scans WHERE id=?", (scan_id,)
+        ).fetchone()
+        if not row or not row["executed_capabilities"]:
+            return []
+        try:
+            return list(json.loads(row["executed_capabilities"]))
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    def running_scans(self) -> list[dict]:
+        """Scans não terminados (status 'running'/'partial') — candidatos a retomada."""
+        rows = self._conn.execute(
+            "SELECT * FROM scans WHERE status IN ('running','partial') ORDER BY id DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
 
     def set_analysis(self, scan_id: int, analysis: str) -> None:
         """Grava a análise da IA (Analysis Engine) do scan."""
@@ -108,11 +153,14 @@ class FindingStore:
     def add_findings(self, scan_id: int, findings: Iterable[Finding]) -> int:
         n = 0
         for f in findings:
-            # INSERT OR IGNORE respeita o UNIQUE(scan_id, fingerprint): dedup
-            # em nível de persistência como segunda barreira além do dedup lógico.
+            # UPSERT no UNIQUE(scan_id, fingerprint): a persistência incremental
+            # (por onda) grava o finding cru; o _finalize regrava a versão dedupada
+            # e pontuada (risco), que deve SOBRESCREVER a incremental — por isso
+            # ON CONFLICT DO UPDATE em vez de OR IGNORE (ADR-0017).
             self._conn.execute(
-                "INSERT OR IGNORE INTO findings(scan_id, fingerprint, severity, data) "
-                "VALUES (?,?,?,?)",
+                "INSERT INTO findings(scan_id, fingerprint, severity, data) VALUES (?,?,?,?) "
+                "ON CONFLICT(scan_id, fingerprint) DO UPDATE SET "
+                "severity=excluded.severity, data=excluded.data",
                 (scan_id, f.fingerprint, f.severity.value, f.model_dump_json()),
             )
             n += 1

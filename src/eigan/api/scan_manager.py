@@ -283,11 +283,13 @@ class ScanManager:
             )
         except ScanCancelled:
             job.status = "cancelled"
+            self._mark_scan_status(job.scan_id, "cancelled")
             log.info("scan cancelado", extra={"event": "scan_cancelled", "job": job.id})
             job.append(ev.scan_status(job.scan_id, "cancelled", "cancelado pelo usuário"))
         except ScopeViolation as exc:
             job.status = "failed"
             job.error = str(exc)
+            self._mark_scan_status(job.scan_id, "failed")
             log.warning(
                 "scan bloqueado por escopo",
                 extra={"event": "scan_blocked", "job": job.id, "reason": str(exc)},
@@ -295,8 +297,21 @@ class ScanManager:
             job.append(ev.scan_status(job.scan_id, "failed", f"bloqueado: {exc}"))
         except Exception as exc:  # noqa: BLE001 — erro de scan não derruba a API
             job.status = "failed"
+            self._mark_scan_status(job.scan_id, "failed")
             log.error(
                 "scan falhou", extra={"event": "scan_failed", "job": job.id, "error": str(exc)}
             )
             job.error = str(exc)
             job.append(ev.scan_status(job.scan_id, "failed", str(exc)))
+
+    def _mark_scan_status(self, scan_id: Optional[int], status: str) -> None:
+        """Marca o status do scan persistido (ADR-0017) — os findings parciais já
+        gravados incrementalmente permanecem legíveis. Best-effort: nunca levanta."""
+        if scan_id is None:
+            return
+        try:
+            store = FindingStore(self._db_path)
+            store.finish_scan(scan_id, status=status)
+            store.close()
+        except Exception as exc:  # noqa: BLE001
+            log.warning("não foi possível marcar status %s do scan %s: %s", status, scan_id, exc)

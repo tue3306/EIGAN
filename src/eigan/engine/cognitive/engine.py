@@ -353,6 +353,10 @@ class CognitiveEngine:
                 tool_opts,
             )
             state.absorb(Feedback(step.capability, choice.tool, step_findings, duration))
+            # Persistência incremental (ADR-0017): grava as descobertas desta onda
+            # AGORA — se o scan for morto/timeout depois, nada do que já achamos se
+            # perde. O _finalize só consolida/dedupa/pontua sobre o que já está lá.
+            self._persist_incremental(scan_id, step_findings, state)
             done = DecisionEntry(
                 step=step_no,
                 capability=step.capability.value,
@@ -435,6 +439,29 @@ class CognitiveEngine:
             else:
                 emitter.emit(ev.tool_execution(spec.name, target, "completed", 100))
         return findings, time.monotonic() - started
+
+    def _persist_incremental(
+        self, scan_id: Optional[int], step_findings: list[Finding], state: ScanState
+    ) -> None:
+        """Grava as descobertas da onda e o progresso — durável contra kill/timeout.
+
+        Idempotente: o UPSERT do store (UNIQUE scan_id,fingerprint) evita duplicar;
+        o _finalize regrava a versão pontuada por cima. Nunca derruba o scan: uma
+        falha de escrita é logada e o loop continua (a coleta é mais importante)."""
+        if self._store is None or scan_id is None:
+            return
+        try:
+            if step_findings:
+                self._store.add_findings(scan_id, step_findings)
+            self._store.set_executed_capabilities(
+                scan_id, [c.value for c in state.executed_capabilities]
+            )
+        except Exception as exc:  # noqa: BLE001 — persistência parcial não derruba o scan
+            import logging
+
+            logging.getLogger("eigan.cognitive.engine").warning(
+                "persistência incremental falhou (scan %s): %s", scan_id, exc
+            )
 
     def _finalize(
         self,

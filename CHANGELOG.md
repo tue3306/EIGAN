@@ -12,6 +12,16 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Fixed (persistência incremental — não perder dados se o scan morrer, ADR-0017)
+- **Gravação incremental por onda:** os findings eram gravados só no `_finalize` —
+  um scan morto/timeout perdia TUDO. Agora cada onda persiste na hora
+  (`_persist_incremental`); o `_finalize` só consolida/dedupa/pontua (UPSERT no
+  `UNIQUE(scan_id, fingerprint)`). Verificado ao vivo: scan morto a 45s manteve o
+  finding + capacidades executadas (antes: 0).
+- **Ciclo de vida do scan:** coluna `status` (running/completed/failed/cancelled/
+  partial) + `executed_capabilities` (base para retomada). ScanManager marca
+  cancelled/failed no store; relatório de scan parcial funciona.
+
 ### Security (defesa contra prompt injection indireto — ADR-0016)
 - **Dado do alvo tratado como não-confiável** antes de ir ao LLM (`ai/sanitize.py`):
   `neutralize` colapsa quebras/remove controles/quebra cercas e marcadores de papel;
