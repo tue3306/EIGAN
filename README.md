@@ -304,6 +304,17 @@ eigan plan 10.0.0.5    --goal network-assessment --execute   # roda (passa pelo 
 # Certifica que a IA responde de verdade (Ollama local, nuvem, etc.) — chamada real
 eigan doctor --probe-ai
 
+# ── Red · Blue · Purple ponta a ponta ────────────────────────────────────────
+# Red: a IA planeja e ESCANEIA o que descobre (subdomínio→IP→portas→web→segredos);
+#      o exposure prober sonda .git/.env/backups/chaves vazadas (mascaradas).
+eigan scan empresa.com --profile deep
+
+# Blue: análise defensiva de LOGS — detecta ataques e mapeia MITRE ATT&CK
+eigan blue /var/log/auth.log /var/log/nginx/
+
+# Purple: correlaciona Red×Blue → cobertura e PONTOS CEGOS (atacado sem detecção)
+eigan purple 1 2 --ai            # 1=scan Red, 2=análise Blue; --ai narra a priorização
+
 # Relatório corporativo de um scan salvo — estilos: technical | executive
 eigan report --scan 1 --format pdf --style executive --classification confidential
 eigan report --scan 1 --format pdf --style technical --show-sensitive   # NÃO mascara segredos

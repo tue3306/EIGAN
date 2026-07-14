@@ -113,6 +113,20 @@ As **exportações** (JSON/SARIF/CSV) são serialização determinística dos fi
 (reprodutíveis para SIEM); as **narrativas** (Técnico/Executivo) são geradas pela
 IA e marcadas `ai_generated`.
 
+## Red · Blue · Purple (caminhos de execução)
+
+- **Red** — o `CognitiveEngine` comanda o scan (recon → **expansão de alvos**
+  ADR-0018 → portas/serviços/web → `exposure` prober ADR-0023). Cada ação passa pelo
+  **Policy Engine** (ADR-0011) e pelo cliente HTTP **blindado contra SSRF** (ADR-0015).
+- **Blue** — caminho separado (`engine/blue.py`, ADR-0021): `log-analysis` detecta
+  ataques em logs → `Finding` com técnica ATT&CK. `eigan blue` / `POST /api/v1/blue`.
+- **Purple** — `analysis/purple.py` (ADR-0022) correlaciona Red×Blue → cobertura e
+  pontos cegos. `eigan purple` / `POST /api/v1/purple`.
+- **Remediação por IA** (ADR-0024) e narrativas são geradas pela IA (grounded,
+  neutralizadas contra prompt-injection ADR-0016); as exportações são determinísticas.
+- A **API/dashboard** exige token (ADR-0014); scans persistem **incrementalmente**
+  (ADR-0017 — nada se perde se o scan morre).
+
 ## Roadmap
 
 O roadmap vive numa fonte única, para não divergir:

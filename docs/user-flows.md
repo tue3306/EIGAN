@@ -54,3 +54,14 @@ Backend: `POST /api/v1/scans` → cria job em thread → `202` com `job_id`.
 **Resumo:** um usuário não-técnico agora escaneia de ponta a ponta clicando em
 botões — alvo → perspectiva → objetivo → autorização → progresso ao vivo →
 resultado — sem nunca abrir um terminal.
+
+## Blue e Purple (menu · CLI · API)
+
+Além do Red, o produto expõe (ADR-0020/0021/0022):
+
+- **Blue (logs)** — menu "Análise Blue", `eigan blue /var/log/auth.log …`, ou
+  `POST /api/v1/blue` (upload do **conteúdo** do log, nunca um caminho no servidor).
+  Detecta ataques (força-bruta/SSH, web, varredura, sudo) e mapeia MITRE ATT&CK.
+- **Purple** — menu "Correlação Purple", `eigan purple <red_id> <blue_id> [--ai]`,
+  ou `POST /api/v1/purple`. Mostra a **cobertura** ataque×detecção e os **pontos
+  cegos** (técnica atacada sem detecção) — onde a defesa está cega.

@@ -15,9 +15,20 @@ honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
   próximos passos automaticamente — ex.: nmap/naabu acham 445/Samba → **enum4linux**
   (usuários/shares) + **nmap-nse** (scripts smb-vuln); share gravável → volta ao
   nmap-nse; serviço web → whatweb/nuclei; WordPress → wpscan.
-- **Blue:** Inventário de ativos, Conformidade indicativa (CWE→OWASP/NIST),
-  postura de risco (dashboard/relatório).
-- **Purple:** Mapa MITRE ATT&CK dos findings + gap analysis + relatório executivo.
+- **Blue REAL (ADR — Blue Engine):** `log-analysis` (nativo) detecta ataques em
+  logs (força-bruta SSH/T1110, web/T1190, varredura/T1595, sudo/T1548) citando as
+  linhas reais; agente `blue-detection` (built); comando **`eigan blue <logs>`** e
+  endpoint **`POST /api/v1/blue`** (upload de conteúdo). + Inventário de ativos,
+  Conformidade indicativa (CWE→OWASP/NIST), postura de risco (dashboard/relatório).
+- **Purple REAL:** `analysis/purple.py` correlaciona técnicas ATT&CK atacadas (Red)
+  × detectadas (Blue) → cobertura % e **pontos cegos**; **`eigan purple`**, `POST
+  /api/v1/purple` + view no dashboard. + Mapa MITRE ATT&CK dos findings.
+- **Red — exposição/"dados vazados":** `exposure` prober (nativo, blindado contra
+  SSRF) sonda `.git`/`.env`/backups/chaves/segredos embutidos (mascarados).
+- **Expansão de alvos dirigida por descoberta (ADR-0018):** o agente escaneia o que
+  a recon acha (subdomínio→IP→portas→web), sob gate de escopo + teto.
+- **Policy Engine no loop (ADR-0011 Fase 3):** cada ação ativa arbitrada (executar/
+  HITL/recusar). **Auth da API + SSRF + anti prompt-injection** (ADR-0014/15/16).
 - **Engine:** Correlação por ativo + Risk Engine (CVSS/EPSS/KEV com `UNVERIFIED`).
 - **Agente autônomo — Núcleo Cognitivo (ADR-0007/0009):** `AgenticPlanner` — a IA
   **comanda** o scan (planeja + replaneja por onda, saída validada Pydantic v2,
@@ -51,7 +62,6 @@ honesto* (`roadmap: true`): são descobertos pelo registry e aparecem em
 | Blue | Detection Rules (Sigma) | `detection_rules` |
 | Blue | Threat Hunting | `threat_hunting` |
 | Blue | Malware Analysis | `malware_analysis` |
-| Blue | Log Analysis | `log_analysis` |
 | Blue | Incident Response | `incident_response` |
 | Purple | Attack Simulation | `attack_simulation` |
 | Purple | Detection Validation | `detection_validation` |

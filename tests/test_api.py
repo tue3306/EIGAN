@@ -187,3 +187,86 @@ def test_dashboard_omits_token_when_exposed(client, monkeypatch):
     monkeypatch.setattr(app.state, "exposed", True)
     r = c.get("/")
     assert "__EIGAN_TOKEN__" not in r.text
+
+
+# ── endpoints Purple / remediação (contrato HTTP) — PROMPT 8 ──────────────────
+def _seed_blue_scan(db_path: str, technique: str = "T1190") -> int:
+    import os
+
+    from eigan.findings.schema import Finding, Severity
+    from eigan.findings.store import FindingStore
+
+    store = FindingStore(db_path)
+    sid = store.create_scan("blue", "internal/blue", ["logs"])
+    store.add_findings(
+        sid,
+        [
+            Finding(
+                title="Ataque web detectado no log",
+                severity=Severity.HIGH,
+                affected_asset="nginx/access.log",
+                source_tool="log-analysis",
+                attack_technique=technique,
+            )
+        ],
+    )
+    store.finish_scan(sid)
+    store.close()
+    return sid
+
+
+def test_purple_endpoint_correlates_red_and_blue(client):
+    import os
+
+    c, red_sid = client
+    blue_sid = _seed_blue_scan(os.environ["EIGAN_DB"])
+    r = c.post("/api/v1/purple", json={"scan_ids": [red_sid, blue_sid]})
+    assert r.status_code == 200
+    body = r.json()
+    # o SQLi do Red (T1190) foi atacado E detectado pelo Blue → coberto.
+    assert "T1190" in body["covered"]
+    assert body["coverage_pct"] >= 0.0
+
+
+def test_purple_endpoint_404_on_unknown_scan(client):
+    c, _ = client
+    assert c.post("/api/v1/purple", json={"scan_ids": [99999]}).status_code == 404
+
+
+def test_remediation_404_on_unknown_scan(client):
+    c, _ = client
+    assert c.get("/api/v1/scans/99999/remediation").status_code == 404
+
+
+def test_remediation_returns_cached_without_ai(client):
+    import os
+
+    from eigan.findings.store import FindingStore
+
+    c, sid = client
+    store = FindingStore(os.environ["EIGAN_DB"])
+    store.set_remediation(
+        sid, '{"items":[{"title":"Corrigir SQLi","what":"x","how":"y","priority":"P1"}],"summary":"s"}'
+    )
+    store.close()
+    r = c.get(f"/api/v1/scans/{sid}/remediation")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["cached"] is True
+    assert body["remediation"]["items"][0]["title"] == "Corrigir SQLi"
+
+
+def test_blue_to_purple_integration(client):
+    """Fluxo ponta a ponta: POST /blue (upload) → POST /purple com Red+Blue."""
+    c, red_sid = client
+    auth = "\n".join(
+        [f"sshd[{i}]: Failed password for root from 198.51.100.7 port 5{i} ssh2" for i in range(8)]
+    )
+    b = c.post("/api/v1/blue", json={"logs": [{"name": "auth.log", "content": auth}], "ai": False})
+    assert b.status_code == 202
+    blue_sid = b.json()["scan_id"]
+    p = c.post("/api/v1/purple", json={"scan_ids": [red_sid, blue_sid]})
+    assert p.status_code == 200
+    body = p.json()
+    # Blue detectou força-bruta (T1110); Red não atacou T1110 → detection_only.
+    assert "T1110" in body["detection_only"] or body["blue_techniques"] >= 1
