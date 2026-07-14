@@ -533,3 +533,82 @@ def test_engine_without_ai_still_delivers_scan():
     assert report.ai_used is False
     assert report.planner_name == "deterministic"
     assert report.findings
+
+
+# --------------------------------------------------------------------------- #
+# Expansão de alvos dirigida por descoberta (ADR-0018)
+# --------------------------------------------------------------------------- #
+class _RecordingPort:
+    """ExecutionPort que registra (ferramenta, alvo) e aplica o gate de escopo."""
+
+    def __init__(self, scope: Scope) -> None:
+        self.scope = scope
+        self.calls: list[tuple[str, str]] = []
+
+    def execute(self, spec, target, perspective, **opts):
+        self.scope.enforce(target, perspective=perspective)
+        self.calls.append((spec.name, target))
+        return spec.scan(target, **opts)
+
+
+def _expansion_registry() -> PluginRegistry:
+    # subfinder DESCOBRE um subdomínio; naabu faz port_discovery (roda depois).
+    return PluginRegistry(
+        [
+            _spec(
+                "subfinder",
+                (C.SUBDOMAIN_ENUMERATION,),
+                perspectives=(P.EXTERNAL,),
+                findings=[_finding("Subdomínio: app.example.com", "app.example.com", "subfinder")],
+            ),
+            _spec(
+                "naabu",
+                (C.PORT_DISCOVERY,),
+                speed="high",
+                preferred=("external",),
+                findings=[_finding("Porta aberta 443/tcp", "example.com:443", "naabu")],
+            ),
+        ]
+    )
+
+
+def test_target_expansion_scans_discovered_subdomain():
+    reg = _expansion_registry()
+    engine = CognitiveEngine(reg)
+    scope = build_scope(None, ["example.com"], P.EXTERNAL)  # efêmero: descobertos entram
+    port = _RecordingPort(scope)
+    goal = Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"])
+    report = engine.run(goal, scope=scope, execution=port)
+    # o subdomínio descoberto pelo subfinder foi de fato escaneado pelo naabu.
+    assert ("naabu", "app.example.com") in port.calls
+    assert ("naabu", "example.com") in port.calls  # o original também
+    assert "app.example.com" in report.discovered_targets  # auditável
+
+
+def test_target_expansion_respects_scope_hard_lock():
+    reg = _expansion_registry()
+    engine = CognitiveEngine(reg)
+    # trava dura: só example.com autorizado → o subdomínio descoberto é DESCARTADO.
+    scope = Scope(
+        authorized=True,
+        hosts=["example.com"],
+        perspective=P.EXTERNAL,
+        enforce_membership=True,
+    )
+    port = _RecordingPort(scope)
+    goal = Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"])
+    engine.run(goal, scope=scope, execution=port)
+    scanned_hosts = {t for _, t in port.calls}
+    assert "app.example.com" not in scanned_hosts  # fora do escopo → nunca escaneado
+
+
+def test_target_expansion_cap_prevents_explosion():
+    reg = _expansion_registry()
+    engine = CognitiveEngine(reg)
+    scope = build_scope(None, ["example.com"], P.EXTERNAL)
+    port = _RecordingPort(scope)
+    # teto de 1 alvo: só o original; o descoberto não cabe.
+    goal = Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"], budget=Budget(max_targets=1))
+    engine.run(goal, scope=scope, execution=port)
+    scanned_hosts = {t for _, t in port.calls}
+    assert "app.example.com" not in scanned_hosts

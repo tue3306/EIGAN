@@ -121,6 +121,8 @@ class CognitiveReport:
     planner_name: str
     ai_used: bool
     suggestions: list[Suggestion] = field(default_factory=list)
+    # Alvos descobertos pela recon e realimentados como novos alvos (ADR-0018).
+    discovered_targets: list[str] = field(default_factory=list)
 
     # Compat com ScanReport: o CLI/wizard/relatório consomem estes campos sem
     # precisar saber qual engine (determinístico × cognitivo) produziu o report.
@@ -255,6 +257,19 @@ class CognitiveEngine:
         stop = StopCondition(goal.budget)
         decisions: list[DecisionEntry] = []
 
+        # Working-set de alvos (ADR-0018): começa com os originais e CRESCE com o que
+        # a recon descobrir (subdomínios/IPs/hosts), cada um após o gate de escopo e
+        # sob o teto duro. As capacidades seguintes escaneiam este conjunto.
+        from ...perspective import extract_host
+
+        working_targets: list[str] = []
+        working_hosts: set[str] = set()
+        for t in goal.targets:
+            key = extract_host(t).lower() or t.lower()
+            if key not in working_hosts:
+                working_hosts.add(key)
+                working_targets.append(t)
+
         # Timeline: registra o raciocínio inicial da IA (ou do determinístico).
         driver = "IA" if getattr(self._planner, "ai_generated", False) else "determinístico"
         plan_entry = DecisionEntry(
@@ -351,8 +366,23 @@ class CognitiveEngine:
                 decisions,
                 emitter,
                 tool_opts,
+                list(working_targets),  # snapshot: escaneia o working-set atual
             )
             state.absorb(Feedback(step.capability, choice.tool, step_findings, duration))
+            # Expansão de alvos dirigida por descoberta (ADR-0018): os hosts/IPs/
+            # subdomínios recém-descobertos entram no working-set (gate de escopo +
+            # teto), para as capacidades seguintes escaneá-los.
+            self._expand_targets(
+                step_findings,
+                working=working_targets,
+                working_hosts=working_hosts,
+                scope=scope,
+                persp=persp,
+                override=override_perspective,
+                budget_max=goal.budget.max_targets,
+                emitter=emitter,
+                state=state,
+            )
             # Persistência incremental (ADR-0017): grava as descobertas desta onda
             # AGORA — se o scan for morto/timeout depois, nada do que já achamos se
             # perde. O _finalize só consolida/dedupa/pontua sobre o que já está lá.
@@ -394,6 +424,7 @@ class CognitiveEngine:
         decisions: list[DecisionEntry],
         emitter: EventSink,
         tool_opts: dict,
+        targets: list[str],
     ) -> tuple[list[Finding], float]:
         findings: list[Finding] = []
         started = time.monotonic()
@@ -402,7 +433,9 @@ class CognitiveEngine:
         coverage = spec.coverage_note()
         if coverage:
             emitter.emit(ev.log(f"[cobertura] {coverage}"))
-        for target in goal.targets:
+        # Escaneia o working-set (alvos originais + descobertos), não só os originais
+        # (ADR-0018: expansão dirigida por descoberta).
+        for target in targets:
             emitter.emit(ev.tool_execution(spec.name, target, "in_progress"))
             try:
                 produced = exec_port.execute(spec, target, persp, **tool_opts)
@@ -439,6 +472,55 @@ class CognitiveEngine:
             else:
                 emitter.emit(ev.tool_execution(spec.name, target, "completed", 100))
         return findings, time.monotonic() - started
+
+    def _expand_targets(
+        self,
+        step_findings: list[Finding],
+        *,
+        working: list[str],
+        working_hosts: set[str],
+        scope: Scope,
+        persp: Perspective,
+        override: bool,
+        budget_max: int,
+        emitter: EventSink,
+        state: ScanState,
+    ) -> None:
+        """Expansão de alvos dirigida por descoberta (ADR-0018): hosts/IPs/subdomínios
+        descobertos viram NOVOS alvos das capacidades seguintes.
+
+        Invariantes inegociáveis: cada candidato passa pelo **gate de escopo** ANTES
+        de entrar (fora do escopo é descartado, §3.2), há **dedup** contra o que já
+        está no working-set, e um **teto duro** (`Budget.max_targets`) impede
+        explosão. Só o que a ferramenta REALMENTE reportou vira alvo (§3.1) — nada
+        inventado. Cada admissão é auditável na timeline ("novo alvo: X ← Y")."""
+        from ...perspective import extract_host
+
+        for f in step_findings:
+            if len(working) >= budget_max:
+                return  # teto duro atingido — não expande mais (anti-explosão)
+            raw = (f.affected_asset or "").strip()
+            if not raw:
+                continue
+            host = extract_host(raw)
+            if not host:
+                continue
+            key = host.lower()
+            if key in working_hosts:
+                continue  # dedup: já é alvo (original ou descoberto)
+            # Gate de escopo ANTES de escanear (defesa em profundidade, §3.2/§3.3):
+            # perspectiva, metadata-SSRF e (na trava dura) pertencimento. Fora → descarta.
+            try:
+                scope.enforce(host, perspective=persp, override=override)
+            except ScopeViolation as exc:
+                emitter.emit(
+                    ev.log(f"[expansão] alvo descoberto FORA de escopo, descartado: {host} ({exc})")
+                )
+                continue
+            working.append(host)
+            working_hosts.add(key)
+            state.discovered_targets.add(host)
+            emitter.emit(ev.log(f"[expansão] novo alvo: {host} ← {f.source_tool} ({f.title[:50]})"))
 
     def _persist_incremental(
         self, scan_id: Optional[int], step_findings: list[Finding], state: ScanState
@@ -510,6 +592,7 @@ class CognitiveEngine:
             planner_name=self._planner.name,
             ai_used=bool(getattr(self._planner, "ai_generated", False)),
             suggestions=list(state.suggestions),
+            discovered_targets=sorted(state.discovered_targets),
         )
 
     def _base_context(self, goal: Goal) -> SelectionContext:

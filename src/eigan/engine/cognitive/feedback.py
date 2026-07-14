@@ -77,6 +77,9 @@ class ScanState:
     context_tags: set[str] = field(default_factory=set)
     suggestions: list[Suggestion] = field(default_factory=list)
     new_findings: list[Finding] = field(default_factory=list)  # desde o último replan
+    # Alvos DESCOBERTOS pela recon e realimentados como novos alvos (ADR-0018) —
+    # só para auditoria/relatório; o working-set de execução vive no engine.
+    discovered_targets: set[str] = field(default_factory=set)
     steps_executed: int = 0
     started_at: float = field(default_factory=time.monotonic)
 

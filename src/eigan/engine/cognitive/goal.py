@@ -137,12 +137,17 @@ class Budget:
     max_capabilities: int = 24  # teto duro de etapas executadas (anti-loop)
     max_wall_seconds: float | None = None  # tempo de parede; None = sem limite
     stop_on_no_new_evidence: bool = True  # encerra quando o replan não agrega nada
+    # Teto duro de alvos (ADR-0018): a expansão dirigida por descoberta (subdomínio/
+    # IP/host viram novos alvos) NÃO pode explodir. Inclui os alvos originais.
+    max_targets: int = 64
 
     def __post_init__(self) -> None:
         if self.max_capabilities < 1:
             raise ValueError("max_capabilities deve ser >= 1")
         if self.max_wall_seconds is not None and self.max_wall_seconds <= 0:
             raise ValueError("max_wall_seconds deve ser > 0 ou None")
+        if self.max_targets < 1:
+            raise ValueError("max_targets deve ser >= 1")
 
 
 @dataclass(frozen=True)

@@ -12,6 +12,14 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Added (expansão de alvos dirigida por descoberta — ADR-0018)
+- **O agente agora escaneia o que a recon descobre** (furo central corrigido): o
+  engine só escaneava os alvos ORIGINAIS. Agora subdomínios/IPs/hosts descobertos
+  (subfinder/dnsx/nmap/naabu) entram num working-set e as capacidades seguintes os
+  escaneiam. Cada novo alvo passa pelo **gate de escopo** antes, há **dedup** e um
+  **teto duro** (`Budget.max_targets`, default 64); tudo auditável (`[expansão]
+  novo alvo: X ← Y`). Expostos em `CognitiveReport.discovered_targets`.
+
 ### Fixed (persistência incremental — não perder dados se o scan morrer, ADR-0017)
 - **Gravação incremental por onda:** os findings eram gravados só no `_finalize` —
   um scan morto/timeout perdia TUDO. Agora cada onda persiste na hora
