@@ -109,7 +109,7 @@ def to_csv(findings: list[Finding]) -> str:
 
 
 def to_sarif(
-    findings: list[Finding], *, tool_version: str = "0.2.0", meta: dict | None = None
+    findings: list[Finding], *, tool_version: str = "0.0.0", meta: dict | None = None
 ) -> str:
     """SARIF 2.1.0 — para GitHub code scanning e ferramentas compatíveis."""
     rules: dict[str, dict] = {}

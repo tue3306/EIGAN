@@ -145,7 +145,7 @@ def test_svg_helpers_render():
 
 
 def test_report_classifies_and_masks_by_default():
-    gen = ReportGenerator(Enricher(KnowledgeBase(_KB), provider=None), tool_version="1.0.1")
+    gen = ReportGenerator(Enricher(KnowledgeBase(_KB), provider=None), tool_version="0.0.0")
     f = Finding(
         title="Arquivo .env exposto",
         severity=Severity.CRITICAL,

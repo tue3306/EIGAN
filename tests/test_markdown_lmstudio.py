@@ -20,7 +20,7 @@ def test_markdown_has_professional_sections_and_ai_analysis():
         targets=["x"],
         scan_type="unified/standard",
         ai_analysis="RESUMO: risco alto.",
-        tool_version="1.1.0",
+        tool_version="0.0.0",
     )
     for section in (
         "# Relatório EIGAN",

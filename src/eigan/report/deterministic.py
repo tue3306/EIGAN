@@ -62,7 +62,7 @@ class ReportGenerator:
         enricher: Enricher,
         *,
         brand: str = "EIGAN",
-        tool_version: str = "0.2.0",
+        tool_version: str = "0.0.0",
         feeds_meta: dict | None = None,
     ) -> None:
         self._enricher = enricher

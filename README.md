@@ -357,7 +357,7 @@ Os diretórios principais têm o seu próprio `README.md`; o **mapa do código-f
 
 ## 🗺️ Roadmap
 
-**Entregue (v1.0.x):** núcleo agêntico (a IA comanda o scan fim a fim) · Recon Red real (8
+**Já funciona hoje (pré-alfa `0.0.0`):** núcleo agêntico (a IA comanda o scan fim a fim) · Recon Red real (8
 plugins) · cascata adaptativa · perspectivas Outside-In/Inside-Out · Risk Engine (CVSS/EPSS/KEV)
 · correlação + inventário + ATT&CK · **relatórios corporativos** em 5 formatos (classificação +
 masking + score) · **dashboard SOC** (tema claro/escuro, tempo real) · multi-provedor de IA (com

@@ -24,23 +24,11 @@ Versionamento: [SemVer](https://semver.org/lang/pt-BR/). Changelog:
    `.github/workflows/publish.yml` dispara no GitHub Release (OIDC, sem segredo
    no repo). Ver `docs/BLOCKERS.md` #5.
 
-## Notas da v1.0.0 — 2026-07-11
+## Estado atual — `0.0.0` (pré-alfa, sem release publicado)
 
-Primeiro release estável. Destaques:
-
-- **Agente de segurança AI-native**: a IA **comanda** o scan de ponta a ponta
-  (planeja, escolhe as capacidades, reage às descobertas e narra) — sem um
-  provedor de IA configurado, o scan é recusado com um erro acionável (ADR-0012).
-  Independente de provedor: Anthropic, OpenAI, Gemini, OpenRouter, Groq, Together,
-  Azure OpenAI e **Ollama local** (privacidade/offline).
-- **Cascata adaptativa entre ferramentas**: descobertas encadeiam os próximos
-  passos (ex.: nmap acha Samba/445 → enum4linux + volta ao nmap com scripts NSE).
-- **Núcleo cognitivo** (`AgenticPlanner`) com timeline de raciocínio em tempo real
-  no dashboard; **Policy/Guardrail Engine** determinístico (`ImpactClass`).
-- **Segurança inegociável**: gate de autorização/escopo, execução segura (lista de
-  args, nunca `shell=True`), redaction de segredos/PII, grounding/anti-invenção.
-- **Saídas**: HTML/PDF/JSON/CSV/SARIF (exportações determinísticas; narrativas por IA).
-- Renome **VulnForge → EIGAN**; `ruff` + `mypy` + `pytest` verdes.
-
-Ação pendente do dono: renomear o repositório no GitHub para `eigan`
-(Settings → Rename) — ver `docs/BLOCKERS.md` #6.
+O versionamento foi **reiniciado para `0.0.0`** e as tags/releases `1.x`
+anteriores foram removidas: elas superestimavam a maturidade (Blue era só
+scaffold, não havia Purple real, o dashboard precisava de trabalho). Não há
+release publicado — o número só volta a subir quando **Red, Blue e Purple**
+rodarem de ponta a ponta com dashboard e relatórios à altura. Honestidade acima
+de número de versão (§3.1). O histórico anterior está preservado no git.

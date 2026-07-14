@@ -42,7 +42,7 @@ def test_ignores_comments_blanks_and_malformed(tmp_path, monkeypatch):
 def test_strips_surrounding_quotes(tmp_path, monkeypatch):
     monkeypatch.delenv("Q1", raising=False)
     monkeypatch.delenv("Q2", raising=False)
-    p = _write(tmp_path, 'Q1="dupla"\nQ2=\'simples\'\n')
+    p = _write(tmp_path, "Q1=\"dupla\"\nQ2='simples'\n")
     load_dotenv(p)
     import os
 
