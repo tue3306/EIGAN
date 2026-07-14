@@ -35,6 +35,7 @@ _EXTERNAL: tuple[Stage, ...] = (
     Stage("screenshot", (C.SCREENSHOT,)),
     Stage("crawl", (C.WEB_CRAWL,)),
     Stage("params", (C.PARAM_DISCOVERY,)),
+    Stage("secrets", (C.SECRETS_EXPOSURE,)),  # exposure: .git/.env/backup/segredos
     Stage("vuln-templates", (C.VULN_TEMPLATE_SCAN,)),
     Stage("cms", (C.CMS_SCAN,)),
     Stage("tls", (C.TLS_ASSESSMENT,)),
@@ -49,6 +50,7 @@ _INTERNAL: tuple[Stage, ...] = (
     Stage("web-probe", (C.WEB_PROBE,)),
     Stage("screenshot", (C.SCREENSHOT,)),
     Stage("crawl", (C.WEB_CRAWL,)),
+    Stage("secrets", (C.SECRETS_EXPOSURE,)),  # exposure: .git/.env/backup/segredos
     Stage("vuln-templates", (C.VULN_TEMPLATE_SCAN,)),
     Stage("tls", (C.TLS_ASSESSMENT,)),
     # gancho p/ módulos futuros: AD/Windows/Linux/Container assessment.
@@ -72,6 +74,7 @@ _UNIFIED: tuple[Stage, ...] = (
     Stage("screenshot", (C.SCREENSHOT,)),
     Stage("crawl", (C.WEB_CRAWL,)),
     Stage("params", (C.PARAM_DISCOVERY,)),  # ffuf
+    Stage("secrets", (C.SECRETS_EXPOSURE,)),  # exposure: .git/.env/backup/segredos (rápido)
     # ── a partir daqui, ferramentas lentas (rodam por último) ────────────────
     Stage("vuln-templates", (C.VULN_TEMPLATE_SCAN,)),  # nuclei
     Stage("web-server", (C.WEB_SERVER_SCAN,)),  # nikto

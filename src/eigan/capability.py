@@ -59,6 +59,7 @@ class Capability(str, Enum):
     WEB_SERVER_SCAN = "web_server_scan"  # misconfig/vuln de servidor web (nikto)
     CMS_SCAN = "cms_scan"
     TLS_ASSESSMENT = "tls_assessment"
+    SECRETS_EXPOSURE = "secrets_exposure"  # arquivos/segredos vazados (.git/.env/backup/chaves)
 
     # ── cloud ────────────────────────────────────────────────────────────────
     CLOUD_STORAGE_ENUM = "cloud_storage_enum"

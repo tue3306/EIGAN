@@ -76,6 +76,7 @@ GOAL_CAPABILITIES: dict[GoalKind, tuple[Capability, ...]] = {
         C.CMS_SCAN,
         C.WEB_CRAWL,
         C.PARAM_DISCOVERY,
+        C.SECRETS_EXPOSURE,
         # lentas por último (nuclei, nikto, testssl):
         C.VULN_TEMPLATE_SCAN,
         C.WEB_SERVER_SCAN,
@@ -87,6 +88,7 @@ GOAL_CAPABILITIES: dict[GoalKind, tuple[Capability, ...]] = {
         C.PORT_DISCOVERY,
         C.SERVICE_DETECTION,
         C.WEB_PROBE,
+        C.SECRETS_EXPOSURE,
         C.TLS_ASSESSMENT,
         C.VULN_TEMPLATE_SCAN,
     ),
@@ -102,6 +104,7 @@ GOAL_CAPABILITIES: dict[GoalKind, tuple[Capability, ...]] = {
         C.WEB_CRAWL,
         C.PARAM_DISCOVERY,
         C.CMS_SCAN,
+        C.SECRETS_EXPOSURE,
         C.VULN_TEMPLATE_SCAN,
     ),
     GoalKind.NETWORK_ASSESSMENT: (

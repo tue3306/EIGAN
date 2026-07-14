@@ -73,9 +73,10 @@ def default_agents() -> list[Agent]:
                     C.CMS_SCAN,
                     C.SCREENSHOT,
                     C.WEB_SERVER_SCAN,
+                    C.SECRETS_EXPOSURE,
                 }
             ),
-            built=True,  # tools reais: katana, whatweb, ffuf, gowitness, nikto
+            built=True,  # tools reais: katana, whatweb, ffuf, gowitness, nikto, exposure
         ),
         Agent(
             name="cloud",
