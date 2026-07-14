@@ -173,6 +173,8 @@ const ROUTES = [
   { re: /^#\/new/, view: viewWizard },
   { re: /^#\/job\/(.+)/, view: viewProgress },
   { re: /^#\/merge\/(.+)/, view: viewMerge },
+  { re: /^#\/purple\/(.+)/, view: viewPurple },
+  { re: /^#\/purple/, view: viewPurpleSelect },
   { re: /^#\/scan\/(\d+)/, view: viewScanDetail },
   { re: /^#\/scans/, view: viewHistory },
   { re: /^#?\/?$/, view: viewDashboard },
@@ -489,6 +491,85 @@ async function viewMerge(root, idsStr) {
     an.innerHTML = '<div class="muted small">⏳ a IA está correlacionando os scans…</div>';
     try { const r = await apiPost('/scans/merge/analysis', { scan_ids: ids }); an.innerHTML = `<div class="ai-analysis">${esc(r.analysis || '').replace(/\n/g, '<br>')}</div>`; }
     catch (e) { an.innerHTML = `<div class="muted small">${e.status === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Falha ao gerar correlação.'}</div>`; }
+  };
+}
+
+// ── VIEW: Purple — seleção de scans (Red + Blue) ──────────────────────────────
+async function viewPurpleSelect(root) {
+  const scans = await api('/scans').catch(() => []);
+  const sel = new Set();
+  root.innerHTML = `<div class="between" style="margin-bottom:6px"><h1>🟣 Purple — ataque × detecção</h1>
+      <button class="btn-primary" id="pgo" disabled>Correlacionar (0)</button></div>
+    <p class="muted small" style="margin-bottom:12px">Selecione os scans a correlacionar — idealmente
+      um(ns) de <b>Red</b> (recon/exploração) e um(ns) de <b>Blue</b> (<span class="mono">eigan blue</span> sobre logs).
+      O Purple cruza as técnicas <b>MITRE ATT&CK</b> atacadas com as detectadas e revela os
+      <b>pontos cegos</b> (atacado sem detecção).</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th></th><th>ID</th><th>Alvo/Fonte</th><th>Perfil</th><th>Início</th></tr></thead>
+      <tbody>${scans.length ? scans.map((s) => `<tr>
+        <td><input type="checkbox" data-id="${s.id}" style="width:auto"></td>
+        <td class="mono">#${s.id}</td><td>${esc(s.engagement || '—')}</td>
+        <td>${esc(s.profile)}</td><td class="mono small">${fmtDate(s.started_at)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="empty">Nenhum scan. Rode um scan Red e um `eigan blue`.</td></tr>'}</tbody>
+    </table></div>`;
+  const btn = el('pgo');
+  const upd = () => { btn.textContent = `Correlacionar (${sel.size})`; btn.disabled = sel.size < 1; };
+  btn.onclick = () => { if (sel.size) location.hash = '#/purple/' + [...sel].join(','); };
+  root.querySelectorAll('input[type=checkbox]').forEach((cb) => (cb.onchange = () => {
+    const id = +cb.dataset.id; cb.checked ? sel.add(id) : sel.delete(id); upd();
+  }));
+  upd();
+}
+
+const PU_STATUS = {
+  gap: { cls: 'pu-gap', label: '🔴 ponto cego' },
+  covered: { cls: 'pu-covered', label: '🟢 coberto' },
+  detection_only: { cls: 'pu-det', label: '🔵 só detecção' },
+};
+async function viewPurple(root, idsStr) {
+  const ids = idsStr.split(',').map(Number).filter(Boolean);
+  root.innerHTML = '<div class="empty"><span class="spin"></span> correlacionando ataque × detecção…</div>';
+  let d;
+  try { d = await apiPost('/purple', { scan_ids: ids, ai: false }); }
+  catch (e) { root.innerHTML = `<div class="empty">Falha: <span class="mono">${esc(e.detail || e.status)}</span></div>`; return; }
+  const cov = d.coverage_pct || 0;
+  const gapRows = (d.correlations || []).filter((c) => c.status === 'gap');
+  root.innerHTML = `
+    <div class="between wrap" style="margin-bottom:14px">
+      <div><h1>🟣 Purple — ataque × detecção</h1>
+        <p class="sub mono">${ids.length} scan(s) · ${d.red_findings} findings Red · ${d.blue_findings} detecções Blue</p></div>
+      <button class="btn-ghost" onclick="location.hash='#/purple'">‹ Trocar scans</button></div>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
+      ${kpi(cov + '%', 'cobertura de detecção', '🛡️', cov >= 70)}
+      ${kpi(gapRows.length, 'pontos cegos', '🕳️', gapRows.length > 0)}
+      ${kpi(d.red_techniques, 'técnicas atacadas', '⚔️')}
+      ${kpi(d.blue_techniques, 'técnicas detectadas', '🛰️')}</div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>🕳️ Pontos cegos — atacado SEM detecção</h2>
+      ${gapRows.length ? `<div class="tablewrap"><table>
+        <thead><tr><th>Técnica</th><th>Tática</th><th>Nº no Red</th></tr></thead>
+        <tbody>${gapRows.map((c) => `<tr>
+          <td><b>${esc(c.technique)}</b> ${esc(c.name)}${c.url ? ` <a href="${esc(c.url)}" target="_blank" rel="noopener" class="mono small">↗</a>` : ''}</td>
+          <td>${esc(c.tactic || '—')}</td><td>${c.attacked}</td></tr>`).join('')}</tbody></table></div>`
+        : '<div class="muted small">Nenhum ponto cego: toda técnica atacada tem detecção correspondente. 🎉</div>'}
+    </div>
+    <div class="card" style="margin-bottom:14px"><h2>✨ Análise Purple da IA (como fechar os gaps)</h2>
+      <div id="puai"></div></div>
+    <div class="card"><h2>Matriz de cobertura (todas as técnicas)</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Técnica</th><th>Tática</th><th>Red</th><th>Blue</th><th>Status</th></tr></thead>
+        <tbody>${(d.correlations || []).map((c) => { const s = PU_STATUS[c.status] || PU_STATUS.gap;
+          return `<tr><td><b>${esc(c.technique)}</b> ${esc(c.name)}</td><td>${esc(c.tactic || '—')}</td>
+            <td>${c.attacked || '—'}</td><td>${c.detected || '—'}</td>
+            <td><span class="pill ${s.cls}">${s.label}</span></td></tr>`; }).join('')
+          || '<tr><td colspan="5" class="empty">Sem técnicas ATT&CK nos scans selecionados.</td></tr>'}</tbody>
+      </table></div></div>`;
+  const ai = el('puai');
+  ai.innerHTML = `<button class="btn-ghost" id="pubtn">✨ Analisar pontos cegos (IA)</button>`;
+  el('pubtn').onclick = async () => {
+    ai.innerHTML = '<div class="muted small">⏳ a IA está priorizando os gaps…</div>';
+    try { const r = await apiPost('/purple', { scan_ids: ids, ai: true }); ai.innerHTML = `<div class="ai-analysis">${esc(r.ai_narrative || '(sem narrativa)').replace(/\n/g, '<br>')}</div>`; }
+    catch (e) { ai.innerHTML = `<div class="muted small">${e.status === 428 ? 'Configure um provedor de IA (menu → Configuração).' : 'Falha ao analisar.'}</div>`; }
   };
 }
 

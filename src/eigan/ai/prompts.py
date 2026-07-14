@@ -53,6 +53,26 @@ REMEDIATION_SYSTEM = (
 )
 
 
+PURPLE_SYSTEM = (
+    _GROUNDING + "\n\nVocê é o analista Purple. Recebe a matriz de cobertura "
+    "ataque×detecção (técnicas MITRE ATT&CK atacadas pelo Red vs. detectadas pelo "
+    "Blue). Produza, em português, seções curtas rotuladas exatamente:\n"
+    "COBERTURA: (leitura geral do % e do que ele significa)\n"
+    "PONTOS CEGOS: (as técnicas ATACADAS SEM detecção — o mais urgente; por que "
+    "importam e o impacto de não detectá-las)\n"
+    "COMO FECHAR OS GAPS: (que detecção/regra criar para cada ponto cego — "
+    "concreto: fonte de log, regra Sigma/alerta, campo a monitorar).\n"
+    "Baseie-se SOMENTE na matriz fornecida; não invente técnicas nem cobertura."
+)
+
+
+def purple_user(context: str) -> str:
+    return (
+        f"=== MATRIZ PURPLE (ataque×detecção) ===\n{context}\n\n"
+        "Produza a análise no formato pedido, priorizando os pontos cegos."
+    )
+
+
 def remediation_user(context: str) -> str:
     return (
         f"=== DADOS DO SCAN ===\n{context}\n\n"

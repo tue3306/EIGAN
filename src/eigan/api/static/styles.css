@@ -126,6 +126,9 @@ tbody tr.expand-row td { background: var(--surface2); }
 .s-critical { background: var(--crit); } .s-high { background: var(--high); }
 .s-medium { background: var(--med); color: #1a1a1a; } .s-low { background: var(--low); color: #1a1a1a; }
 .s-info { background: var(--info); }
+/* Purple — status da correlação ataque×detecção */
+.pill.pu-gap { background: var(--crit); } .pill.pu-covered { background: #2e9e5b; }
+.pill.pu-det { background: var(--info); }
 .kev { font-size: 10px; font-weight: 700; background: var(--crit); color: #fff; padding: 1px 6px; border-radius: 4px; }
 .unv { font-size: 10px; color: var(--med); border: 1px solid var(--med); padding: 0 5px; border-radius: 4px; }
 .tag { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: var(--bg2); color: var(--text2); }

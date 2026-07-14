@@ -12,6 +12,10 @@ techniques:
     name: "Gather Victim Network Information"
     tactic: "Reconnaissance"
     url: "https://attack.mitre.org/techniques/T1590/"
+  T1592:
+    name: "Gather Victim Host Information"
+    tactic: "Reconnaissance"
+    url: "https://attack.mitre.org/techniques/T1592/"
   T1046:
     name: "Network Service Discovery"
     tactic: "Discovery"
@@ -24,3 +28,15 @@ techniques:
     name: "Exploitation of Remote Services"
     tactic: "Lateral Movement"
     url: "https://attack.mitre.org/techniques/T1210/"
+  T1110:
+    name: "Brute Force"
+    tactic: "Credential Access"
+    url: "https://attack.mitre.org/techniques/T1110/"
+  T1078:
+    name: "Valid Accounts"
+    tactic: "Initial Access"
+    url: "https://attack.mitre.org/techniques/T1078/"
+  T1548:
+    name: "Abuse Elevation Control Mechanism"
+    tactic: "Privilege Escalation"
+    url: "https://attack.mitre.org/techniques/T1548/"

@@ -363,6 +363,50 @@ def merge_analysis_endpoint(req: MergeRequest) -> dict:
     return {"analysis": _ai_or_http(lambda: analyze(ctx))}
 
 
+# ── Purple: correlação ataque×detecção ───────────────────────────────────────
+class PurpleRequest(BaseModel):
+    """Scans a correlacionar (Red + Blue). ``ai`` pede a narrativa dos gaps."""
+
+    scan_ids: list[int] = Field(min_length=1)
+    ai: bool = False
+
+
+def _detection_tools() -> frozenset[str]:
+    """Ferramentas Blue (detecção) conhecidas pelo registry + defaults."""
+    from ..analysis.purple import DEFAULT_DETECTION_TOOLS
+    from ..capability import Category
+    from ..engine.registry import PluginRegistry
+
+    tools = set(DEFAULT_DETECTION_TOOLS)
+    try:
+        reg = PluginRegistry.discover()
+        tools |= {s.name for s in reg.all() if s.metadata.category == Category.BLUE}
+    except Exception:  # noqa: BLE001 — registry indisponível não quebra a correlação
+        pass
+    return frozenset(tools)
+
+
+@app.post("/api/v1/purple")
+def purple_endpoint(req: PurpleRequest) -> dict:
+    """Correlação Purple: técnicas ATT&CK atacadas (Red) × detectadas (Blue).
+
+    Devolve a matriz de cobertura, os PONTOS CEGOS (atacado sem detecção) e o %
+    de cobertura. Com ``ai=true``, inclui a narrativa da IA priorizando os gaps."""
+    from ..ai.conversation import purple_analysis
+    from ..analysis.purple import correlate_findings, purple_context
+
+    store = _store()
+    _validate_scan_ids(store, req.scan_ids)
+    findings: list[Finding] = []
+    for sid in req.scan_ids:
+        findings.extend(store.get_findings(sid))
+    report = correlate_findings(findings, detection_tools=_detection_tools())
+    out = asdict(report)
+    if req.ai:
+        out["ai_narrative"] = _ai_or_http(lambda: purple_analysis(purple_context(report)))
+    return out
+
+
 @app.post("/api/v1/jobs/{job_id}/chat")
 def job_chat(job_id: str, req: ChatRequest) -> dict:
     """Chat sobre um scan EM ANDAMENTO — usa as descobertas emitidas até agora."""

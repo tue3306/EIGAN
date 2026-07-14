@@ -52,3 +52,9 @@ def analyze(context: str, *, provider: CompletionPort | None = None) -> str:
     prov = _provider(provider)
     out = prov.complete(prompts.ANALYSIS_SYSTEM, prompts.analysis_user(context)).strip()
     return out
+
+
+def purple_analysis(context: str, *, provider: CompletionPort | None = None) -> str:
+    """Narrativa Purple: lê a matriz ataque×detecção e prioriza os pontos cegos."""
+    prov = _provider(provider)
+    return prov.complete(prompts.PURPLE_SYSTEM, prompts.purple_user(context)).strip()
