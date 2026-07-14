@@ -183,6 +183,30 @@ def test_groq_uses_confirmed_openai_compatible_base_url():
     assert captured["url"] == "https://api.groq.com/openai/v1/chat/completions"
 
 
+def test_json_mode_sends_response_format_only_when_requested():
+    # json_mode=True → response_format json_object (saída estruturada garante JSON
+    # válido; corrige o JSON malformado do GPT-5 que forçava o fallback do Planner).
+    # json_mode=False (default) → sem response_format (narrativas seguem prosa).
+    httpx = pytest.importorskip("httpx")
+    captured = {}
+
+    def handler(request):
+        import json as _json
+
+        captured["payload"] = _json.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    def _mk():
+        client = httpx.Client(transport=httpx.MockTransport(handler))
+        return GroqProvider(model="m", credential="k", client=client)
+
+    _mk().complete("s", "diga json", json_mode=True)
+    assert captured["payload"]["response_format"] == {"type": "json_object"}
+
+    _mk().complete("s", "prosa por favor")
+    assert "response_format" not in captured["payload"]
+
+
 def test_azure_half_configured_is_not_usable(monkeypatch):
     # Azure sem api_version não é utilizável → o gate não deve aprová-lo
     # (build() só devolve provedores available()).

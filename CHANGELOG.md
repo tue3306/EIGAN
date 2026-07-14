@@ -7,6 +7,26 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+> ⚠️ **Versão reiniciada para `0.0.0` (pré-alfa).** As tags `1.x` anteriores
+> superestimavam a maturidade: o Red team não era comandado pela IA na CLI/wizard,
+> o Blue team é só scaffold e não há Purple real, e o dashboard precisa de trabalho.
+> O versionamento só volta a subir quando Red **e** Blue **e** Purple rodarem de
+> ponta a ponta. Honestidade acima de número de versão (§3.1).
+
+### Fixed (crítico — a IA volta a comandar o Red team)
+- **`eigan scan` e o wizard rodavam um pipeline FIXO sem IA.** O `execute_scan`
+  exigia um provedor (§3.4) mas depois ignorava a IA e rodava o `Orchestrator`
+  determinístico — contrariando §3.4/§7/§18 ("a IA comanda o scan fim a fim").
+  Agora `execute_scan` roda o **`CognitiveEngine`** (mesmo motor da API/dashboard):
+  a IA planeja as capacidades, reage às descobertas e replaneja em ondas. O
+  operador **vê a IA raciocinar** no terminal (plano · seleção · execução).
+- **O `AgenticPlanner` caía no determinístico em TODO scan** porque o GPT-5 às vezes
+  emite JSON malformado (aspa faltando) e o parse falhava silenciosamente. Novo
+  **JSON mode** (`response_format`/`response_mime_type`/`format:json`) em todos os
+  provedores (OpenAI/Azure/Gemini/Ollama) força saída estruturada válida; o Planner
+  pede `json_mode=True` e tenta 2×. Verificado ao vivo: GPT-5 passou a devolver JSON
+  válido e a IA de fato comanda o plano.
+
 ### Added
 - **Wizard abre o dashboard direto no scan concluído.** Ao final de um "Novo Scan"
   o assistente oferece subir o dashboard já no deep-link `#/scan/<id>` (fecha a

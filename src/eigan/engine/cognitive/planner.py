@@ -165,7 +165,7 @@ class CompletionPort(Protocol):
 
     def available(self) -> bool: ...
 
-    def complete(self, system: str, user: str) -> str: ...
+    def complete(self, system: str, user: str, *, json_mode: bool = False) -> str: ...
 
 
 _AI_SYSTEM = (
@@ -431,15 +431,26 @@ class AgenticPlanner:
         return self._call(user, _ReplanOut)
 
     def _call(self, user: str, model: type[_M]) -> _M | None:
-        try:
-            raw = self.completion.complete(_AGENTIC_SYSTEM, user)
-        except Exception as exc:  # noqa: BLE001 — IA instável nunca derruba o plano
-            log.warning("AgenticPlanner: fallback determinístico (%s)", exc)
-            return None
-        out = _parse(raw, model)
-        if out is None:
-            log.warning("AgenticPlanner: resposta não-JSON/ inválida — fallback determinístico")
-        return out
+        # Até 2 tentativas com JSON mode: o provedor garante JSON sintaticamente
+        # válido (elimina o JSON malformado do GPT-5 que forçava o fallback). A 2ª
+        # tentativa cobre o raro caso de o schema não bater na 1ª.
+        last_raw = ""
+        for attempt in range(2):
+            try:
+                raw = self.completion.complete(_AGENTIC_SYSTEM, user, json_mode=True)
+            except Exception as exc:  # noqa: BLE001 — IA instável nunca derruba o plano
+                log.warning("AgenticPlanner: fallback determinístico (%s)", exc)
+                return None
+            last_raw = raw
+            out = _parse(raw, model)
+            if out is not None:
+                return out
+        log.warning(
+            "AgenticPlanner: resposta não-JSON/inválida após retry (%d chars) — "
+            "fallback determinístico",
+            len(last_raw),
+        )
+        return None
 
 
 def _summarize_findings(findings: list["Finding"], limit: int = 12) -> str:

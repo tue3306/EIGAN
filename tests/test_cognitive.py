@@ -133,7 +133,7 @@ class _FakeCompletion:
     def available(self) -> bool:
         return self._available
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
         if self._raises:
             raise RuntimeError("provedor instável")
         return self._text

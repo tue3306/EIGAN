@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eigan"
-version = "1.2.0"
+version = "0.0.0"
 description = "EIGAN — Enhanced Intelligent Guardian for Autonomous Assessment: agente de segurança autônomo dirigido por IA (Web + Infra, Outside-In/Inside-Out). Uso autorizado."
 readme = "README.md"
 requires-python = ">=3.11"

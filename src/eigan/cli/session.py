@@ -15,7 +15,7 @@ from ..engine.cognitive import CognitiveEngine, CognitiveReport, DecisionEntry, 
 if TYPE_CHECKING:
     from ..engine.cognitive import CompletionPort
 from ..engine.feeds import FeedCache
-from ..engine.orchestrator import Orchestrator, ScanReport
+from ..engine.orchestrator import ScanReport
 from ..engine.registry import PluginRegistry
 from ..engine.risk import RiskScorer
 from ..findings.store import FindingStore
@@ -30,8 +30,40 @@ class SessionAborted(Exception):
 
 @dataclass
 class ScanOutcome:
-    report: ScanReport
+    # A IA comanda o scan (CognitiveReport); o tipo aceita ScanReport por compat
+    # com quem ainda usa o Orchestrator determinístico direto (testes/pipeline).
+    report: "ScanReport | CognitiveReport"
     feeds_meta: dict
+
+
+class _ProgressSink:
+    """Adapta os eventos do :class:`CognitiveEngine` para o callback textual do
+    CLI/wizard — o operador vê a IA **raciocinar** (plano/replan) e as ferramentas
+    executarem em tempo real. Antes o scan da CLI nem passava pela IA."""
+
+    def __init__(self, progress) -> None:
+        self._p = progress
+
+    def emit(self, event: dict) -> None:
+        if self._p is None:
+            return
+        kind = event.get("type")
+        if kind == "log":
+            msg = event.get("message", "")
+            if msg:
+                self._p(msg)
+        elif kind == "tool_execution":
+            status = event.get("status", "")
+            if status in ("in_progress", "completed", "failed", "skipped"):
+                detail = event.get("detail", "")
+                line = f"[{status}] {event.get('tool', '?')} → {event.get('target', '?')}"
+                self._p(line + (f"  ({detail})" if detail else ""))
+        elif kind == "discovery":
+            fnd = event.get("finding", {})
+            self._p(
+                f"descoberta: [{fnd.get('severity', '?')}] {fnd.get('title', '?')} "
+                f"({fnd.get('affected_asset', '?')})"
+            )
 
 
 def feeds_meta(feeds: FeedCache) -> dict:
@@ -147,18 +179,28 @@ def execute_scan(
     progress=None,
     input_fn=input,
     echo=print,
+    goal_kind: GoalKind = GoalKind.FULL_ASSESSMENT,
 ) -> ScanOutcome:
-    # Gate AI-native (§3.4/ADR-0012): sem provedor de IA, o scan é recusado com um
-    # erro acionável — antes de qualquer prompt de termo/consent.
-    _require_completion()
+    """Executa um scan **comandado pela IA** (núcleo cognitivo, ADR-0007/0009).
+
+    A IA planeja as capacidades (objetivo → estratégia), reage a cada descoberta
+    e **replaneja em ondas**; o engine determinístico traduz cada capacidade na
+    ferramenta concreta e a executa com o runner seguro, dentro do escopo. É o
+    mesmo motor da API/dashboard — antes o ``eigan scan``/wizard rodavam um
+    pipeline fixo sem IA, contrariando §3.4/§7/§18.
+
+    Sem provedor de IA o scan é recusado com erro acionável (§3.4), antes de
+    qualquer prompt de termo/consent.
+    """
+    completion = _require_completion()
     if not accept_terms(assume_yes=assume_yes, input_fn=input_fn, echo=echo):
         raise SessionAborted("Termo de uso não aceito.")
 
-    # Resolve a perspectiva: explícita (--perspective) > do scope.yaml > unified.
-    # O default agora é UNIFIED (modo produto): não bloqueia por público×privado.
-    scope = build_scope(scope_path, targets, perspective or Perspective.UNIFIED)
-    resolved = perspective or scope.perspective
-
+    # O objetivo resolve a perspectiva default (FULL_ASSESSMENT → UNIFIED, modo
+    # produto); --perspective explícito sobrepõe. O guardrail de escopo é
+    # revalidado por alvo dentro do engine (defesa em profundidade).
+    goal = Goal.build(goal_kind, targets, perspective=perspective, profile=profile)
+    scope = build_scope(scope_path, targets, goal.perspective)
     try:
         ConsentGate(scope.engagement, targets).require(assume_yes=assume_yes, input_fn=input_fn)
     except ConsentDenied as exc:
@@ -166,15 +208,13 @@ def execute_scan(
 
     feeds = FeedCache.load()
     risk = RiskScorer(feeds, online=online_enrich)
-
     store = FindingStore(db)
-    orch = Orchestrator(store=store, risk=risk)
-    report = orch.run(
-        targets,
+    registry = PluginRegistry.discover()
+    engine = CognitiveEngine(registry, risk=risk, store=store, completion=completion)
+    report = engine.run(
+        goal,
         scope=scope,
-        perspective=resolved,
-        profile=profile,
         override_perspective=override_perspective,
-        progress=progress,
+        sink=_ProgressSink(progress),
     )
     return ScanOutcome(report=report, feeds_meta=feeds_meta(feeds))

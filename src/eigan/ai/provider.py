@@ -251,11 +251,16 @@ class _HTTPProvider(AIProvider):
             user = redact(user)
         return _parse_explanation(self._complete(system, user), finding)
 
-    def complete(self, system: str, user: str) -> str:
+    def complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
         """Completamento de texto genérico — porta para o Planner cognitivo
         (ADR-0007). Aplica a mesma redaction externa que ``explain`` (o prompt do
-        Planner pode conter títulos/ativos de findings)."""
-        return self._complete(system, redact(user) if self._redact_external else user)
+        Planner pode conter títulos/ativos de findings).
+
+        ``json_mode`` pede ao provedor a **saída estruturada** (JSON garantido
+        sintaticamente) onde suportado — sem ele, modelos como o GPT-5 às vezes
+        emitem JSON malformado (aspa faltando) e o Planner caía no determinístico."""
+        redacted = redact(user) if self._redact_external else user
+        return self._complete(system, redacted, json_mode=json_mode)
 
     def probe(self) -> tuple[bool, str]:
         """Faz uma completude mínima real para provar que a IA responde (custa
@@ -267,7 +272,9 @@ class _HTTPProvider(AIProvider):
         text = (out or "").strip().replace("\n", " ")
         return (bool(text), text[:80] if text else "resposta vazia do provedor")
 
-    def _complete(self, system: str, user: str) -> str:  # pragma: no cover - abstrato
+    def _complete(  # pragma: no cover - abstrato
+        self, system: str, user: str, *, json_mode: bool = False
+    ) -> str:
         raise NotImplementedError
 
     def _post(self, url: str, *, headers: dict[str, str], payload: dict) -> dict:
@@ -282,7 +289,9 @@ class _HTTPProvider(AIProvider):
 
 
 class AnthropicProvider(_HTTPProvider):
-    def _complete(self, system: str, user: str) -> str:
+    def _complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
+        # Anthropic não tem um flag "json_object"; o grounding por prompt já pede
+        # JSON e o modelo cumpre bem. json_mode é aceito para uniformizar a porta.
         data = self._post(
             "https://api.anthropic.com/v1/messages",
             headers={
@@ -329,18 +338,23 @@ class _OpenAICompatProvider(_HTTPProvider):
             "content-type": "application/json",
         }
 
-    def _complete(self, system: str, user: str) -> str:
+    def _complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
+        payload: dict[str, Any] = {
+            "model": self._model,
+            self.token_param: _max_tokens(),
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        }
+        # Saída estruturada: força JSON sintaticamente válido (a mensagem já contém
+        # a palavra "JSON", exigência da API). Elimina o JSON malformado do GPT-5.
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
         data = self._post(
             f"{self._base_url}/chat/completions",
             headers=self._auth_headers(),
-            payload={
-                "model": self._model,
-                self.token_param: _max_tokens(),
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-            },
+            payload=payload,
         )
         msg = data["choices"][0].get("message", {})
         return str(msg.get("content") or "")
@@ -384,40 +398,42 @@ class AzureOpenAIProvider(_HTTPProvider):
     def available(self) -> bool:
         return bool(self._credential and self._model and self._endpoint and self._api_version)
 
-    def _complete(self, system: str, user: str) -> str:
+    def _complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
         url = (
             f"{self._endpoint}/openai/deployments/{self._model}"
             f"/chat/completions?api-version={self._api_version}"
         )
+        payload: dict[str, Any] = {
+            "max_completion_tokens": _max_tokens(),
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
         data = self._post(
             url,
             headers={"api-key": self._credential, "content-type": "application/json"},
-            payload={
-                "max_completion_tokens": _max_tokens(),
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-            },
+            payload=payload,
         )
         msg = data["choices"][0].get("message", {})
         return str(msg.get("content") or "")
 
 
 class GoogleProvider(_HTTPProvider):
-    def _complete(self, system: str, user: str) -> str:
+    def _complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self._model}:generateContent?key={self._credential}"
         )
-        data = self._post(
-            url,
-            headers={"content-type": "application/json"},
-            payload={
-                "systemInstruction": {"parts": [{"text": system}]},
-                "contents": [{"parts": [{"text": user}]}],
-            },
-        )
+        payload: dict[str, Any] = {
+            "systemInstruction": {"parts": [{"text": system}]},
+            "contents": [{"parts": [{"text": user}]}],
+        }
+        if json_mode:
+            payload["generationConfig"] = {"response_mime_type": "application/json"}
+        data = self._post(url, headers={"content-type": "application/json"}, payload=payload)
         return str(data["candidates"][0]["content"]["parts"][0]["text"])
 
 
@@ -432,18 +448,21 @@ class OllamaProvider(_HTTPProvider):
             host = "http://" + host
         return host
 
-    def _complete(self, system: str, user: str) -> str:
+    def _complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
+        payload: dict[str, Any] = {
+            "model": self._model,
+            "stream": False,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        }
+        if json_mode:
+            payload["format"] = "json"  # Ollama força JSON válido
         data = self._post(
             f"{self._host()}/api/chat",
             headers={"content-type": "application/json"},
-            payload={
-                "model": self._model,
-                "stream": False,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-            },
+            payload=payload,
         )
         return str(data["message"]["content"])
 

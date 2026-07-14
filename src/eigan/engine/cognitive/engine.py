@@ -119,6 +119,18 @@ class CognitiveReport:
     ai_used: bool
     suggestions: list[Suggestion] = field(default_factory=list)
 
+    # Compat com ScanReport: o CLI/wizard/relatório consomem estes campos sem
+    # precisar saber qual engine (determinístico × cognitivo) produziu o report.
+    @property
+    def perspective(self) -> Perspective:
+        """Perspectiva efetiva do scan (derivada do objetivo)."""
+        return self.goal.perspective
+
+    @property
+    def skipped_tools(self) -> list[str]:
+        """Ferramentas sugeridas mas não executadas (indisponíveis/roadmap)."""
+        return [s.tool for s in self.suggestions]
+
 
 class CognitiveEngine:
     """Orquestrador goal-driven: planeja capacidades, seleciona ferramentas,
