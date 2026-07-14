@@ -7,6 +7,8 @@ tocar em rede, TTY ou nos fluxos bloqueantes (wizard/serve).
 
 import importlib.util
 import os
+import sys
+import types
 
 import pytest
 
@@ -34,6 +36,18 @@ def test_banner_has_box_and_name():
     b = menu.banner()
     assert "EIGAN" in b
     assert b.startswith("╔") and "╚" in b
+
+
+def test_serve_app_opens_deeplink_path(monkeypatch):
+    # O wizard abre o dashboard direto no scan concluído: serve_app deve repassar
+    # ``open_path`` para a URL aberta no navegador (deep-link #/scan/<id>).
+    opened: dict[str, str] = {}
+    monkeypatch.setattr(
+        menu, "_open_when_ready", lambda h, p, url, **_k: opened.setdefault("url", url)
+    )
+    monkeypatch.setitem(sys.modules, "uvicorn", types.SimpleNamespace(run=lambda *a, **k: None))
+    menu.serve_app(db=":memory:", open_browser=True, open_path="/#/scan/9", echo=lambda *_a: None)
+    assert opened["url"].endswith("/#/scan/9")
 
 
 def test_render_menu_lists_all_options():

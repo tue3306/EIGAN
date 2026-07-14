@@ -66,3 +66,13 @@ def test_store_dedup_by_fingerprint():
         sid = store.create_scan("eng", "standard", ["host"])
         store.add_findings(sid, [_f(), _f()])  # mesmo fingerprint
         assert len(store.get_findings(sid)) == 1
+
+
+def test_store_none_path_falls_back_to_default(tmp_path, monkeypatch):
+    # Um db_path nulo/vazio NÃO deve virar um banco "None"/"" no disco: cai no
+    # default seguro (regressão do arquivo-fantasma "None"). Roda em cwd temporário
+    # para não sujar o diretório do repositório com um eigan.db.
+    monkeypatch.chdir(tmp_path)
+    assert FindingStore(None)._path == "eigan.db"
+    assert FindingStore("")._path == "eigan.db"
+    assert not (tmp_path / "None").exists()

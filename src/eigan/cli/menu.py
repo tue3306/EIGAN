@@ -29,6 +29,7 @@ from ..engine.feeds import FeedCache
 from ..findings.store import FindingStore
 from ..security.onboarding import config_dir, terms_accepted
 from . import doctor as doctor_mod
+from .ui import boxed
 
 _REPORT_FORMATS = ("html", "pdf", "md", "json", "csv", "sarif")
 _REPORT_STYLES = ("technical", "executive")
@@ -36,18 +37,11 @@ _YES = {"s", "sim", "y", "yes"}
 
 
 # --------------------------------------------------------------------------- #
-# Apresentação (banner + menu). Box-drawing puro: alinha em qualquer terminal.
+# Apresentação (banner + menu). A moldura vem de :mod:`.ui` (compartilhada com o
+# wizard e a TUI), alinhando em qualquer terminal.
 # --------------------------------------------------------------------------- #
-def _boxed(lines: list[str], width: int = 58) -> str:
-    inner = width - 2
-    top = "╔" + "═" * inner + "╗"
-    bottom = "╚" + "═" * inner + "╝"
-    body = ["║" + (" " + ln).ljust(inner) + "║" for ln in lines]
-    return "\n".join([top, *body, bottom])
-
-
 def banner() -> str:
-    return _boxed(
+    return boxed(
         [
             "EIGAN",
             "Plataforma de Operações de Segurança",
@@ -373,15 +367,20 @@ def serve_app(
     port: int = 8000,
     db: str = "eigan.db",
     open_browser: bool = False,
+    open_path: str = "",
     echo: Callable = print,
 ) -> None:
-    """Sobe a API + dashboard (bloqueante). Compartilhado pelo menu e por `serve`."""
+    """Sobe a API + dashboard (bloqueante). Compartilhado pelo menu e por `serve`.
+
+    ``open_path`` é um fragmento anexado à URL base ao abrir o navegador — ex.:
+    ``"/#/scan/7"`` leva direto ao scan recém-concluído (deep-link do SPA).
+    """
     os.environ["EIGAN_DB"] = db
     url = f"http://{host}:{port}"
     echo(f"EIGAN — dashboard: {url}   ·   API: {url}/api/v1   ·   docs: {url}/docs")
     if open_browser:
         echo("Abrindo o navegador assim que o servidor subir…")
-        _open_when_ready(host, port, url)
+        _open_when_ready(host, port, url + open_path)
     try:
         import uvicorn
     except ImportError:

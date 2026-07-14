@@ -8,6 +8,8 @@ dist/
 venv/
 .env
 *.db
+*.db-shm
+*.db-wal
 *.sqlite3
 scope.yaml
 report_scan_*.pdf
@@ -21,3 +23,8 @@ node_modules/
 
 .claude/
 eigan-screenshots/
+
+# Artefatos de execução de ferramentas externas (saída de scan, nunca versionar)
+/None
+/gowitness.jsonl
+/eigan-screenshots/

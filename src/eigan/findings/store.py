@@ -39,8 +39,11 @@ CREATE INDEX IF NOT EXISTS idx_findings_scan ON findings(scan_id);
 
 
 class FindingStore:
-    def __init__(self, db_path: str | Path = "eigan.db") -> None:
-        self._path = str(db_path)
+    def __init__(self, db_path: str | Path | None = "eigan.db") -> None:
+        # Defesa: um `db_path` nulo/vazio (ex.: caller que esqueceu de resolver o
+        # default) NÃO deve virar silenciosamente um banco chamado "None"/"" —
+        # isso já produziu um arquivo-fantasma no passado. Cai no default seguro.
+        self._path = str(db_path) if db_path else "eigan.db"
         # timeout generoso + WAL: suporta MÚLTIPLOS scans simultâneos (cada job roda
         # em sua thread com sua própria conexão) sem "database is locked". WAL deixa
         # leitores (dashboard/API) não bloquearem o escritor (o scan em andamento).

@@ -7,6 +7,30 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- **Wizard abre o dashboard direto no scan concluído.** Ao final de um "Novo Scan"
+  o assistente oferece subir o dashboard já no deep-link `#/scan/<id>` (fecha a
+  lacuna de não haver como ver o resultado na web logo após escanear). `serve_app`
+  ganhou o parâmetro `open_path` para o deep-link.
+- **Resumo pós-scan por severidade** no wizard: contagem colorida
+  `CRÍTICA · ALTA · MÉDIA · BAIXA · INFO` + top findings ordenados por risco (a
+  "cara" do ataque encontrado) antes da oferta de relatório.
+- Helper de apresentação compartilhado `cli/ui.py` (`boxed`/`rule`): menu, wizard e
+  TUI passam a desenhar a **mesma moldura alinhada**.
+
+### Fixed
+- **Moldura do cabeçalho do wizard desalinhada** (bordas de larguras diferentes) —
+  agora usa a caixa alinhada de `cli/ui.py`.
+- **`FindingStore(None)`/`""` criava um banco-fantasma `None`** no disco (`str(None)`
+  → `"None"`); agora cai no default seguro `eigan.db`. Artefatos de runtime (`None`,
+  `gowitness.jsonl`, sidecars `*.db-wal`/`*.db-shm`) removidos do versionamento e
+  ignorados.
+
+### Tests
+- +20 testes: `cli/ui.py`, resumo por severidade do wizard, deep-link do
+  `serve_app`, parser de `.env` (`envfile`, 0→100% de cobertura) e regressão do
+  banco-fantasma `None`.
+
 ## [1.2.0] - 2026-07-13
 
 Foco: **correlação entre scans, observabilidade e mais 7 ferramentas.**
