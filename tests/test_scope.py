@@ -40,15 +40,15 @@ def test_unified_scope_allows_private_and_public():
     scope.enforce("8.8.8.8", perspective=UNIFIED)  # público: não levanta
 
 
-def test_cloud_metadata_blocked_always(tmp_path):
+def test_cloud_metadata_blocked_always():
     """Metadata de nuvem (169.254.169.254) é bloqueado SEMPRE — nem override libera (ADR-0015)."""
-    from eigan.security.scope import ScopeViolation
-
     scope = build_scope(None, ["169.254.169.254"], UNIFIED)
     with pytest.raises(ScopeViolation):
         scope.enforce("169.254.169.254", perspective=UNIFIED)
     with pytest.raises(ScopeViolation):
-        scope.enforce("http://169.254.169.254/latest/meta-data/", perspective=UNIFIED, override=True)
+        scope.enforce(
+            "http://169.254.169.254/latest/meta-data/", perspective=UNIFIED, override=True
+        )
     with pytest.raises(ScopeViolation):
         scope.enforce("metadata.google.internal", perspective=UNIFIED, override=True)
 
