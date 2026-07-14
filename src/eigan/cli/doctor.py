@@ -106,6 +106,8 @@ class DoctorReport:
     feeds_epss: str = ""
     pdf_available: bool = False
     pdf_detail: str = ""
+    seclists_root: str | None = None
+    wordlist_by_profile: list[str] = field(default_factory=list)
 
     @property
     def tools_available(self) -> int:
@@ -168,6 +170,8 @@ def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = Non
     ai_provider = _detect_ai()
     fc = feeds if feeds is not None else FeedCache.load()
     pdf_ok, pdf_detail = pdf_status()
+    from ..engine.wordlists import seclists_root, summary_by_profile
+
     return DoctorReport(
         python_version=platform.python_version(),
         python_ok=sys.version_info >= (3, 11),
@@ -179,6 +183,8 @@ def gather(registry: PluginRegistry | None = None, feeds: FeedCache | None = Non
         feeds_epss=fc.epss_date(),
         pdf_available=pdf_ok,
         pdf_detail=pdf_detail,
+        seclists_root=seclists_root(),
+        wordlist_by_profile=summary_by_profile("content"),
     )
 
 
@@ -241,6 +247,15 @@ def render(report: DoctorReport, echo, secho) -> None:
 
     echo("\nRelatórios (PDF opcional; HTML sempre funciona):")
     echo(f"  [{ok if report.pdf_available else 'i'}] {report.pdf_detail}")
+
+    echo("\nWordlists (descoberta de conteúdo — ffuf):")
+    if report.seclists_root:
+        echo(f"  [{ok}] SecLists: {report.seclists_root}")
+    else:
+        echo("  [i] SecLists não encontrado — usando a embutida (cobertura reduzida).")
+        echo("      instale: sudo apt install seclists  (ou EIGAN_WORDLIST_DIR=/caminho/SecLists)")
+    for line in report.wordlist_by_profile:
+        echo(f"      {line}")
 
     echo("\nFeeds de risco (EPSS/KEV):")
     echo(f"  KEV : {report.feeds_kev or 'UNVERIFIED — rode `eigan feeds update`'}")

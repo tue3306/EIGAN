@@ -85,6 +85,7 @@ def tool_options(profile: str, perspective: Perspective) -> dict:
         base["rate_web"] = min(base["rate_web"], 150)
         base["port_rate"] = min(base["port_rate"], 500)
     return {
+        "profile": _profile_key(profile),  # p/ seleção de wordlist (ffuf, ADR-0019)
         "rate_limit": base["rate_web"],  # tools web (httpx/nuclei/katana/ffuf)
         "port_rate": base["port_rate"],  # naabu
         "timing": base["timing"],  # nmap -T

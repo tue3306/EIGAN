@@ -12,6 +12,13 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Added (wordlists de verdade — SecLists, ADR-0019)
+- **Resolvedor central de wordlists** (`engine/wordlists.py`): detecta SecLists
+  (ou `EIGAN_WORDLIST_DIR`) e escolhe por objetivo (content/params/dns) e tamanho
+  por perfil (quick→small, deep→large); senão wordlist do SO; senão a **curada
+  média embutida** (300 entradas, vs. 80 antes), **avisando cobertura reduzida**.
+  O ffuf passou a usá-lo; o `doctor` mostra o SecLists e a wordlist por perfil.
+
 ### Security (Policy Engine ligado no loop — ADR-0011 Fase 3)
 - **A política arbitra CADA ação ativa** antes de tocar a rede (§7): o
   `CognitiveEngine` submete cada ferramenta×alvo ao `PolicyEngine.vet()` →

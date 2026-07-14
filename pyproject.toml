@@ -39,7 +39,7 @@ vulnforge = "eigan.cli.main:deprecated_alias"
 where = ["src"]
 
 [tool.setuptools.package-data]
-eigan = ["report/templates/*.j2", "api/static/*"]
+eigan = ["report/templates/*.j2", "api/static/*", "engine/wordlists_data/*.txt"]
 
 [tool.pytest.ini_options]
 # "." habilita `import plugins.<cat>.<nome>...` nos testes de plugin (ADR-0003).
