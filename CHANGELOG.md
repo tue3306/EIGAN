@@ -12,6 +12,15 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Security (blindagem de SSRF — ADR-0015)
+- **Cliente HTTP anti-SSRF** (`security/ssrf.py`): `safe_get` resolve+tria+**fixa o
+  IP** validado (anti-DNS-rebinding), **não segue redirect cegamente** (revalida
+  cada destino) e **bloqueia metadata de nuvem SEMPRE** (169.254.169.254 etc.).
+- **Gate central** (`scope.enforce`) nega o metadata literal em toda perspectiva —
+  nem `override` libera. O exposure prober usa `safe_get`; `allow_private` vem da
+  perspectiva. Antes: `urllib.urlopen` seguia redirect → um alvo redirecionava para
+  metadata/interno furando o escopo. Verificado ao vivo (302→metadata recusado).
+
 ### Security (autenticação da API/dashboard — ADR-0014)
 - **Token obrigatório na API:** todo `/api/v1` (exceto `/health`) e o WebSocket
   exigem o token do EIGAN (`Authorization: Bearer …`/`X-EIGAN-Token`/`?token=`).

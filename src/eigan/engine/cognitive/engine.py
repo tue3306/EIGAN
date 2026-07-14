@@ -73,7 +73,10 @@ class SafeExecution:
         self, spec: PluginSpec, target: str, perspective: Perspective, **opts
     ) -> list[Finding]:
         self.scope.enforce(target, perspective=perspective, override=self.override)
-        findings = spec.scan(target, **opts)
+        # Passa a perspectiva ao runner (opt-in): sondas HTTP nativas (exposure) a
+        # usam para decidir allow_private na blindagem de SSRF (ADR-0015). Runners
+        # que não a consomem simplesmente a ignoram (BaseToolPlugin.scan tem **options).
+        findings = spec.scan(target, perspective=perspective.value, **opts)
         for f in findings:
             f.perspective = perspective
         return findings

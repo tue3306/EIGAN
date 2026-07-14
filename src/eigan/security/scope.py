@@ -130,6 +130,17 @@ class Scope:
         except ValueError as exc:
             raise InvalidTarget(str(exc)) from exc
 
+        # 0b. Metadata de nuvem (169.254.169.254 etc.) NUNCA é alvo legítimo — só
+        #     pivô de SSRF. Bloqueado SEMPRE, independente de perspectiva/override
+        #     (§3.2/§4/ADR-0015). O redirect/DNS-rebinding é fechado no cliente HTTP.
+        from . import ssrf
+
+        if ssrf.is_metadata_literal(extract_host(target)):
+            raise ScopeViolation(
+                f"Endereço de metadata de nuvem bloqueado (SSRF): {target!r}. "
+                "Não é alvo legítimo de scanner ativo."
+            )
+
         if not self.authorized:
             raise ScopeViolation(
                 "Escopo não autorizado: defina 'authorized: true' no scope.yaml "
