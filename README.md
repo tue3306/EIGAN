@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-1.0.1-blue">
+  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.0.0-blue">
   <a href="LICENSE"><img alt="Licença" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-blue"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white">
   <a href="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml/badge.svg"></a>
