@@ -28,6 +28,19 @@ def test_extract_host():
     assert extract_host("host.local") == "host.local"
 
 
+def test_extract_host_ipv6_bracketed():
+    """IPv6 entre colchetes (com/sem porta) tem de virar o host nu — senão
+    classify_host o vê como 'hostname' e o gate de escopo/perspectiva erra
+    (ex.: [::1]:80 liberado em EXTERNAL; metadata [fd00:ec2::254]:80 passa)."""
+    assert extract_host("[::1]") == "::1"
+    assert extract_host("[::1]:80") == "::1"
+    assert extract_host("[fd00:ec2::254]:80") == "fd00:ec2::254"
+    assert extract_host("http://[::1]:8080/x") == "::1"
+    # IPv6 nu (sem colchetes) fica como está — sem porta a desambiguar.
+    assert extract_host("fd00::1") == "fd00::1"
+    assert extract_host("::1") == "::1"
+
+
 def test_external_policy_blocks_private_and_loopback():
     ok, _ = target_allowed(EXTERNAL, "10.0.0.1")
     assert not ok

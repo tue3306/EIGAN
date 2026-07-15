@@ -115,8 +115,15 @@ def extract_host(target: str) -> str:
     t = target.strip()
     if "://" in t:
         return urlparse(t).hostname or t
-    # host:port (sem esquema); evita quebrar IPv6 entre colchetes
-    if t.count(":") == 1 and "[" not in t:
+    # IPv6 entre colchetes, com ou sem porta: [::1] · [::1]:80 · [fd00::1]:443.
+    # Sem isto o host nu não é extraído e classify_host o trata como 'hostname'
+    # (fura perspectiva/escopo e o bloqueio de metadata de nuvem em IPv6).
+    if t.startswith("["):
+        end = t.find("]")
+        if end != -1:
+            return t[1:end]
+    # host:port (sem esquema): um único ':' garante que não é IPv6 nu (2+ ':').
+    if t.count(":") == 1:
         return t.split(":")[0]
     return t
 
