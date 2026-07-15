@@ -12,6 +12,39 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Security (auditoria de segurança — hardening do próprio produto §4)
+- **SSRF / IPv4-mapped IPv6** (`security/ssrf.py`): o endpoint de metadata de nuvem
+  na forma `::ffff:169.254.169.254` era classificado como *link-local* — e, em
+  assumed-breach (`allow_private=True`, default de UNIFIED/INTERNAL), **furava o
+  bloqueio "sempre" de metadata** (SSRF → roubo de credencial de nuvem). Agora o
+  IPv4-mapped é normalizado ao IPv4 embutido antes de classificar; metadata é
+  bloqueado em toda forma e toda perspectiva.
+- **IPv6 entre colchetes** (`perspective.py`): `[::1]:80` / `[fd00:ec2::254]:80`
+  não tinham o host extraído (caíam em `HOSTNAME`) — `[::1]:80` (loopback) era
+  liberado em EXTERNAL e o metadata IPv6 passava pelo gate. `extract_host` passou a
+  tratar `[ipv6]` e `[ipv6]:porta`.
+
+### Fixed (auditoria — robustez e correção §4)
+- **`engine/base.py`**: no timeout, um stdout parcial com bytes UTF-8 inválidos
+  levantava `UnicodeDecodeError` e derrubava o passo do scan — decodifica com
+  `errors="replace"` (o runner é a única porta de subprocess, §5).
+- **`plugins/red/nuclei`**: um `cwe-id` malformado (sem prefixo `CWE-`, ou inteiro)
+  num template derrubava o parse inteiro — mesma classe do bug do `cvss-score`.
+  Normaliza número claro → `CWE-N` ou descarta o irreconhecível (sem fabricar, §2).
+- **`findings/dedup.py`**: o merge de duplicados comia traços/quebras **legítimos**
+  da evidência (`-----END CERTIFICATE-----`) via `.strip("\n-")` e ignorava o
+  `first_seen` mais antigo — corrigido (evidência íntegra no relatório §12).
+- **`engine/feeds.py`**: um cache KEV/EPSS com JSON válido de tipo errado (lista no
+  lugar de objeto) derrubava `FeedCache.load()` — chamada em todo scan/relatório.
+  Degrada para vazio (`UNVERIFIED`), como qualquer cache ilegível.
+
+### Changed (preparação de release 0.0.0)
+- README: badge de versão → `0.0.0`; contagem de testes real; clone/CI/URLs
+  migradas de `vulnerability-scanner` → **`tue3306/EIGAN`** (repo renomeado).
+- SARIF (`report/exporters.py`): `informationUri` corrigido para o repo atual
+  (`tue3306/EIGAN`) — aparecia em todo relatório SARIF exportado.
+- `docs/BLOCKERS.md`: blocker #6 (renome do repo) marcado **RESOLVIDO**.
+
 ### Added (camada de Validação — confiança explícita, anti-falso-positivo §16, ADR-0027)
 - **`analysis/validation.py` `Validator`**: etapa de *Validation* (§8) que atribui
   confiança **grounded** a cada finding — sobe para `CONFIRMED` com **PoC ativa**
