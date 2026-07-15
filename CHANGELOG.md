@@ -12,6 +12,13 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Added (camada de Validação — confiança explícita, anti-falso-positivo §16, ADR-0027)
+- **`analysis/validation.py` `Validator`**: etapa de *Validation* (§8) que atribui
+  confiança **grounded** a cada finding — sobe para `CONFIRMED` com **PoC ativa**
+  (sqlmap/dalfox) e para `FIRM` com **corroboração** (≥2 fontes via dedup); nunca
+  fabrica nem rebaixa. Rodada no `_finalize` do engine; `ValidationSummary` no
+  evento `analysis_complete` e em **`GET /api/v1/scans/{id}`** (validadas + confiança).
+
 ### Added (contrato de saúde de ferramenta — MASTER PROMPT v2 §12)
 - **`PluginSpec.health_check() → Health`** e **`PluginRegistry.health_report()`**:
   estado estruturado e **verificável** de cada ferramenta (ok/missing/roadmap/

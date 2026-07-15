@@ -679,6 +679,12 @@ class CognitiveEngine:
         emitter: EventSink,
     ) -> CognitiveReport:
         findings = deduplicate(state.findings)
+        # Validação (§16): confiança explícita e grounded — sobe só com prova (PoC
+        # ativa) ou corroboração (≥2 fontes); nunca fabrica. Após o dedup (que popula
+        # correlated_sources) e antes do risco.
+        from ...analysis.validation import Validator
+
+        validation = Validator().apply(findings)
         if self._risk is not None:
             findings = self._risk.score(findings)
         findings.sort(key=lambda f: (f.risk_rank, f.severity.rank), reverse=True)
@@ -714,6 +720,7 @@ class CognitiveEngine:
                     "capabilities": state.steps_executed,
                     "suggestions": len(state.suggestions),
                     "stop": stop_reason.value,
+                    "validation": validation.as_dict(),
                 }
             )
         )

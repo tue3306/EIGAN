@@ -24,6 +24,7 @@ from ..ai.provider import AIProviderRequired, default_provider
 from ..analysis.attack import map_attack
 from ..analysis.compliance import assess_compliance
 from ..analysis.inventory import build_inventory, summarize
+from ..analysis.validation import Validator
 from ..findings.schema import Finding, Severity
 from ..findings.store import FindingStore
 from ..security import apitoken
@@ -246,6 +247,8 @@ def scan_detail(scan_id: int) -> dict:
         "severity": _severity_counts(findings),
         # Uso de tokens da IA no scan (observabilidade §22, ADR-0025), estruturado.
         "token_usage": store.get_token_usage(scan_id),
+        # Validação (§16): quantas findings validadas + distribuição de confiança.
+        "validation": Validator().summarize(findings).as_dict(),
     }
 
 
