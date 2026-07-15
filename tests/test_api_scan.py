@@ -18,8 +18,9 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("EIGAN_DB", str(tmp_path / "api.db"))
     monkeypatch.setenv("EIGAN_API_TOKEN", "test-token")
     # EIGAN é AI-native (§3.4/ADR-0012): um provedor precisa existir para o scan
-    # rodar. Uma chave de teste satisfaz o gate; como use_ai=False nestes testes,
-    # nenhuma chamada de rede acontece (execução determinística do substrato).
+    # rodar. Uma chave de teste satisfaz o gate e o planner tenta a IA; como a
+    # chamada falha (chave inválida/sem rede), o AgenticPlanner cai no substrato
+    # determinístico — o scan conclui sem depender de rede.
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.delenv("EIGAN_AI_PROVIDER", raising=False)
     # reimporta o app com o DB temporário e manager limpo.
@@ -120,6 +121,42 @@ def test_scan_lifecycle_and_cascade_log(client):
     logs = [e for e in prog["events"] if e["type"] == "log"]
     assert logs, "o agente deve transmitir o raciocínio (eventos log)"
     assert any("[plano" in e.get("message", "") for e in logs)
+
+
+def test_scan_uses_ai_planner_even_when_use_ai_false(client, monkeypatch):
+    """§3.4 (AI-native, tudo-ou-nada): mesmo com ``use_ai=False`` um scan REAL usa a
+    IA para PLANEJAR — não existe caminho determinístico que produza um scan sem a
+    IA. ``use_ai`` controla só as narrativas por IA, nunca o planejador. Regressão:
+    antes, ``use_ai=False`` fazia o engine rodar o DeterministicPlanner direto (a IA
+    nem era chamada), furando o inegociável §3.4."""
+    import eigan.ai.provider as prov
+
+    calls: list[str] = []
+
+    class _FakeAI:
+        def available(self) -> bool:
+            return True
+
+        def complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
+            calls.append("plan")
+            return '{"capabilities": []}'  # plano válido (vazio) — sem rede
+
+    # start() e _run() fazem `from ..ai.provider import require_provider` em tempo de
+    # chamada; monkeypatch no módulo atinge ambos.
+    monkeypatch.setattr(prov, "require_provider", lambda: _FakeAI())
+    r = client.post(
+        "/api/v1/scans",
+        json={
+            "targets": ["10.0.0.5"],
+            "perspective": "internal",
+            "objective": "quick",
+            "authorized": True,
+            "use_ai": False,
+        },
+    )
+    assert r.status_code == 202
+    _wait(client, r.json()["id"])
+    assert calls, "o planner deve chamar a IA mesmo com use_ai=False (§3.4)"
 
 
 def test_invalid_perspective_is_rejected(client):

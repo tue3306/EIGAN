@@ -695,7 +695,10 @@ class ScanRequest(BaseModel):
     targets: list[str] = Field(min_length=1)
     perspective: str = "unified"  # default do produto: público+privado num só scan
     objective: str = "standard"  # quick | standard | deep | ai
-    use_ai: bool = True  # EIGAN é AI-native; a IA comanda o scan por padrão
+    # A IA SEMPRE comanda o scan (§3.4 — não há scan sem IA). Isto controla apenas
+    # se as NARRATIVAS por IA (análise + remediação) são geradas ao final — um lever
+    # de custo, nunca um "modo determinístico".
+    use_ai: bool = True
     authorized: bool = False
     override_perspective: bool = False
 

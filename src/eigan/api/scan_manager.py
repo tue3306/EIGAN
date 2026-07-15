@@ -19,7 +19,10 @@ from __future__ import annotations
 import itertools
 import threading
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, cast
+
+if TYPE_CHECKING:
+    from ..engine.cognitive import CompletionPort
 
 from ..engine import events as ev
 from ..engine.bus import EventBus
@@ -51,19 +54,6 @@ _GOAL_BY_PERSPECTIVE = {
     Perspective.EXTERNAL: GoalKind.ATTACK_SURFACE,
     Perspective.INTERNAL: GoalKind.NETWORK_ASSESSMENT,
 }
-
-
-def _ai_completion(use_ai: bool):
-    """Provedor de IA (se pedido e disponível) para o AgenticPlanner; senão None
-    → o engine cai no DeterministicPlanner (fallback §3.4)."""
-    if not use_ai:
-        return None
-    try:
-        from ..ai.provider import default_provider
-
-        return default_provider()
-    except Exception:  # noqa: BLE001 — IA indisponível nunca quebra o scan
-        return None
 
 
 class ScanCancelled(Exception):
@@ -247,9 +237,15 @@ class ScanManager:
             feeds = FeedCache.load()
             risk = RiskScorer(feeds, online=False)  # enriquecimento online é opt-in
             store = FindingStore(self._db_path)
-            # EIGAN: a IA comanda o scan (AgenticPlanner) quando disponível; senão
-            # o loop determinístico. A cascata declarativa é o piso de segurança.
-            completion = _ai_completion(job.use_ai)
+            # §3.4 (AI-native, tudo-ou-nada): a IA comanda TODO scan real. O provedor
+            # já foi exigido em start(), então o AgenticPlanner SEMPRE o usa — não há
+            # caminho determinístico que produza um scan sem a IA. Se a chamada de IA
+            # falhar, o próprio planner cai no substrato (falha de agente reportada,
+            # não "rodar sem IA"). `use_ai` NÃO desliga o planejador — controla apenas
+            # se as NARRATIVAS por IA (análise/remediação) também são geradas.
+            from ..ai.provider import require_provider
+
+            completion = cast("CompletionPort", require_provider())
             # Policy Engine (ADR-0011): sob o consent do engajamento, ações HITL são
             # auto-aprovadas (e auditadas na timeline); exploit exige allow_exploit.
             from ..policy.engine import AutoApprove
@@ -285,9 +281,10 @@ class ScanManager:
                 **opts,
             )
             # Analysis Engine (auto): a IA analisa o scan inteiro e conclui — o
-            # usuário não precisa clicar. Só roda quando há achados (nada a analisar
-            # num scan vazio). Persistida com o scan; degrada sem quebrar.
-            if report.scan_id is not None and report.findings:
+            # usuário não precisa clicar. Roda quando há achados (nada a analisar num
+            # scan vazio) e `use_ai` pede as narrativas (lever de custo — não gastar
+            # tokens à toa). O PLANNER já usou a IA acima (§3.4), independente disto.
+            if report.scan_id is not None and report.findings and job.use_ai:
                 sink.emit(ev.log("[análise] IA correlacionando os achados e concluindo…"))
                 from ..analysis.engine import analyze_and_store, remediate_and_store
 
