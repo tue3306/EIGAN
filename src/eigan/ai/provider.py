@@ -310,7 +310,22 @@ class _HTTPProvider(AIProvider):
         else:
             resp = httpx.post(url, headers=headers, json=payload, timeout=self._timeout)
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        self._meter_usage(data)
+        return data
+
+    def _meter_usage(self, data: object) -> None:
+        """Registra o uso de tokens desta chamada (observabilidade §22, ADR-0025).
+
+        Best-effort: a telemetria **nunca** derruba a chamada de IA. O nome do
+        provedor é derivado da classe (``AnthropicProvider`` → ``anthropic``)."""
+        try:
+            from ..observability.usage import record_completion
+
+            name = type(self).__name__.removesuffix("Provider").lower() or "ai"
+            record_completion(name, self._model, data)
+        except Exception:  # noqa: BLE001 — telemetria é best-effort
+            pass
 
 
 class AnthropicProvider(_HTTPProvider):

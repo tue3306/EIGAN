@@ -12,6 +12,17 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Added (observabilidade de tokens/custo — MASTER PROMPT v2 §22, ADR-0025)
+- **Pacote `observability/`** medindo o uso **real** de tokens de toda chamada de
+  IA (contagem vem do provedor, não de heurística): `extract_usage()` normaliza os
+  4 formatos oficiais (OpenAI/Anthropic/Gemini/Ollama), `UsageMeter` acumula
+  thread-safe, `use_meter()` escopa por execução. Instrumentado no único
+  choke-point HTTP (`_HTTPProvider._post`) — cobre todos os provedores.
+- **`CostModel`** converte tokens→custo **só** com preços que o operador confirmou
+  na fonte oficial (`config/ai_pricing.yaml`, `verified: true`). Sem preço
+  verificado, o custo é **UNVERIFIED** — nunca estimado (§2/§3.1). O arquivo
+  versionado vai com `models: {}` (zero preço fabricado).
+
 ### Added (Blue/Purple acessíveis no produto — ADR-0020)
 - **Menu** ganhou "Análise Blue (logs)" e "Correlação Purple" (era Red-only).
 - **CLI** `eigan purple <scan_ids...> [--ai]`: correlaciona Red×Blue, mostra
