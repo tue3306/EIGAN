@@ -41,20 +41,33 @@ class SsrfError(Exception):
     """Destino recusado por política anti-SSRF (metadata/interno fora do permitido)."""
 
 
+def _normalize_mapped(
+    ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+    """IPv4-mapped IPv6 (``::ffff:a.b.c.d``) roteia, na pilha dupla, para o IPv4
+    embutido — logo tem de ser classificado pelo IPv4 real. Sem isto, um endpoint
+    de metadata na forma ``::ffff:169.254.169.254`` seria visto como link-local e,
+    em assumed-breach (``allow_private=True``), furaria o bloqueio 'sempre' de
+    metadata (SSRF → roubo de credencial de nuvem)."""
+    mapped = getattr(ip, "ipv4_mapped", None)
+    return mapped if mapped is not None else ip
+
+
 def is_metadata_literal(host: str) -> bool:
     """O host é, literalmente (sem DNS), um endpoint de metadata? (usado pelo gate)."""
     h = (host or "").strip().lower().strip("[]")
     if h in METADATA_HOSTS:
         return True
     try:
-        return str(ipaddress.ip_address(h)) in METADATA_IPS or h in METADATA_IPS
+        ip = _normalize_mapped(ipaddress.ip_address(h))
     except ValueError:
         return False
+    return str(ip) in METADATA_IPS
 
 
 def ip_category(ip_str: str) -> str:
     """Classe do IP: metadata | loopback | link-local | private | reserved | public."""
-    ip = ipaddress.ip_address(ip_str)
+    ip = _normalize_mapped(ipaddress.ip_address(ip_str))
     if str(ip) in METADATA_IPS:
         return "metadata"
     if ip.is_loopback:

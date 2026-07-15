@@ -41,6 +41,37 @@ def test_screen_ip_private_gated_by_allow():
     ssrf.screen_ip("8.8.8.8", allow_private=False)  # público sempre ok
 
 
+def test_ipv4_mapped_ipv6_metadata_normalized():
+    """IPv4-mapped IPv6 (``::ffff:169.254.169.254``) roteia para o metadata real:
+    tem de ser classificado como metadata, não link-local — senão em assumed-breach
+    (allow_private=True) o bloqueio 'sempre' de metadata é furado (SSRF → roubo de
+    credencial de nuvem). Regressão."""
+    assert ssrf.ip_category("::ffff:169.254.169.254") == "metadata"
+    assert ssrf.ip_category("::ffff:100.100.100.100") == "metadata"
+    assert ssrf.ip_category("::ffff:10.0.0.5") == "private"
+    assert ssrf.ip_category("::ffff:127.0.0.1") == "loopback"
+    assert ssrf.is_metadata_literal("::ffff:169.254.169.254")
+    assert ssrf.is_metadata_literal("[::ffff:169.254.169.254]")
+
+
+def test_screen_ip_metadata_always_blocked_even_ipv4_mapped():
+    # nem com allow_private=True (assumed-breach) — metadata é bloqueado SEMPRE.
+    with pytest.raises(ssrf.SsrfError):
+        ssrf.screen_ip("::ffff:169.254.169.254", allow_private=True)
+    with pytest.raises(ssrf.SsrfError):
+        ssrf.screen_ip("::ffff:169.254.169.254", allow_private=False)
+
+
+def test_resolve_and_screen_blocks_ipv4_mapped_metadata(monkeypatch):
+    """DNS-rebinding com AAAA IPv4-mapped apontando pro metadata é bloqueado mesmo
+    em assumed-breach (allow_private=True)."""
+    monkeypatch.setattr(
+        socket, "getaddrinfo", _fake_getaddrinfo({"evil6": "::ffff:169.254.169.254"})
+    )
+    with pytest.raises(ssrf.SsrfError):
+        ssrf.resolve_and_screen("evil6", allow_private=True)
+
+
 def _fake_getaddrinfo(mapping):
     def _gai(host, *_a, **_k):
         ip = mapping.get(host)
