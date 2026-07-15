@@ -105,3 +105,17 @@ def test_update_kev_parses_catalog_and_records_integrity(tmp_path):
     # persistiu e recarrega igual.
     reloaded = FeedCache.load(tmp_path / "feeds")
     assert reloaded.kev_cves == feeds.kev_cves
+
+
+def test_load_survives_corrupt_cache_of_wrong_shape(tmp_path):
+    """Regressão (robustez §5): um cache com JSON VÁLIDO mas de tipo errado (lista
+    em vez de objeto) fazia `data.get(...)` levantar AttributeError e derrubava
+    FeedCache.load() — que roda no início de todo scan/relatório. Deve degradar
+    para vazio (UNVERIFIED), como qualquer cache ilegível, sem crashar."""
+    cache = tmp_path / "feeds"
+    cache.mkdir(parents=True)
+    (cache / "kev.json").write_text("[]")  # JSON válido, porém lista
+    (cache / "epss.json").write_text('"a string"')  # JSON válido, porém string
+    c = FeedCache.load(cache)  # não pode levantar
+    assert c.kev_cves == set()
+    assert c.epss_scores == {}

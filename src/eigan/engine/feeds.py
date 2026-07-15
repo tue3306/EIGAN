@@ -76,15 +76,19 @@ class FeedCache:
                 data = json.loads(c._kev_path.read_text())
                 c.kev_cves = {s.upper() for s in data.get("cves", [])}
                 c.kev_meta = data.get("meta", {})
-            except (json.JSONDecodeError, OSError) as exc:
+            # AttributeError/TypeError: JSON válido de tipo errado (ex.: lista no
+            # lugar de objeto) — trata como cache ilegível em vez de derrubar o scan.
+            except (json.JSONDecodeError, OSError, AttributeError, TypeError) as exc:
                 log.warning("cache KEV ilegível: %s", exc)
+                c.kev_cves, c.kev_meta = set(), {}
         if c._epss_path.exists():
             try:
                 data = json.loads(c._epss_path.read_text())
                 c.epss_scores = {k.upper(): float(v) for k, v in data.get("scores", {}).items()}
                 c.epss_meta = data.get("meta", {})
-            except (json.JSONDecodeError, OSError, ValueError) as exc:
+            except (json.JSONDecodeError, OSError, ValueError, AttributeError, TypeError) as exc:
                 log.warning("cache EPSS ilegível: %s", exc)
+                c.epss_scores, c.epss_meta = {}, {}
         return c
 
     def _save_kev(self) -> None:
