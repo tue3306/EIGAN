@@ -14,8 +14,8 @@ manter o padrão de qualidade e — o mais importante — **adicionar um plugin 
 Requer **Python 3.11+**.
 
 ```bash
-git clone https://github.com/tue3306/vulnerability-scanner.git
-cd vulnerability-scanner
+git clone https://github.com/tue3306/EIGAN.git
+cd EIGAN
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[pdf,ai,dev]"
 eigan doctor          # confere ambiente, ferramentas, IA e feeds

@@ -158,7 +158,7 @@ def to_sarif(
                     "driver": {
                         "name": "EIGAN",
                         "version": tool_version,
-                        "informationUri": "https://github.com/tue3306/vulnerability-scanner",
+                        "informationUri": "https://github.com/tue3306/EIGAN",
                         "rules": list(rules.values()),
                     }
                 },

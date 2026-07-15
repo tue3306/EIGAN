@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: 🔒 Vulnerabilidade de segurança
-    url: https://github.com/tue3306/vulnerability-scanner/security/policy
+    url: https://github.com/tue3306/EIGAN/security/policy
     about: Não abra Issue pública. Siga a política de segurança (reporte privado).
   - name: 📖 Documentação e arquitetura
-    url: https://github.com/tue3306/vulnerability-scanner/tree/main/docs
+    url: https://github.com/tue3306/EIGAN/tree/main/docs
     about: Arquitetura, ADRs, design system e roadmap antes de abrir uma Issue.
   - name: 💬 Dúvidas de uso
-    url: https://github.com/tue3306/vulnerability-scanner/discussions
+    url: https://github.com/tue3306/EIGAN/discussions
     about: Perguntas gerais e ideias vão para as Discussions.

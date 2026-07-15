@@ -17,8 +17,8 @@
   <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.0.0-blue">
   <a href="LICENSE"><img alt="Licença" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-blue"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white">
-  <a href="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tue3306/vulnerability-scanner/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Testes" src="https://img.shields.io/badge/testes-234%20passed-brightgreen">
+  <a href="https://github.com/tue3306/EIGAN/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tue3306/EIGAN/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Testes" src="https://img.shields.io/badge/testes-487%20passed-brightgreen">
   <img alt="IA" src="https://img.shields.io/badge/IA-native%20(obrigat%C3%B3ria)-6c5ce7">
   <img alt="PRs" src="https://img.shields.io/badge/PRs-bem--vindos-brightgreen">
 </p>
@@ -192,8 +192,8 @@ faltar). Um provedor de IA (chave de nuvem **ou** Ollama local) para escanear.
 <tr valign="top"><td>
 
 ```bash
-git clone https://github.com/tue3306/vulnerability-scanner.git
-cd vulnerability-scanner
+git clone https://github.com/tue3306/EIGAN.git
+cd EIGAN
 python3 eigan.py     # cria .venv, instala e abre o menu
 ```
 
@@ -222,8 +222,8 @@ falta e o comando de instalação. Caminho recomendado com sandbox:
 
 ```bash
 # 1) Clone e abra o menu (cria o ambiente e instala tudo)
-git clone https://github.com/tue3306/vulnerability-scanner.git
-cd vulnerability-scanner && python3 eigan.py
+git clone https://github.com/tue3306/EIGAN.git
+cd EIGAN && python3 eigan.py
 
 # 2) Configure a IA (obrigatório):  menu → Configuração → escolha o provedor → cole a chave
 #    (gravada em .env, chmod 600, nunca exibida)   — ou use Ollama local, offline e sem custo
