@@ -41,7 +41,11 @@ def parse(result: ToolResult, target: str) -> list[Finding]:
 
         cvss = None
         score = classification.get("cvss-score")
-        if isinstance(score, (int, float)):
+        # CVSS válido é 0–10 (schema Field ge=0/le=10). Um template custom/quebrado
+        # pode emitir score fora da faixa; ignoramos o CVSS inválido (sem fabricar
+        # nem clampar, §2) em vez de deixar 1 template ruim derrubar o parse inteiro
+        # e descartar TODAS as findings do nuclei (§24).
+        if isinstance(score, (int, float)) and 0.0 <= score <= 10.0:
             vector = classification.get("cvss-metrics", "") or ""
             version = (
                 "3.1"
