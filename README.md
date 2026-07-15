@@ -386,7 +386,7 @@ plugins/<red|blue|purple>/…         capabilities intercambiáveis (auto-discov
 config/                             profiles.yaml · tools.yaml · ai.yaml (zero-config por padrão)
 knowledge/                          base determinística: skills/ · attack/ · compliance/
 web/                                landing page + design tokens + logo/favicon
-docs/                               architecture · adr/ · design/ · roadmap/ · AUDIT · DECISIONS
+docs/                               architecture · adr/ · design/ · roadmap/ · DECISIONS · internal/
 examples/  docker/  tests/          alvos de exemplo · sandbox · unit + integração local
 ```
 

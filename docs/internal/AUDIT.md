@@ -45,6 +45,6 @@ do ambiente. Python 3.13 disponível (o alvo declarado é 3.11+).
 > preservando testes verdes a cada incremento.
 
 Decisões derivadas registradas em:
-- [ADR-0001](adr/0001-plugin-capability-architecture.md) — Plugins + Capabilities.
-- [ADR-0002](adr/0002-risk-engine-feeds.md) — Risk Engine e feeds sem invenção.
-- [ADR-0003](adr/0003-plugins-directory-layout.md) — Onde os plugins vivem.
+- [ADR-0001](../adr/0001-plugin-capability-architecture.md) — Plugins + Capabilities.
+- [ADR-0002](../adr/0002-risk-engine-feeds.md) — Risk Engine e feeds sem invenção.
+- [ADR-0003](../adr/0003-plugins-directory-layout.md) — Onde os plugins vivem.

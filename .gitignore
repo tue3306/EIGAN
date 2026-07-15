@@ -24,6 +24,11 @@ node_modules/
 .claude/
 eigan-screenshots/
 
+# Instruções de desenvolvimento para o assistente de IA (Claude Code) — local,
+# fora do repositório público. O código cita seções (§) deste arquivo como a
+# fonte de verdade dos princípios do projeto.
+CLAUDE.md
+
 # Artefatos de execução de ferramentas externas (saída de scan, nunca versionar)
 /None
 /gowitness.jsonl

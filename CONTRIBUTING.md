@@ -64,14 +64,18 @@ listados, mas **não fingem executar**. Nunca faça um stub que simula resultado
 
 ## Regras inegociáveis (não afrouxáveis em PR)
 
-Herdadas do [CLAUDE.md](CLAUDE.md) §3:
+Princípios de segurança e veracidade do projeto (a decisão por trás de cada um
+está registrada nos [ADRs](docs/adr/)):
 
 1. **Anti-invenção:** CVE/CVSS/EPSS/KEV/versão/licença não verificados saem
    `UNVERIFIED` — nunca fabricados.
 2. **Autorização sempre presente:** guardrail de escopo e consent gate não são
    removidos, no máximo simplificados.
-3. **A IA nunca executa scanner nem descobre vulnerabilidade** — só interpreta.
-4. **Todo recurso de IA tem fallback determinístico** (funciona sem chave).
+3. **A IA planeja, decide e comanda o scan**, mas a execução real passa por
+   *plumbing* seguro e pelo gate de escopo — a IA nunca spawna processo nem
+   opera fora do escopo autorizado, nem afirma fato fora das evidências.
+4. **A IA é obrigatória (AI-native, tudo-ou-nada):** sem um provedor configurado,
+   o scan é recusado com erro acionável — não existe "modo sem IA" ([ADR-0012](docs/adr/0012-ai-native-mandatory.md)).
 5. **Segurança de código:** sem `shell=True`, sem concatenar comando, sem
    secret no repo, validação/sanitização sempre.
 

@@ -15,8 +15,9 @@
 - [ROADMAP.md](ROADMAP.md) — entregue (MVP), scaffolded e futuro.
 - [roadmap/commercial.md](roadmap/commercial.md) — itens comerciais **apenas
   documentados** (sem código).
-- [AUDIT.md](AUDIT.md) — auditoria inicial da árvore e do estado dos testes.
 - [BLOCKERS.md](BLOCKERS.md) — bloqueios reais isolados (não param o resto).
+- [internal/](internal/) — notas históricas de planejamento e auditoria
+  (retratos de um momento, não são a referência viva).
 
 ## Design
 - [design/](design/) — design system: tokens, cores/severidades, tipografia,
