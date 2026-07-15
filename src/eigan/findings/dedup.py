@@ -29,11 +29,17 @@ def deduplicate(findings: list[Finding]) -> list[Finding]:
         if f.source_tool not in base.correlated_sources and f.source_tool != base.source_tool:
             base.correlated_sources.append(f.source_tool)
         if f.evidence and f.evidence not in base.evidence:
-            base.evidence = (base.evidence + "\n---\n" + f.evidence).strip("\n-")
+            # Concatena com separador SEM `.strip("\n-")`: aquele strip comia
+            # traços/quebras LEGÍTIMOS do conteúdo (ex.: "-----END CERTIFICATE-----"),
+            # corrompendo a evidência que vai para o relatório (§12).
+            base.evidence = f"{base.evidence}\n---\n{f.evidence}" if base.evidence else f.evidence
         # referências únicas
         for ref in f.references:
             if ref not in base.references:
                 base.references.append(ref)
+        # first_seen = o MAIS ANTIGO observado (semântica de "primeira vez visto");
+        # last_seen = o mais recente. Antes só last_seen era fundido.
+        base.first_seen = min(base.first_seen, f.first_seen)
         base.last_seen = max(base.last_seen, f.last_seen)
 
     return list(merged.values())

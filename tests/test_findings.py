@@ -48,6 +48,27 @@ def test_dedup_merges_and_keeps_highest_severity():
     assert set(out[0].references) == {"r1", "r2"}
 
 
+def test_dedup_merge_preserves_evidence_and_earliest_first_seen():
+    """Regressão do merge (correção/veracidade §4, evidência de relatório §12):
+    - o antigo `.strip('\\n-')` comia traços/quebras LEGÍTIMOS do conteúdo da
+      evidência (ex.: '-----END CERTIFICATE-----') — corrompia o dado no relatório;
+    - `first_seen` do merge tem de ser o MAIS ANTIGO observado (não o do primeiro
+      da lista) — semântica de 'primeira vez visto'."""
+    from datetime import datetime, timezone
+
+    t_early = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    t_late = datetime(2020, 6, 1, tzinfo=timezone.utc)
+    pem = "-----BEGIN CERTIFICATE-----\nMIIBcert\n-----END CERTIFICATE-----"
+    a = _f(source_tool="nuclei", evidence="ev-a", first_seen=t_late, last_seen=t_late)
+    b = _f(source_tool="testssl", evidence=pem, first_seen=t_early, last_seen=t_early)
+    out = deduplicate([a, b])
+    assert len(out) == 1
+    assert pem in out[0].evidence  # traços do conteúdo preservados, não comidos
+    assert "ev-a" in out[0].evidence
+    assert out[0].first_seen == t_early  # o mais antigo
+    assert out[0].last_seen == t_late  # o mais recente
+
+
 def test_store_roundtrip():
     with tempfile.TemporaryDirectory() as d:
         store = FindingStore(Path(d) / "t.db")
