@@ -86,6 +86,27 @@ def test_sarif_is_valid_2_1_0():
     assert "error" in levels and "note" in levels
 
 
+def test_report_escapes_target_controlled_data_no_xss():
+    """Regressão de segurança (CWE-79): dado do alvo (title/asset/evidence/description)
+    vai ESCAPADO ao HTML do relatório. Antes, os templates .html.j2 não eram
+    autoescapados (`select_autoescape(['html','xml'])` casa pela extensão final .j2),
+    então um `<script>` no título/banner do alvo virava XSS armazenado no relatório."""
+    gen = ReportGenerator(Enricher(KnowledgeBase(_KB), provider=None))
+    payload = "<script>alert(document.cookie)</script>"
+    evil = Finding(
+        title=f"T {payload}",
+        severity=Severity.HIGH,
+        affected_asset=f"http://alvo/{payload}",
+        source_tool="nuclei",
+        evidence=f"resp {payload}",
+        description=f"desc {payload}",
+    )
+    for style in ("technical", "executive"):
+        html = gen.render_html([evil], engagement="lab", targets=["alvo"], style=style)
+        assert payload not in html, f"XSS cru no relatório {style}"
+        assert "&lt;script&gt;alert(document.cookie)&lt;/script&gt;" in html
+
+
 def test_executive_report_without_ai():
     gen = ReportGenerator(
         Enricher(KnowledgeBase(_KB), provider=None),

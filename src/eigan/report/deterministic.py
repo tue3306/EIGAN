@@ -17,7 +17,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, pass_context, select_autoescape
+from jinja2 import Environment, FileSystemLoader, pass_context
 
 from ..ai.provider import Enricher
 from ..ai.remediation import RemediationPlan
@@ -81,7 +81,13 @@ class ReportGenerator:
         self._feeds_meta = feeds_meta or {}
         self._env = Environment(
             loader=FileSystemLoader(str(_TEMPLATE_DIR)),
-            autoescape=select_autoescape(["html", "xml"]),
+            # autoescape SEMPRE: os templates têm extensão .html.j2, e
+            # select_autoescape(["html","xml"]) NÃO os reconhece (casa pela extensão
+            # final, que é .j2) — deixava a saída SEM escape → XSS armazenado no
+            # relatório a partir de dado do alvo (title/evidence/asset). Todos os
+            # templates deste env são HTML; os únicos trechos de HTML cru (SVGs dos
+            # gráficos) já usam |safe. (segurança §4.2/§23; CWE-79)
+            autoescape=True,
         )
 
         # Filtro de mascaramento: só oculta segredos quando o contexto pede
