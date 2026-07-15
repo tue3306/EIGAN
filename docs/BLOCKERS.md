@@ -9,9 +9,26 @@ Itens que não podem ser resolvidos de dentro do build autônomo. Cada bloqueio 
 | 2 | **Binários das ferramentas externas** (nmap, nuclei, httpx…) podem não estar instalados no host. | Scans reais dependem das ferramentas. | O engine **pula** ferramenta ausente com aviso; `eigan doctor` lista o que falta e como instalar; Docker roda cada ferramenta em container efêmero. Testes usam fixtures de saída real, sem executar binários. |
 | 3 | **Feeds EPSS/KEV** exigem rede na primeira atualização. | Sem `feeds update`, priorização usa só CVSS. | Offline-first: campos saem `UNVERIFIED`; `eigan feeds update` popula o cache quando houver rede (ver ADR-0002). |
 | 4 | **Executor em container (§15)** — rodar cada ferramenta em container efêmero exige refatorar o executor dos runners + **revalidar as tags** das imagens oficiais + testes de integração com Docker. Não verificável offline nesta iteração; não fabrico tag/imagem (§3.1). | Ferramentas ProjectDiscovery ausentes no host seguem sendo **puladas** no scan. | ADR-0006: entra na próxima missão com a porta `ToolExecutor` (Local/Docker), sem mudar o caminho local. Enquanto isso, `doctor --install` / `python3 eigan.py --with-tools` provisiona o que é seguro e o engine pula o que falta (com aviso no `doctor`). |
-| 5 | **Publicação no PyPI (`eigan`)** exige que o **dono** registre o projeto no PyPI e configure o *trusted publisher* (OIDC). Não executável no build autônomo. | Sem `pipx install eigan`; instalação do núcleo segue por `git clone` + `python3 eigan.py`. | `.github/workflows/publish.yml` já pronto (trusted publishing, dispara em GitHub Release). Ativa sozinho assim que o dono configurar o publisher — sem tocar em segredo no repo. |
+| 5 | **Publicação no PyPI (`eigan`)** exige que o **dono** registre o projeto no PyPI e configure o *trusted publisher* (OIDC). Não executável no build autônomo. | Sem `pipx install eigan`; instalação do núcleo segue por `git clone` + `python3 eigan.py`. | `.github/workflows/publish.yml` pronto (trusted publishing). O job `build` valida o pacote em todo Release; o job `publish` fica **PULADO** (não falha o deploy) até o dono ligar a variável `PYPI_TRUSTED_PUBLISHER=true`. Passos exatos abaixo. |
 | 6 | ~~**Renome do repositório no GitHub para `EIGAN`**~~ (ADR-0009) — **RESOLVIDO**: o dono renomeou o repo; o remoto agora é `github.com/tue3306/EIGAN.git`. | — | Feito. Badges/links do README, `web/`, `CONTRIBUTING` e templates apontam para `tue3306/EIGAN`. |
 | 7 | ~~**"About" do repositório**~~ — **RESOLVIDO em 2026-07-12**: descrição + 14 tópicos definidos via API (token do dono, efêmero, não gravado). | — | Feito. Os comandos abaixo ficam como referência para reeditar quando quiser. |
+
+### Ativar a publicação no PyPI (rode você mesmo, uma vez)
+
+Enquanto isso não é feito, o Release **não falha** — o job `publish` fica pulado.
+Quando quiser publicar no PyPI:
+
+1. Registre/possua o projeto `eigan` em <https://pypi.org>.
+2. Em **PyPI → Manage → Publishing → Add a new pending publisher**, preencha:
+   - **Owner:** `tue3306`
+   - **Repository name:** `EIGAN`
+   - **Workflow name:** `publish.yml`
+   - **Environment name:** `pypi`
+3. No GitHub, crie a variável de repositório (não é segredo):
+   **Settings → Secrets and variables → Actions → Variables → New variable** →
+   `PYPI_TRUSTED_PUBLISHER` = `true`.
+4. O próximo Release publica sozinho (ou rode `publish` manualmente em **Actions →
+   publish → Run workflow**). Sem token/segredo no repo (§5).
 
 ### Definir o "About" do repositório (rode você mesmo)
 

@@ -4,10 +4,20 @@ name: publish
 # Release é publicado — NÃO usa token/segredo: a identidade vem do OIDC do
 # próprio Actions (§5: nunca segredo no repo).
 #
-# INERTE até o dono (1) registrar o projeto `eigan` no PyPI e (2) configurar
-# o *trusted publisher* apontando para este repositório + workflow `publish.yml`
-# + environment `pypi`. Enquanto não configurado, o passo de publish falha de
-# propósito (sem credencial) e não vaza nada. Ver docs/BLOCKERS.md #5 e ADR-0006.
+# INERTE por padrão. O passo de `publish` só roda quando o dono liga a
+# variável de repositório `PYPI_TRUSTED_PUBLISHER = true` (Settings → Secrets
+# and variables → Actions → Variables). Enquanto ela não estiver ligada, o job
+# `publish` é PULADO (não falha) e o Release NÃO gera "Failed to deploy".
+#
+# Para habilitar a publicação (uma vez, do lado do dono):
+#   1. Registrar/possuir o projeto `eigan` no PyPI (https://pypi.org).
+#   2. Em PyPI → Manage → Publishing, adicionar um *trusted publisher* com:
+#        Owner:        tue3306
+#        Repository:   EIGAN
+#        Workflow:     publish.yml
+#        Environment:  pypi
+#   3. Criar a variável de repositório `PYPI_TRUSTED_PUBLISHER = true`.
+# Ver docs/BLOCKERS.md #5 e ADR-0006.
 
 on:
   release:
@@ -40,6 +50,9 @@ jobs:
 
   publish:
     needs: build
+    # Só publica quando o dono configurou o trusted publisher no PyPI e ligou
+    # esta variável. Sem ela, o job é pulado (o Release não falha o deploy).
+    if: ${{ vars.PYPI_TRUSTED_PUBLISHER == 'true' }}
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
