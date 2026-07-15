@@ -106,3 +106,18 @@ def scan_status(scan_id: int | None, status: str, detail: str = "") -> dict[str,
 
 def analysis_complete(summary: dict[str, Any]) -> dict[str, Any]:
     return {"type": "analysis_complete", "summary": summary, "timestamp": _ts()}
+
+
+def token_usage(usage: dict[str, Any], by_model: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Uso de tokens da IA acumulado no scan (observabilidade §22, ADR-0025).
+
+    ``usage`` = ``{prompt_tokens, completion_tokens, total_tokens}`` + ``calls``;
+    ``by_model`` mapeia ``"<provider>:<model>"`` → uso. Números **reais** do provedor
+    (nunca estimados); o custo em dinheiro só aparece com preço verificado (cost.py).
+    """
+    return {
+        "type": "token_usage",
+        "usage": usage,
+        "by_model": by_model or {},
+        "timestamp": _ts(),
+    }

@@ -477,6 +477,34 @@ def test_engine_uses_agentic_planner_when_ai_available():
     assert any(d.action == "planned" for d in report.decisions)
 
 
+def test_report_captures_token_usage_from_ai_calls():
+    # Observabilidade (ADR-0025): o report do scan carrega o uso REAL de tokens que a
+    # IA gastou comandando o scan (planejamento + replan). Um provedor metrificado
+    # registra no medidor escopado por scan — como o provedor HTTP faz em `_post`.
+    from eigan.observability.usage import record_completion
+
+    class _MeteredFake:
+        def available(self) -> bool:
+            return True
+
+        def complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
+            record_completion(
+                "fake", "modelo-x", {"usage": {"prompt_tokens": 30, "completion_tokens": 12}}
+            )
+            return '{"plan": ["port_discovery"], "stop_when": "sem evidência"}'
+
+    engine = CognitiveEngine(_engine_registry(), completion=_MeteredFake())
+    scope = build_scope(None, ["example.com"], P.EXTERNAL)
+    report = engine.run(Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"]), scope=scope)
+    assert report.ai_calls >= 1
+    assert report.token_usage.total_tokens == report.ai_calls * 42  # 30+12 por chamada
+    assert report.token_usage_by_model.get("fake:modelo-x") is not None
+    # um scan sem IA não inventa tokens: o report fica zerado.
+    plain = CognitiveEngine(_engine_registry())
+    plain_report = plain.run(Goal.build(GoalKind.ATTACK_SURFACE, ["example.com"]), scope=scope)
+    assert plain_report.ai_calls == 0 and plain_report.token_usage.total_tokens == 0
+
+
 def test_engine_refuses_out_of_scope_target():
     # DoD: recusa de alvo fora de escopo é um bloqueio real, registrado.
     reg = _engine_registry()

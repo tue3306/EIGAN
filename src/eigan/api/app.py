@@ -205,7 +205,13 @@ def scan_detail(scan_id: int) -> dict:
     if not meta_:
         raise HTTPException(404, "scan não encontrado")
     findings = store.get_findings(scan_id)
-    return {"scan": meta_, "count": len(findings), "severity": _severity_counts(findings)}
+    return {
+        "scan": meta_,
+        "count": len(findings),
+        "severity": _severity_counts(findings),
+        # Uso de tokens da IA no scan (observabilidade §22, ADR-0025), estruturado.
+        "token_usage": store.get_token_usage(scan_id),
+    }
 
 
 @app.get("/api/v1/scans/{scan_id}/findings")

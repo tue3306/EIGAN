@@ -183,3 +183,23 @@ def test_provider_records_usage_into_current_meter():
         assert provider.complete("s", "u") == "ok"
     assert meter.total() == TokenUsage(42, 8)
     assert meter.by_model() == {"anthropic:claude-opus-4-8": TokenUsage(42, 8)}
+
+
+# --------------------------------------------------------------------------- #
+# Persistência do uso de tokens no scan (round-trip no FindingStore)
+# --------------------------------------------------------------------------- #
+def test_store_persists_and_reads_token_usage(tmp_path):
+    from eigan.findings.store import FindingStore
+
+    store = FindingStore(str(tmp_path / "obs.db"))
+    sid = store.create_scan("eng", "external/standard", ["example.com"])
+    assert store.get_token_usage(sid) is None  # sem IA ainda → None (não zero fabricado)
+    payload = {
+        "total": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "calls": 2},
+        "by_model": {
+            "openai:gpt-5": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}
+        },
+    }
+    store.set_token_usage(sid, payload)
+    assert store.get_token_usage(sid) == payload
+    store.close()

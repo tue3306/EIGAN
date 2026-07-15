@@ -78,6 +78,9 @@ class FindingStore:
         if "executed_capabilities" not in cols:
             # Capacidades já executadas (JSON) — base para retomada de scan parcial.
             self._conn.execute("ALTER TABLE scans ADD COLUMN executed_capabilities TEXT")
+        if "token_usage" not in cols:
+            # Uso de tokens da IA no scan (JSON) — observabilidade §22, ADR-0025.
+            self._conn.execute("ALTER TABLE scans ADD COLUMN token_usage TEXT")
 
     def create_scan(self, engagement: str, profile: str, targets: list[str]) -> int:
         cur = self._conn.execute(
@@ -120,6 +123,22 @@ class FindingStore:
             return list(json.loads(row["executed_capabilities"]))
         except (json.JSONDecodeError, TypeError):
             return []
+
+    def set_token_usage(self, scan_id: int, usage: dict) -> None:
+        """Persiste o uso de tokens da IA no scan (JSON) — observabilidade (ADR-0025)."""
+        self._conn.execute(
+            "UPDATE scans SET token_usage=? WHERE id=?", (json.dumps(usage), scan_id)
+        )
+        self._conn.commit()
+
+    def get_token_usage(self, scan_id: int) -> dict | None:
+        row = self._conn.execute("SELECT token_usage FROM scans WHERE id=?", (scan_id,)).fetchone()
+        if not row or not row["token_usage"]:
+            return None
+        try:
+            return dict(json.loads(row["token_usage"]))
+        except (json.JSONDecodeError, TypeError):
+            return None
 
     def running_scans(self) -> list[dict]:
         """Scans não terminados (status 'running'/'partial') — candidatos a retomada."""

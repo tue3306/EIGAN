@@ -27,6 +27,7 @@ from typing import Optional, Protocol
 from ...findings.dedup import deduplicate
 from ...findings.schema import Finding
 from ...findings.store import FindingStore
+from ...observability.usage import TokenUsage, UsageMeter, use_meter
 from ...perspective import Perspective
 from ...policy.engine import (
     PolicyEngine,
@@ -139,6 +140,11 @@ class CognitiveReport:
     suggestions: list[Suggestion] = field(default_factory=list)
     # Alvos descobertos pela recon e realimentados como novos alvos (ADR-0018).
     discovered_targets: list[str] = field(default_factory=list)
+    # Uso de tokens da IA no scan (observabilidade §22, ADR-0025): cobre o loop
+    # cognitivo (planejamento + replan adaptativo). Zero quando não há IA.
+    token_usage: TokenUsage = field(default_factory=TokenUsage)
+    ai_calls: int = 0
+    token_usage_by_model: dict[str, TokenUsage] = field(default_factory=dict)
 
     # Compat com ScanReport: o CLI/wizard/relatório consomem estes campos sem
     # precisar saber qual engine (determinístico × cognitivo) produziu o report.
@@ -151,6 +157,26 @@ class CognitiveReport:
     def skipped_tools(self) -> list[str]:
         """Ferramentas sugeridas mas não executadas (indisponíveis/roadmap)."""
         return [s.tool for s in self.suggestions]
+
+
+class _MeteredCompletion:
+    """Envolve a porta de IA para medir tokens por scan (observabilidade, ADR-0025).
+
+    Cada ``complete()`` roda sob o medidor do scan (``use_meter``); o provedor HTTP
+    registra o uso real ali dentro (``_post`` → ``record_completion``). Assim o loop
+    cognitivo (``run``) permanece intocado — a medição é transparente e escopada por
+    execução (contextvar), correta mesmo com scans concorrentes em threads."""
+
+    def __init__(self, inner: CompletionPort, meter_holder: "CognitiveEngine") -> None:
+        self._inner = inner
+        self._holder = meter_holder
+
+    def available(self) -> bool:
+        return self._inner.available()
+
+    def complete(self, system: str, user: str, *, json_mode: bool = False) -> str:
+        with use_meter(self._holder._scan_meter):
+            return self._inner.complete(system, user, json_mode=json_mode)
 
 
 class CognitiveEngine:
@@ -182,11 +208,15 @@ class CognitiveEngine:
         # provedor; senão o DeterministicPlanner — o substrato determinístico que
         # a IA comanda (§3.4), não um "modo sem IA": o gate de produto exige um
         # provedor antes de chegar aqui.
+        # Medidor de tokens do scan corrente (observabilidade §22, ADR-0025): é
+        # reatribuído a cada run() para isolar scans; a completion metrificada o lê
+        # ao vivo. Fica vazio quando não há IA (sem provedor → sem tokens).
+        self._scan_meter = UsageMeter()
         base = DeterministicPlanner(self._registry, self._graph)
         if planner is not None:
             self._planner: Planner = planner
         elif completion is not None and completion.available():
-            self._planner = AgenticPlanner(base, completion)
+            self._planner = AgenticPlanner(base, _MeteredCompletion(completion, self))
         else:
             self._planner = base
 
@@ -257,6 +287,9 @@ class CognitiveEngine:
         (autorização) antes; aqui o escopo é revalidado por alvo (defesa em
         profundidade) e **cada ação ativa passa pelo Policy Engine** (ADR-0011)."""
         emitter: EventSink = sink if sink is not None else NullSink()
+        # Medidor de tokens fresco por scan (observabilidade §22, ADR-0025): a
+        # completion metrificada registra aqui todo o uso do loop cognitivo.
+        self._scan_meter = UsageMeter()
         # Policy Engine (ADR-0011 Fase 3): arbitra CADA ação ativa antes de tocar a
         # rede — executar / aprovação humana (HITL) / recusar por ImpactClass. O teto
         # autônomo vem do perfil; exploit_validation exige allow_exploit + HITL.
@@ -650,8 +683,19 @@ class CognitiveEngine:
             findings = self._risk.score(findings)
         findings.sort(key=lambda f: (f.risk_rank, f.severity.rank), reverse=True)
 
+        # Observabilidade (§22, ADR-0025): consolida o uso de tokens do loop cognitivo.
+        usage = self._scan_meter.total()
+        by_model = self._scan_meter.by_model()
+        ai_calls = self._scan_meter.call_count()
+        usage_payload = {**usage.as_dict(), "calls": ai_calls}
+        by_model_payload = {k: v.as_dict() for k, v in by_model.items()}
+
         if self._store is not None and scan_id is not None:
             self._store.add_findings(scan_id, findings)
+            if ai_calls:
+                self._store.set_token_usage(
+                    scan_id, {"total": usage_payload, "by_model": by_model_payload}
+                )
             self._store.finish_scan(scan_id)
 
         decisions.append(
@@ -673,6 +717,8 @@ class CognitiveEngine:
                 }
             )
         )
+        if ai_calls:
+            emitter.emit(ev.token_usage(usage_payload, by_model_payload))
         emitter.emit(ev.scan_status(scan_id, "completed"))
         return CognitiveReport(
             goal=goal,
@@ -684,6 +730,9 @@ class CognitiveEngine:
             ai_used=bool(getattr(self._planner, "ai_generated", False)),
             suggestions=list(state.suggestions),
             discovered_targets=sorted(state.discovered_targets),
+            token_usage=usage,
+            ai_calls=ai_calls,
+            token_usage_by_model=by_model,
         )
 
     def _base_context(self, goal: Goal) -> SelectionContext:

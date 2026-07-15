@@ -41,9 +41,15 @@ Novo pacote `src/eigan/observability/`, best-effort (nunca derruba um scan):
   (base para o painel de custo do dashboard, §19); custo que respeita a veracidade
   (só aparece quando há preço verificado). Um único ponto de instrumentação.
 - **Custos/limites:** o custo em dinheiro fica `UNVERIFIED` até o operador preencher
-  `ai_pricing.yaml` — decisão consciente (honestidade > número bonito). A gravação
-  no medidor global é process-wide; a agregação **por scan** (wire no
-  `CognitiveEngine` + persistência + API) é a próxima unidade.
+  `ai_pricing.yaml` — decisão consciente (honestidade > número bonito).
+- **Agregação por scan (entregue):** o `CognitiveEngine` escopa um `UsageMeter`
+  fresco por `run()` (via uma completion metrificada — `_MeteredCompletion` — que
+  roda cada `complete()` sob `use_meter`, sem tocar o loop cognitivo). O
+  `CognitiveReport` carrega `token_usage`/`ai_calls`/`token_usage_by_model`; o
+  finalize persiste em `scans.token_usage` (JSON) e emite o evento `token_usage`;
+  a API expõe em `GET /scans/{id}`. Cobre o **loop cognitivo** (planejamento +
+  replan). As narrativas pós-scan (análise/remediação) são chamadas de IA
+  separadas cuja agregação por scan fica como próxima unidade.
 - **Testes:** `tests/test_observability.py` cobre os 4 formatos, agregação
   thread-safe, escopo por contextvar, gravação via um provedor real (MockTransport)
   e a regra UNVERIFIED do custo.

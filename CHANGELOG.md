@@ -22,6 +22,10 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   na fonte oficial (`config/ai_pricing.yaml`, `verified: true`). Sem preço
   verificado, o custo é **UNVERIFIED** — nunca estimado (§2/§3.1). O arquivo
   versionado vai com `models: {}` (zero preço fabricado).
+- **Uso de tokens por scan:** o `CognitiveEngine` escopa um medidor por execução;
+  o `CognitiveReport` carrega `token_usage`/`ai_calls`/`by_model`, persistido em
+  `scans.token_usage` e exposto em `GET /api/v1/scans/{id}` + evento `token_usage`
+  (timeline). Cobre o loop cognitivo (planejamento + replan adaptativo).
 
 ### Added (Blue/Purple acessíveis no produto — ADR-0020)
 - **Menu** ganhou "Análise Blue (logs)" e "Correlação Purple" (era Red-only).
