@@ -69,6 +69,7 @@ GOAL_CAPABILITIES: dict[GoalKind, tuple[Capability, ...]] = {
     GoalKind.FULL_ASSESSMENT: (
         C.SUBDOMAIN_ENUMERATION,
         C.DNS_RESOLUTION,
+        C.DNS_ENUMERATION,
         C.HOST_DISCOVERY,
         C.PORT_DISCOVERY,
         C.SERVICE_DETECTION,
@@ -85,6 +86,7 @@ GOAL_CAPABILITIES: dict[GoalKind, tuple[Capability, ...]] = {
     GoalKind.ATTACK_SURFACE: (
         C.SUBDOMAIN_ENUMERATION,
         C.DNS_RESOLUTION,
+        C.DNS_ENUMERATION,
         C.PORT_DISCOVERY,
         C.SERVICE_DETECTION,
         C.WEB_PROBE,

@@ -30,6 +30,7 @@ class Stage:
 _EXTERNAL: tuple[Stage, ...] = (
     Stage("subdomain", (C.SUBDOMAIN_ENUMERATION,)),
     Stage("resolve", (C.DNS_RESOLUTION,)),
+    Stage("dns-enum", (C.DNS_ENUMERATION,)),  # registros + AXFR (ADR-0028)
     Stage("ports", (C.PORT_DISCOVERY,)),
     Stage("web-probe", (C.WEB_PROBE,)),
     Stage("screenshot", (C.SCREENSHOT,)),

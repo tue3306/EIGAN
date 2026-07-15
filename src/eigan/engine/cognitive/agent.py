@@ -47,6 +47,7 @@ def default_agents() -> list[Agent]:
                 {
                     C.SUBDOMAIN_ENUMERATION,
                     C.DNS_RESOLUTION,
+                    C.DNS_ENUMERATION,
                     C.HOST_DISCOVERY,
                     C.PORT_DISCOVERY,
                     C.SERVICE_DETECTION,

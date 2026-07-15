@@ -42,6 +42,7 @@ class Capability(str, Enum):
     # ── recon ────────────────────────────────────────────────────────────────
     SUBDOMAIN_ENUMERATION = "subdomain_enumeration"
     DNS_RESOLUTION = "dns_resolution"
+    DNS_ENUMERATION = "dns_enumeration"  # registros (SOA/NS/MX/TXT/SRV) + AXFR (ADR-0028)
 
     # ── network ──────────────────────────────────────────────────────────────
     HOST_DISCOVERY = "host_discovery"

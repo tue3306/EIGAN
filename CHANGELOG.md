@@ -30,6 +30,13 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   fabricada (§2). Exposto em **`GET /api/v1/tools`** (contadores por status) para o
   painel de saúde da plataforma (§19).
 
+### Added (enumeração de DNS + zone transfer AXFR — PROMPT 2, ADR-0028)
+- **Plugin Red `dns-enum`** (sobre `dig`, capability `DNS_ENUMERATION`): enumera
+  SOA/NS/MX/TXT/SRV e tenta **AXFR** contra cada nameserver. AXFR permitido →
+  finding **CRÍTICO** (`confirmed`, CWE-200, T1590.002) com os registros vazados;
+  recusado → nenhum finding. Roteado ao agente recon; em `ATTACK_SURFACE`/
+  `FULL_ASSESSMENT`. Verificado ao vivo contra `zonetransfer.me` (2 CRÍTICOS).
+
 ### Added (event bus + métricas ao vivo — MASTER PROMPT v2 §9/§13/§22, ADR-0026)
 - **`engine/bus.py` `EventBus`**: fan-out síncrono in-process de eventos para N
   assinantes (filtro opcional por tipo), ele próprio um `EventSink` — entra em
