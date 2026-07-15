@@ -12,6 +12,7 @@ import asyncio
 import os
 from dataclasses import asdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -27,6 +28,9 @@ from ..findings.schema import Finding, Severity
 from ..findings.store import FindingStore
 from ..security import apitoken
 from .scan_manager import ScanManager
+
+if TYPE_CHECKING:
+    from ..engine.registry import PluginRegistry
 
 app = FastAPI(
     title="EIGAN API",
@@ -94,6 +98,19 @@ def manager() -> ScanManager:
     return _manager
 
 
+# Registry de plugins cacheado por processo — a descoberta é cara para cada request.
+_registry: "PluginRegistry | None" = None
+
+
+def plugin_registry() -> "PluginRegistry":
+    global _registry
+    if _registry is None:
+        from ..engine.registry import PluginRegistry
+
+        _registry = PluginRegistry.discover()
+    return _registry
+
+
 def _findings_or_404(store: FindingStore, scan_id: int) -> list[Finding]:
     if not store.get_scan(scan_id):
         raise HTTPException(404, "scan não encontrado")
@@ -116,6 +133,24 @@ class HealthOut(BaseModel):
 @app.get("/api/v1/health", response_model=HealthOut)
 def health() -> HealthOut:
     return HealthOut(status="ok", version=_TOOL_VERSION)
+
+
+@app.get("/api/v1/tools")
+def tools_health() -> dict:
+    """Saúde das ferramentas (contrato ToolAdapter §12): ok/missing/roadmap/degraded.
+
+    Alimenta o painel de saúde da plataforma (§19). Verificável — a disponibilidade
+    vem de ``shutil.which``, sem versão fabricada (§2)."""
+    healths = plugin_registry().health_report()
+    by_status: dict[str, int] = {}
+    for h in healths:
+        by_status[h.status] = by_status.get(h.status, 0) + 1
+    return {
+        "count": len(healths),
+        "available": sum(1 for h in healths if h.available),
+        "by_status": by_status,
+        "tools": [h.as_dict() for h in healths],
+    }
 
 
 @app.get("/api/v1/meta")

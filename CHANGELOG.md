@@ -12,6 +12,13 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Added (contrato de saúde de ferramenta — MASTER PROMPT v2 §12)
+- **`PluginSpec.health_check() → Health`** e **`PluginRegistry.health_report()`**:
+  estado estruturado e **verificável** de cada ferramenta (ok/missing/roadmap/
+  degraded), com binário e caminho real no PATH (`shutil.which`) — sem versão
+  fabricada (§2). Exposto em **`GET /api/v1/tools`** (contadores por status) para o
+  painel de saúde da plataforma (§19).
+
 ### Added (event bus + métricas ao vivo — MASTER PROMPT v2 §9/§13/§22, ADR-0026)
 - **`engine/bus.py` `EventBus`**: fan-out síncrono in-process de eventos para N
   assinantes (filtro opcional por tipo), ele próprio um `EventSink` — entra em

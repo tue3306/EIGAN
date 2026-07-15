@@ -20,6 +20,7 @@ from pathlib import Path
 from ..capability import Capability
 from ..perspective import Perspective
 from .base import BaseToolPlugin
+from .health import Health
 from .plugin import PluginMetadata, PluginMetadataError, PluginSpec
 
 log = logging.getLogger("eigan.registry")
@@ -164,6 +165,10 @@ class PluginRegistry:
 
     def capabilities(self) -> set[Capability]:
         return set(self._by_capability)
+
+    def health_report(self) -> list[Health]:
+        """Saúde (§12) de todas as ferramentas do registry, ordenada por nome."""
+        return [s.health_check() for s in sorted(self._specs, key=lambda s: s.name)]
 
     def __len__(self) -> int:
         return len(self._by_name)

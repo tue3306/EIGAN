@@ -18,6 +18,7 @@ import yaml
 
 from ..capability import Capability, Category
 from ..findings.schema import Finding
+from .health import Health
 from ..perspective import Perspective
 from ..policy.impact import ImpactClass
 from .base import BaseToolPlugin
@@ -221,6 +222,38 @@ class PluginSpec:
         if self.metadata.roadmap or self.runner is None or self.degraded:
             return False
         return self.runner.available()
+
+    def health_check(self) -> Health:
+        """Saúde estruturada da ferramenta (contrato ToolAdapter §12).
+
+        Verificável e honesta: ``ok`` só quando o binário está no PATH
+        (``shutil.which``); ``roadmap`` para scaffold; ``degraded`` para falha de
+        carregamento; ``missing`` quando o executável não foi encontrado. Não
+        fabrica versão (§2) — a disponibilidade é o fato que reportamos."""
+        import shutil
+
+        m = self.metadata
+        binary = getattr(self.runner, "binary", "") or m.tool
+        path = ""
+        if m.roadmap:
+            status, detail = "roadmap", "scaffold honesto — declarado, ainda não operante"
+        elif self.degraded or self.runner is None:
+            status, detail = "degraded", self.load_error or "plugin sem runner operante"
+        else:
+            found = shutil.which(binary) if binary else None
+            if found:
+                status, detail, path = "ok", "executável presente no PATH", found
+            else:
+                status, detail = "missing", f"'{binary}' não encontrado no PATH"
+        return Health(
+            name=self.name,
+            status=status,
+            available=(status == "ok"),
+            binary=binary,
+            binary_path=path,
+            requires_credentials=m.requires_credentials,
+            detail=detail,
+        )
 
     def scan(self, target: str, **options) -> list[Finding]:
         if self.runner is None:

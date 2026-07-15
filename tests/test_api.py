@@ -49,6 +49,17 @@ def test_health_and_meta(client):
     assert "ai_enabled" in m and "ai_key_detected" in m
 
 
+def test_tools_health_endpoint(client):
+    # Saúde das ferramentas (§12): shape + contadores consistentes + status válidos.
+    c, _ = client
+    body = c.get("/api/v1/tools").json()
+    assert body["count"] == len(body["tools"]) and body["count"] > 0
+    assert sum(body["by_status"].values()) == body["count"]
+    valid = {"ok", "missing", "roadmap", "degraded"}
+    assert all(t["status"] in valid for t in body["tools"])
+    assert body["available"] == sum(1 for t in body["tools"] if t["available"])
+
+
 def test_setup_status_reports_degraded_items(client):
     c, _ = client
     s = c.get("/api/v1/setup").json()

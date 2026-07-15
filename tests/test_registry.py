@@ -52,3 +52,52 @@ def test_broken_plugin_is_isolated(tmp_path: Path):
     # o plugin 'ok' é roadmap: descoberto, catalogado, porém não disponível.
     ok = reg.get("ok")
     assert ok is not None and not ok.available()
+
+
+def test_health_report_classifies_tools(tmp_path: Path):
+    """health_check (§12): roadmap→roadmap, metadados inválidos→degraded; status é
+    sempre do conjunto válido (nada inventado, §2)."""
+    from eigan.engine.health import Health
+
+    root = tmp_path / "plugins"
+    (root / "red" / "ok").mkdir(parents=True)
+    (root / "red" / "ok" / "metadata.yaml").write_text(
+        "name: ok\ncategory: red\ncapabilities: [port_discovery]\n"
+        "supported_perspectives: [external]\ntool: ok\nroadmap: true\n"
+    )
+    (root / "red" / "broken").mkdir(parents=True)
+    (root / "red" / "broken" / "metadata.yaml").write_text("name: broken\n")
+
+    report = PluginRegistry.discover(roots=[root]).health_report()
+    assert report and all(isinstance(h, Health) for h in report)
+    by_name = {h.name: h for h in report}
+    assert by_name["ok"].status == "roadmap" and by_name["ok"].available is False
+    assert by_name["broken"].status == "degraded" and by_name["broken"].available is False
+    assert {h.status for h in report} <= {"ok", "missing", "roadmap", "degraded"}
+
+
+def test_health_check_reports_available_when_binary_on_path():
+    """Uma ferramenta cujo binário existe no PATH sai como 'ok' com binary_path real."""
+    from eigan.capability import Category
+    from eigan.engine.base import BaseToolPlugin
+    from eigan.engine.plugin import PluginMetadata, PluginSpec
+
+    class _Echo(BaseToolPlugin):
+        binary = "python3"  # garantidamente no PATH do ambiente de teste
+        name = "echo"
+
+        def build_args(self, target, **options):
+            return [target]
+
+        def parse(self, result, target):
+            return []
+
+    meta = PluginMetadata(
+        name="echo",
+        category=Category.RED,
+        capabilities=(),
+        supported_perspectives=(),
+        tool="python3",
+    )
+    h = PluginSpec(metadata=meta, runner=_Echo()).health_check()
+    assert h.status == "ok" and h.available is True and h.binary_path.endswith("python3")
