@@ -7,7 +7,6 @@ ambiente, o aviso de cobertura parcial (§3.1), o parse a partir do metadata rea
 
 from __future__ import annotations
 
-
 from eigan.engine.credentials import (
     CredentialState,
     Licensing,

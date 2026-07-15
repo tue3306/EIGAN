@@ -16,6 +16,7 @@ from pathlib import Path
 
 import click
 
+from ..engine.cognitive import GoalKind
 from ..engine.feeds import FeedCache
 from ..findings.schema import Severity
 from ..findings.store import FindingStore
@@ -23,7 +24,6 @@ from ..perspective import Perspective
 from ..security.scope import ScopeViolation
 from . import doctor as doctor_mod
 from .reporting import TOOL_VERSION, write_report
-from ..engine.cognitive import GoalKind
 from .session import SessionAborted, execute_scan, feeds_meta, plan_scan
 
 

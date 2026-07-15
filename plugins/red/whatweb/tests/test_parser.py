@@ -1,9 +1,8 @@
 """Testes do parser do whatweb — fixture da saída JSON real (demo.testfire.net)."""
 
+from eigan.engine.base import ToolResult
 from plugins.red.whatweb.parser import parse
 from plugins.red.whatweb.runner import WhatWebRunner
-
-from eigan.engine.base import ToolResult
 
 _JSON = (
     '[\n{"target":"https://demo.testfire.net/","http_status":200,'

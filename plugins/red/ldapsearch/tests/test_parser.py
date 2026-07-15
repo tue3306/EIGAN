@@ -1,10 +1,9 @@
 """Testes do parser do ldapsearch — RootDSE (LDIF) por bind anônimo."""
 
-from plugins.red.ldapsearch.parser import parse
-from plugins.red.ldapsearch.runner import LdapsearchRunner, _host
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.red.ldapsearch.parser import parse
+from plugins.red.ldapsearch.runner import LdapsearchRunner, _host
 
 _LDIF = """# extended LDIF
 dn:

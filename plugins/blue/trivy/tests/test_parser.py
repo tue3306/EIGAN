@@ -1,10 +1,9 @@
 """Testes do parser do trivy — Results[].Vulnerabilities[] → findings."""
 
-from plugins.blue.trivy.parser import parse
-from plugins.blue.trivy.runner import TrivyRunner
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.blue.trivy.parser import parse
+from plugins.blue.trivy.runner import TrivyRunner
 
 _JSON = (
     '{"Results":[{"Target":"nginx:1.25 (debian 12)","Vulnerabilities":['

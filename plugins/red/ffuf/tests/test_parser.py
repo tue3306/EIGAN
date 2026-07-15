@@ -1,10 +1,9 @@
 """Testes do parser do ffuf — JSON de resultados e NDJSON, severidade sensível."""
 
-from plugins.red.ffuf.parser import parse
-from plugins.red.ffuf.runner import FfufRunner
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.red.ffuf.parser import parse
+from plugins.red.ffuf.runner import FfufRunner
 
 # JSON único (formato -json com bloco "results")
 _JSON = (

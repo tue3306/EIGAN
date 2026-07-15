@@ -18,12 +18,12 @@ import yaml
 
 from ..capability import Capability, Category
 from ..findings.schema import Finding
-from .health import Health
 from ..perspective import Perspective
 from ..policy.impact import ImpactClass
 from .base import BaseToolPlugin
 from .cascade import CascadeRule
 from .credentials import CredentialState, Licensing, ToolCredential, resolve_credentials
+from .health import Health
 
 
 class PluginMetadataError(ValueError):

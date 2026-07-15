@@ -1,10 +1,9 @@
 """Testes do parser do wpscan — versão, vulnerabilidades, usuários, findings."""
 
-from plugins.red.wpscan.parser import parse
-from plugins.red.wpscan.runner import WpscanRunner
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.red.wpscan.parser import parse
+from plugins.red.wpscan.runner import WpscanRunner
 
 _JSON = (
     '{"target_url":"https://wp.example/","version":{"number":"5.2","found_by":"meta",'

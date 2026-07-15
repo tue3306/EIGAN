@@ -1,9 +1,9 @@
 """Testes do parser e do runner do nmap (segurança de args + parse do XML)."""
 
-from plugins.red.nmap.parser import parse
-from plugins.red.nmap.runner import NmapRunner
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.red.nmap.parser import parse
+from plugins.red.nmap.runner import NmapRunner
 
 _NMAP_XML = """<?xml version="1.0"?>
 <nmaprun>

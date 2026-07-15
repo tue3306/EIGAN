@@ -1,10 +1,9 @@
 """Testes do parser do nikto — envelope JSON (lista ou objeto) + severidade."""
 
-from plugins.red.nikto.parser import parse
-from plugins.red.nikto.runner import NiktoRunner
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.red.nikto.parser import parse
+from plugins.red.nikto.runner import NiktoRunner
 
 _JSON = (
     '[{"host":"demo","ip":"1.2.3.4","port":"443","vulnerabilities":['

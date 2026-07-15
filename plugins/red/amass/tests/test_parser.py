@@ -1,9 +1,8 @@
 """Testes do parser do amass — subdomínios um por linha, com filtro de ruído."""
 
+from eigan.engine.base import ToolResult
 from plugins.red.amass.parser import parse
 from plugins.red.amass.runner import AmassRunner, _domain
-
-from eigan.engine.base import ToolResult
 
 _OUT = "\n".join(
     [

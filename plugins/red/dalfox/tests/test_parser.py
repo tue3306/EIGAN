@@ -1,10 +1,9 @@
 """Testes do parser do dalfox — JSONL de achados de XSS."""
 
-from plugins.red.dalfox.parser import parse
-from plugins.red.dalfox.runner import DalfoxRunner
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Confidence, Severity
+from plugins.red.dalfox.parser import parse
+from plugins.red.dalfox.runner import DalfoxRunner
 
 _JSONL = (
     '{"type":"V","inject_type":"inHTML-URL","poc":"https://x/?q=<svg onload=alert(1)>",'

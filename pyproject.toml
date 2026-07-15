@@ -39,7 +39,8 @@ vulnforge = "eigan.cli.main:deprecated_alias"
 where = ["src"]
 
 [tool.setuptools.package-data]
-eigan = ["report/templates/*.j2", "api/static/*", "engine/wordlists_data/*.txt"]
+# py.typed: PEP 561 — sinaliza a consumidores que o pacote publica type hints.
+eigan = ["py.typed", "report/templates/*.j2", "api/static/*", "engine/wordlists_data/*.txt"]
 
 [tool.pytest.ini_options]
 # "." habilita `import plugins.<cat>.<nome>...` nos testes de plugin (ADR-0003).
@@ -51,6 +52,13 @@ addopts = "--import-mode=importlib"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+# Conjunto padrão do ruff (E4/E7/E9 + F = pyflakes) + I (ordenação de imports/isort).
+# E501 (linha longa) fica de fora: o formatter arruma a largura do código e strings/
+# URLs longas são permitidas — mesmo comportamento que a CI já validava, agora com
+# imports padronizados e garantidos pelo lint.
+select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.mypy]
 python_version = "3.11"

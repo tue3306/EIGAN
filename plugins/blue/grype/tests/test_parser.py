@@ -1,10 +1,9 @@
 """Testes do parser do grype — matches[].vulnerability → findings."""
 
-from plugins.blue.grype.parser import parse
-from plugins.blue.grype.runner import GrypeRunner
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.blue.grype.parser import parse
+from plugins.blue.grype.runner import GrypeRunner
 
 _JSON = (
     '{"matches":[{"vulnerability":{"id":"CVE-2022-9999","severity":"High",'

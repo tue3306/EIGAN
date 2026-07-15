@@ -28,11 +28,11 @@ from ..engine import events as ev
 from ..engine.bus import EventBus
 from ..engine.cognitive import CognitiveEngine, Goal, GoalKind
 from ..engine.feeds import FeedCache
-from ..observability.metrics import MetricsCollector
+from ..engine.registry import PluginRegistry
 from ..engine.risk import RiskScorer
 from ..findings.store import FindingStore
-from ..engine.registry import PluginRegistry
 from ..logging_setup import get_logger
+from ..observability.metrics import MetricsCollector
 from ..perspective import Perspective, validate_target
 from ..security.onboarding import build_scope
 from ..security.scope import ScopeViolation

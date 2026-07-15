@@ -1,10 +1,9 @@
 """Testes do parser do testssl — lista de findings JSON, mapa de severidade."""
 
-from plugins.red.testssl.parser import parse
-from plugins.red.testssl.runner import TestsslRunner
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.red.testssl.parser import parse
+from plugins.red.testssl.runner import TestsslRunner
 
 _JSON = (
     "["

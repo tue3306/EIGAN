@@ -2,7 +2,6 @@
 
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
-
 from plugins.red.enum4linux.parser import parse
 
 # Fixture no formato documentado do enum4linux (marcadores reais, sem inventar).

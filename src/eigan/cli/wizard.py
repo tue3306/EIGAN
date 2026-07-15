@@ -12,8 +12,8 @@ import click
 
 from ..ai.provider import list_providers
 from ..findings.schema import Finding, Severity
-from ..perspective import Perspective
 from ..findings.store import FindingStore
+from ..perspective import Perspective
 from .reporting import write_report
 from .session import SessionAborted, execute_scan
 from .ui import boxed, rule

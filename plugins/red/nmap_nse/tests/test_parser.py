@@ -2,7 +2,6 @@
 
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
-
 from plugins.red.nmap_nse.parser import parse
 
 # XML nativo do nmap com resultados NSE (formato documentado do -oX).

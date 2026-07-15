@@ -1,7 +1,7 @@
 """Teste do parser do dnsx (hosts que resolvem)."""
 
-from plugins.red.dnsx.parser import parse
 from eigan.engine.base import ToolResult
+from plugins.red.dnsx.parser import parse
 
 
 def test_dnsx_parse_live_host():

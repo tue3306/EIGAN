@@ -1,9 +1,8 @@
 """Testes do parser do katana — saída de URLs (uma por linha)."""
 
+from eigan.engine.base import ToolResult
 from plugins.red.katana.parser import parse
 from plugins.red.katana.runner import KatanaRunner
-
-from eigan.engine.base import ToolResult
 
 _URLS = "\n".join(
     [

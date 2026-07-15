@@ -1,10 +1,9 @@
 """Testes do parser do sqlmap — fixture do stdout de injeção confirmada."""
 
-from plugins.red.sqlmap.parser import parse
-from plugins.red.sqlmap.runner import SqlmapRunner
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Confidence, Severity
+from plugins.red.sqlmap.parser import parse
+from plugins.red.sqlmap.runner import SqlmapRunner
 
 _CONFIRMED = """
 sqlmap identified the following injection point(s) with a total of 42 HTTP(s) requests:

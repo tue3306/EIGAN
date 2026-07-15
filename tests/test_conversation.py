@@ -1,8 +1,8 @@
 """Testes do Conversation Engine + Context Manager (com provedor fake, sem rede)."""
 
-from eigan.ai.context import build_scan_context, severity_counts
-from eigan.ai.conversation import answer_question, analyze
 from eigan.ai import prompts
+from eigan.ai.context import build_scan_context, severity_counts
+from eigan.ai.conversation import analyze, answer_question
 from eigan.findings.schema import Confidence, Finding, Severity
 
 

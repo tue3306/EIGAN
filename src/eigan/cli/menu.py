@@ -307,8 +307,8 @@ def configure_ai_provider(
     # EIGAN resolve o modelo concreto por provedor. Provedores sem mapa de tier
     # (Azure/Ollama/OpenRouter/Groq/Together) ainda pedem o id, pois não há um
     # default que possamos verificar (anti-invenção §3.1).
-    from ..ai.provider import TIERS as _TIERS
     from ..ai.provider import _TIER_LABELS
+    from ..ai.provider import TIERS as _TIERS
 
     if spec.tier_models:
         echo("\nNível de IA (o EIGAN escolhe o modelo por você):")

@@ -10,6 +10,7 @@ import json
 import pytest
 
 from eigan.ai.provider import (
+    _LOCAL_TIMEOUT,
     PROVIDERS,
     AIProvider,
     AnthropicProvider,
@@ -20,7 +21,6 @@ from eigan.ai.provider import (
     OpenAIProvider,
     ProviderSpec,
     _build_prompts,
-    _LOCAL_TIMEOUT,
     _parse_explanation,
     default_provider,
     list_providers,

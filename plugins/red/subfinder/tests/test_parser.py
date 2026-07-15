@@ -1,7 +1,7 @@
 """Teste do parser do subfinder (subdomínios, com dedup)."""
 
-from plugins.red.subfinder.parser import parse
 from eigan.engine.base import ToolResult
+from plugins.red.subfinder.parser import parse
 
 
 def test_subfinder_parse_and_dedup():

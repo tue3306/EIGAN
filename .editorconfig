@@ -1,0 +1,28 @@
+# EditorConfig — padroniza indentação/espaçamento entre editores.
+# https://editorconfig.org  ·  Alinhado ao ruff (line-length 100, py311).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+[*.py]
+indent_size = 4
+
+[*.{yaml,yml,json,toml}]
+indent_size = 2
+
+[*.{md,markdown}]
+# Markdown usa dois espaços no fim da linha para quebra dura — não os apare.
+trim_trailing_whitespace = false
+
+[*.{js,css,html,svg}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab

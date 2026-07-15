@@ -1,8 +1,8 @@
 """Teste do parser do naabu (JSONL de portas)."""
 
-from plugins.red.naabu.parser import parse
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.red.naabu.parser import parse
 
 
 def test_naabu_parse_ports():

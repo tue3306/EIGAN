@@ -1,9 +1,8 @@
 """Testes do parser do dns-enum (saída real do dig, sem executar a ferramenta)."""
 
-from plugins.red.dns_enum.parser import nameservers_from_dig, parse
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Confidence, Severity
+from plugins.red.dns_enum.parser import nameservers_from_dig, parse
 
 # Formato real do `dig +noall +answer` (verificado): NAME<TAB>TTL<TAB>IN<TAB>TYPE<TAB>RDATA.
 _NS = "example.com.\t3600\tIN\tNS\tns1.example.com.\nexample.com.\t3600\tIN\tNS\tns2.example.com.\n"

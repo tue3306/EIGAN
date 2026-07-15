@@ -1,10 +1,9 @@
 """Testes do parser do gowitness — JSONL de captura → screenshot finding."""
 
-from plugins.red.gowitness.parser import parse
-from plugins.red.gowitness.runner import GowitnessRunner
-
 from eigan.engine.base import ToolResult
 from eigan.findings.schema import Severity
+from plugins.red.gowitness.parser import parse
+from plugins.red.gowitness.runner import GowitnessRunner
 
 _JSONL = '{"url":"https://demo.testfire.net/","title":"Altoro Mutual","response_code":200,"filename":"demo.jpeg"}'
 
