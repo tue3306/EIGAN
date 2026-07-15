@@ -44,3 +44,28 @@ def test_nuclei_parse_survives_out_of_range_cvss():
     assert len(findings) == 2  # nenhuma finding válida é perdida
     assert findings[0].cvss is None  # score inválido descartado, não fabricado
     assert findings[1].cvss is not None and findings[1].cvss.score == 5.0
+
+
+def test_nuclei_parse_survives_malformed_cwe():
+    """Regressão: cwe-id malformado (sem prefixo 'CWE-', ou inteiro) num template
+    custom/quebrado NÃO pode derrubar o parse inteiro — mesma classe do bug do
+    cvss (§24). O schema Finding valida o formato 'CWE-<n>' e levantaria ValueError;
+    o parser tem de normalizar (número claro → CWE-N) ou descartar (irreconhecível
+    → None, sem fabricar §2), nunca crashar."""
+    no_prefix = (
+        '{"template-id":"a","matched-at":"http://h/a","info":'
+        '{"name":"A","severity":"medium","classification":{"cwe-id":["79"]}}}'
+    )
+    as_int = (
+        '{"template-id":"b","matched-at":"http://h/b","info":'
+        '{"name":"B","severity":"low","classification":{"cwe-id":[89]}}}'
+    )
+    garbage = (
+        '{"template-id":"c","matched-at":"http://h/c","info":'
+        '{"name":"C","severity":"info","classification":{"cwe-id":["not-a-cwe"]}}}'
+    )
+    findings = parse(ToolResult(0, "\n".join([no_prefix, as_int, garbage]), ""), "http://h/")
+    assert len(findings) == 3  # nenhuma finding perdida por causa de um cwe ruim
+    assert findings[0].cwe == "CWE-79"  # "79" normalizado para o formato do schema
+    assert findings[1].cwe == "CWE-89"  # 89 (inteiro) normalizado
+    assert findings[2].cwe is None  # irreconhecível: descartado, não fabricado

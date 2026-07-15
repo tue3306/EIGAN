@@ -24,6 +24,22 @@ _SEV_MAP = {
 }
 
 
+def _norm_cwe(raw: object) -> str | None:
+    """Normaliza o ``cwe-id`` do template para o formato ``CWE-<n>`` que o schema
+    exige, ou ``None``. Um template custom/quebrado pode emitir ``79``, ``"79"``,
+    ``"cwe-79"`` ou lixo — nada disso pode derrubar o parse inteiro (§24, mesma
+    classe do bug do cvss) nem virar um CWE fabricado (§2). Só um número claro é
+    normalizado; o irreconhecível é descartado."""
+    if raw is None:
+        return None
+    s = str(raw).strip().upper()
+    if s.startswith("CWE-") and s[4:].isdigit():
+        return s
+    if s.isdigit():
+        return f"CWE-{s}"
+    return None
+
+
 def parse(result: ToolResult, target: str) -> list[Finding]:
     findings: list[Finding] = []
     for line in result.stdout.splitlines():
@@ -54,8 +70,10 @@ def parse(result: ToolResult, target: str) -> list[Finding]:
             )
             cvss = CVSS(version=version, score=float(score), vector=vector or None)
 
-        cwe_ids = classification.get("cwe-id") or []
-        cwe = cwe_ids[0].upper() if cwe_ids else None
+        cwe_ids = classification.get("cwe-id")
+        if isinstance(cwe_ids, list):
+            cwe_ids = cwe_ids[0] if cwe_ids else None
+        cwe = _norm_cwe(cwe_ids)
         cve_ids = classification.get("cve-id") or []
 
         refs = list(info.get("reference") or [])
