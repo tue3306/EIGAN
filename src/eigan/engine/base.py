@@ -96,9 +96,16 @@ class BaseToolPlugin(ABC):
             )
             return ToolResult(proc.returncode, proc.stdout, proc.stderr)
         except subprocess.TimeoutExpired as exc:
+            # No timeout o stdout parcial pode vir como bytes (não passou pelo
+            # decode text=True). Decodifica tolerante — a saída da ferramenta sob
+            # teste não é confiável e bytes inválidos NÃO podem derrubar o runner.
+            raw = exc.stdout
+            stdout = (
+                raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else (raw or "")
+            )
             return ToolResult(
                 exit_code=124,
-                stdout=exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or ""),
+                stdout=stdout,
                 stderr="timeout",
                 timed_out=True,
             )
