@@ -18,6 +18,10 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   (sqlmap/dalfox) e para `FIRM` com **corroboração** (≥2 fontes via dedup); nunca
   fabrica nem rebaixa. Rodada no `_finalize` do engine; `ValidationSummary` no
   evento `analysis_complete` e em **`GET /api/v1/scans/{id}`** (validadas + confiança).
+- **Resumo pós-scan da CLI** passou a mostrar a **validação** (`validadas/total` +
+  distribuição de confiança), o **custo de IA** (chamadas + tokens in/out) e a
+  **confiança por finding** — a observabilidade (§22) e a validação (§16) ficam
+  visíveis para o usuário de CLI, não só na API.
 
 ### Added (contrato de saúde de ferramenta — MASTER PROMPT v2 §12)
 - **`PluginSpec.health_check() → Health`** e **`PluginRegistry.health_report()`**:

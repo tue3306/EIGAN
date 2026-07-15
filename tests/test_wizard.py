@@ -56,6 +56,28 @@ def test_print_results_shows_counts_and_titles(capsys):
     assert "CRÍTICA" in out and "RCE" in out
 
 
+def test_print_results_shows_validation_and_ai_cost(capsys):
+    from eigan.findings.schema import Confidence
+    from eigan.observability.usage import TokenUsage
+
+    f = _f(Severity.HIGH, "SQLi")
+    f.source_tool = "sqlmap"
+    f.confidence = Confidence.CONFIRMED  # como o engine deixaria após a validação (§16)
+    report = SimpleNamespace(
+        scan_id=3,
+        perspective=Perspective.UNIFIED,
+        findings=[f],
+        skipped_tools=[],
+        token_usage=TokenUsage(120, 30),
+        ai_calls=4,
+    )
+    wizard._print_results(report)
+    out = capsys.readouterr().out
+    assert "Validação: 1/1" in out
+    assert "confirmed" in out  # confiança validada na linha do finding
+    assert "IA: 4 chamada" in out and "150 tokens" in out
+
+
 def test_print_results_reports_skipped_tools(capsys):
     report = SimpleNamespace(
         scan_id=1,

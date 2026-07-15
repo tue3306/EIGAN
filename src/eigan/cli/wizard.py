@@ -68,6 +68,23 @@ def _print_results(report) -> None:
     )
     click.echo(_severity_bar(_count_by_severity(findings)))
 
+    # Validação (§16): quantas findings foram validadas/corroboradas + confiança.
+    if findings:
+        from ..analysis.validation import Validator
+
+        vs = Validator().summarize(findings)
+        conf = "  ".join(f"{k}:{n}" for k, n in sorted(vs.by_confidence.items()))
+        click.secho(f"Validação: {vs.validated}/{vs.total} validadas · {conf}", fg="cyan")
+
+    # Custo de IA (§22): tokens que a IA gastou comandando o scan.
+    usage = getattr(report, "token_usage", None)
+    if getattr(report, "ai_calls", 0) and usage is not None:
+        click.secho(
+            f"IA: {report.ai_calls} chamada(s) · {usage.total_tokens} tokens "
+            f"({usage.prompt_tokens} in / {usage.completion_tokens} out)",
+            fg="bright_black",
+        )
+
     # Mais perigosos primeiro (risco, depois severidade) — a cara do ataque.
     top = sorted(
         findings,
@@ -79,7 +96,8 @@ def _print_results(report) -> None:
         for f in top:
             risk = f"{f.risk.score:.0f}" if f.risk else "—"
             click.echo(
-                f"  [{f.severity.value.upper():8}] risco {risk:>3}  {f.title}  ({f.affected_asset})"
+                f"  [{f.severity.value.upper():8}] risco {risk:>3}  {f.title}  "
+                f"({f.affected_asset})  «{f.confidence.value}»"
             )
         if total > len(top):
             click.secho(
