@@ -22,8 +22,10 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from ..engine import events as ev
+from ..engine.bus import EventBus
 from ..engine.cognitive import CognitiveEngine, Goal, GoalKind
 from ..engine.feeds import FeedCache
+from ..observability.metrics import MetricsCollector
 from ..engine.risk import RiskScorer
 from ..findings.store import FindingStore
 from ..engine.registry import PluginRegistry
@@ -82,6 +84,8 @@ class ScanJob:
     error: str = ""
     events: list[dict[str, Any]] = field(default_factory=list)
     cascade_log: list[dict[str, Any]] = field(default_factory=list)
+    # Métricas ao vivo do scan (§22): assinam o event bus e agregam contadores.
+    metrics: MetricsCollector = field(default_factory=MetricsCollector, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     _cancel: threading.Event = field(default_factory=threading.Event, repr=False)
 
@@ -113,6 +117,7 @@ class ScanJob:
                 "error": self.error,
                 "events": len(self.events),
                 "cascade_tools": len({c["tool"] for c in self.cascade_log}),
+                "metrics": self.metrics.snapshot(),
             }
 
     @property
@@ -219,7 +224,13 @@ class ScanManager:
     # ── execução ────────────────────────────────────────────────────────────
     def _run(self, job: ScanJob, perspective: Perspective, profile: str, override: bool) -> None:
         job.status = "running"
+        # Event bus (§9/§13): o engine publica uma vez; o bus distribui. As métricas
+        # assinam PRIMEIRO (observam mesmo se o scan abortar); o sink do job (que
+        # dispara o cancelamento cooperativo ao levantar) vem por último.
         sink = _JobSink(job)
+        bus = EventBus()
+        bus.subscribe(job.metrics)
+        bus.subscribe(sink)
         log.info(
             "scan iniciado",
             extra={
@@ -270,7 +281,7 @@ class ScanManager:
                 scope=scope,
                 override_perspective=override,
                 allow_exploit=True,
-                sink=sink,
+                sink=bus,
                 **opts,
             )
             # Analysis Engine (auto): a IA analisa o scan inteiro e conclui — o

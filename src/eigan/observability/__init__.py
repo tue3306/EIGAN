@@ -15,6 +15,7 @@ Regra de ouro: observabilidade é **best-effort** e **nunca** derruba um scan.
 from __future__ import annotations
 
 from .cost import CostEstimate, CostModel
+from .metrics import MetricsCollector
 from .usage import (
     TokenUsage,
     UsageEvent,
@@ -35,4 +36,5 @@ __all__ = [
     "use_meter",
     "CostEstimate",
     "CostModel",
+    "MetricsCollector",
 ]

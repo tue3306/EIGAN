@@ -12,6 +12,17 @@ projeto adota o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 > passaram a rodar de ponta a ponta**; o versionamento volta a subir quando o
 > conjunto estiver estável e polido. Honestidade acima de número de versão (§3.1).
 
+### Added (event bus + métricas ao vivo — MASTER PROMPT v2 §9/§13/§22, ADR-0026)
+- **`engine/bus.py` `EventBus`**: fan-out síncrono in-process de eventos para N
+  assinantes (filtro opcional por tipo), ele próprio um `EventSink` — entra em
+  qualquer `sink=` sem tocar o Core. **Não engole exceções** (preserva o
+  cancelamento cooperativo). Inspiração conceitual no pipeline do Wazuh; código
+  100% original.
+- **`observability/metrics.py` `MetricsCollector`**: assina o bus e agrega ao vivo
+  eventos por tipo, execuções de ferramenta por status, descobertas e tokens. O
+  `ScanManager` roda cada scan por um bus (`métricas → job sink`) e expõe
+  `metrics` no `job.summary()` (dashboard §19).
+
 ### Added (observabilidade de tokens/custo — MASTER PROMPT v2 §22, ADR-0025)
 - **Pacote `observability/`** medindo o uso **real** de tokens de toda chamada de
   IA (contagem vem do provedor, não de heurística): `extract_usage()` normaliza os
