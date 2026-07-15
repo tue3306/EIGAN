@@ -15,10 +15,11 @@
 
 <p align="center">
   <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.0.0-blue">
+  <img alt="Status" src="https://img.shields.io/badge/status-pr%C3%A9--alfa-orange">
   <a href="LICENSE"><img alt="Licença" src="https://img.shields.io/badge/licen%C3%A7a-Apache--2.0-blue"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white">
   <a href="https://github.com/tue3306/EIGAN/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tue3306/EIGAN/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Testes" src="https://img.shields.io/badge/testes-498%20passed-brightgreen">
+  <img alt="Testes" src="https://img.shields.io/badge/testes-499%20passed-brightgreen">
   <img alt="IA" src="https://img.shields.io/badge/IA-native%20(obrigat%C3%B3ria)-6c5ce7">
   <img alt="PRs" src="https://img.shields.io/badge/PRs-bem--vindos-brightgreen">
 </p>
@@ -41,6 +42,14 @@
 > apenas contra sistemas que possui ou tem permissão escrita para testar. Os testes de
 > integração rodam somente contra alvos vulneráveis **locais** (DVWA/Juice Shop), nunca contra
 > terceiros.
+
+> ### 🚧 Status do projeto — pré-alfa (`0.0.0`)
+> Sem release publicado ainda. O **núcleo agêntico** e o **Recon (Red)** rodam de ponta a
+> ponta; **Blue** (análise de logs → MITRE ATT&CK) e **Purple** (correlação ataque × detecção)
+> já são funcionais. Módulos avançados (Windows/AD, Cloud, SIEM, threat-hunting) entram como
+> **_scaffold honesto_** — visíveis no `doctor`, *sugeridos, não executados*, até serem
+> implementados (§3.6). O número de versão só sobe quando o conjunto estiver estável e polido —
+> **honestidade acima do número**. Veja o [Roadmap](#-roadmap).
 
 ## Índice
 
@@ -112,10 +121,13 @@ Tudo gira em torno de duas perguntas:
 - 🚀 **Baixa e roda** — um comando do zip ao menu; wizard guiado, `doctor` (com `--probe-ai`
   para **certificar que a IA responde**, incluindo Ollama local), zero-config por padrão.
 
-<sub><b>Ferramentas hoje (Red / Recon real):</b> nmap · naabu · nuclei · subfinder · dnsx ·
-httpx · enum4linux · nmap-nse. Dezenas de outras (whatweb, wpscan, sqlmap, testssl, AD, cloud,
-Blue e Purple) já existem como <b>scaffold honesto</b>: aparecem no <code>doctor</code>,
-<i>sugeridas — não executadas</i> — até serem implementadas.</sub>
+<sub><b>Ferramentas que executam hoje —</b> <b>Red:</b> nmap · nmap-nse · naabu · nuclei ·
+subfinder · amass · dnsx · dig (DNS/AXFR) · httpx · whatweb · katana · ffuf · gowitness · nikto ·
+testssl · sqlmap · dalfox · wpscan · enum4linux · ldapsearch + sondagem de exposição/segredos.
+<b>Blue:</b> análise de logs (→ MITRE ATT&CK) · trivy · grype. Módulos avançados (Windows/AD,
+cloud, exploitation, feroxbuster, password-audit, wireless; SIEM/threat-hunting/IR/malware;
+simulação de ataque Purple) entram como <b>scaffold honesto</b>: aparecem no <code>doctor</code>,
+<i>sugeridos — não executados</i>, até serem implementados (§3.6).</sub>
 
 ## 🎬 Demonstração
 
@@ -385,7 +397,7 @@ Os diretórios principais têm o seu próprio `README.md`; o **mapa do código-f
 ## 🗺️ Roadmap
 
 **Já funciona hoje (pré-alfa `0.0.0`):** núcleo agêntico (a IA comanda o scan fim a fim) · Recon Red
-real (arsenal 18+) + **exposição/segredos vazados** (`.git`/`.env`/backups/chaves, mascarados) ·
+real (arsenal de 20+ ferramentas) + **exposição/segredos vazados** (`.git`/`.env`/backups/chaves, mascarados) ·
 cascata adaptativa · perspectivas Outside-In/Inside-Out · Risk Engine (CVSS/EPSS/KEV) · correlação +
 inventário + ATT&CK · **Blue real** (`eigan blue` — detecção em logs mapeada a ATT&CK) · **Purple
 real** (correlação ataque×detecção + pontos cegos, na CLI/API/dashboard) · **plano de remediação por
